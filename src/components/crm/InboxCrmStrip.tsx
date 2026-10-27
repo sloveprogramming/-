@@ -7,8 +7,8 @@ import { useDialogs } from "@/components/DialogProvider";
 import { ClassificationPicker, type ClassificationChoice } from "@/components/crm/ActionRowTools";
 import { crmCategoryLabel as categoryLabel } from "@/lib/crm/labels";
 import { crmFetch, errorMessage } from "@/components/crm/crm-utils";
-import type { InboxCrmContext, InboxCrmDraft, InboxCrmSummary } from "@/lib/linkedin/messages/crmContext";
-import { inboxCrmStepLabel } from "@/lib/linkedin/messages/crmContext";
+import type { InboxCrmContext, InboxCrmDraft, InboxCrmSummary } from "@/lib/crm/inboxContext";
+import { inboxCrmStepLabel } from "@/lib/crm/inboxContext";
 import { cn } from "@/utils/cn";
 
 /**

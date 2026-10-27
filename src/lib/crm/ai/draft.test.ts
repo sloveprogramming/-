@@ -134,15 +134,15 @@ describe("CRM draft prompt", () => {
       additionalProperties: boolean;
       properties: { subject: { type: string } };
     };
-    const linkedin = draftJsonSchema("linkedin") as {
+    const shortMessage = draftJsonSchema("sms") as {
       additionalProperties: boolean;
       properties: { subject: { type: string }; bodyHtml: { type: string } };
     };
     assert.equal(email.additionalProperties, false);
     assert.equal(email.properties.subject.type, "string");
-    assert.equal(linkedin.additionalProperties, false);
-    assert.equal(linkedin.properties.subject.type, "null");
-    assert.equal(linkedin.properties.bodyHtml.type, "null");
+    assert.equal(shortMessage.additionalProperties, false);
+    assert.equal(shortMessage.properties.subject.type, "null");
+    assert.equal(shortMessage.properties.bodyHtml.type, "null");
   });
 });
 
@@ -159,11 +159,11 @@ describe("CRM draft output validation", () => {
     assert.throws(() => validateDraftOutput({ subject: "Hello", bodyText: " ", bodyHtml: null }, "email"), /bodyText is required/);
   });
 
-  test("requires a null or absent LinkedIn subject and plain-text-only body", () => {
-    assert.throws(() => validateDraftOutput({ subject: "No", bodyText: "Hello", bodyHtml: null }, "linkedin"), /subject must be null or absent/);
-    assert.throws(() => validateDraftOutput({ subject: null, bodyText: "Hello", bodyHtml: "<p>Hello</p>" }, "linkedin"), /bodyHtml must be null/);
+  test("requires a null or absent subject and plain-text-only body on short-message channels", () => {
+    assert.throws(() => validateDraftOutput({ subject: "No", bodyText: "Hello", bodyHtml: null }, "sms"), /subject must be null or absent/);
+    assert.throws(() => validateDraftOutput({ subject: null, bodyText: "Hello", bodyHtml: "<p>Hello</p>" }, "sms"), /bodyHtml must be null/);
     assert.deepEqual(
-      validateDraftOutput({ bodyText: " Hello ", bodyHtml: null }, "linkedin"),
+      validateDraftOutput({ bodyText: " Hello ", bodyHtml: null }, "sms"),
       { subject: null, bodyText: "Hello", bodyHtml: null },
     );
   });

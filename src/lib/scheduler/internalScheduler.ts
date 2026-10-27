@@ -1,6 +1,6 @@
 import "server-only";
 
-import { serializeError } from "@/lib/linkedin/serializeError";
+import { serializeError } from "@/lib/errors";
 import { migrationMutationBlockReason } from "@/lib/migration/controls";
 import { claimSlot, finishSlot, lastStarts } from "./claims";
 import { organizationDays, runDailyRollover } from "./dailyRollover";

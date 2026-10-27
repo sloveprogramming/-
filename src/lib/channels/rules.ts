@@ -1,35 +1,37 @@
 /**
  * Sending rules: the numbers that used to be hardcoded in the sending
- * engines, now set per organization in Settings → <channel> → Sending rules.
+ * engines, now set per organization in 设置 → <渠道> → 发送规则.
  *
  * Every rule is declared once here — label, help, default, unit and the
  * bounds it may take — and the settings page is generated from it, the API
  * validates against it, and the engines read resolved values through
- * `channelRules()` (rules.server.ts). Today's behaviour is each rule's
- * default, so an organization that never opens the page behaves exactly as
- * before.
+ * `channelRules()` (rules.server.ts). An organization that never opens the
+ * page behaves exactly as the defaults say.
  *
  * Two bounds per rule:
  *  - min / max: hard limits. A value outside them is refused, so a typo
- *    cannot, say, send 3,000 LinkedIn invitations in a day.
+ *    cannot, say, blast 3,000 text messages in a day.
  *  - safe: the edge of what the platforms tolerate. Beyond it the page
  *    shows the rule's `warning` but still saves.
  *
  * Some rules can be overridden per connected account (a mailbox's daily
- * limit, a LinkedIn account's invitations, a WhatsApp number's new chats);
- * `override` says where. Resolution: account override → organization rule →
- * default.
+ * limit, a WeCom account's daily adds); `override` says where. Resolution:
+ * account override → organization rule → default.
+ *
+ * 改造：渠道从 LinkedIn / WhatsApp 换成国内实际在用的「邮件 / 企业微信 / 短信 /
+ * 电话」，规则、默认值、时段和提示语都按国内场景重写（默认时区 Asia/Shanghai、
+ * 默认电话国家 CN）。原来的 LinkedIn 邀请数、WhatsApp 新聊天数等规则整段删除。
  *
  * Client-safe: no database or server imports.
  */
 
 import { resolveTimeZone } from "@/lib/timeZone";
 
-export const CHANNELS = ["email", "linkedin", "whatsapp", "general"] as const;
+export const CHANNELS = ["email", "wecom", "sms", "call", "general"] as const;
 export type Channel = (typeof CHANNELS)[number];
 
 export type WeeklyHours = {
-  /** IANA time zone, e.g. Asia/Kolkata. */
+  /** IANA time zone, e.g. Asia/Shanghai. */
   timezone: string;
   /** 0 = Sunday … 6 = Saturday. */
   days: number[];
@@ -84,233 +86,170 @@ export type ClockRule = Common & { kind: "time"; default: string };
 
 export type Rule = NumberRule | RangeRule | HoursRule | CountryRule | TimeZoneRule | ClockRule;
 
+/** 国内工作日：周一到周五。周六常见于门店/批发渠道，企业微信单独放开了周六。 */
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WORKDAYS_PLUS_SATURDAY = [1, 2, 3, 4, 5, 6];
+
 export const CHANNEL_RULES = {
   email: [
     {
       key: "dailySendLimit",
       kind: "number",
-      label: "Emails per day, per mailbox",
-      help: "How many emails a newly connected mailbox sends a day. Warm mailboxes can send more; new ones should start low.",
-      unit: "emails / day",
+      label: "每个邮箱每天发信上限",
+      help: "新接入的邮箱每天发多少封。老邮箱可以多一些；新邮箱建议从低处起步，逐步加量。",
+      unit: "封 / 天",
       default: 30,
       min: 1,
       max: 200,
       safe: { above: 50 },
-      warning: "Above about 50 a day from one Google Workspace mailbox, deliverability usually drops and Google may throttle it.",
-      override: "Each mailbox can set its own limit in Email → Accounts.",
+      warning: "单个企业邮箱一天超过约 50 封，送达率通常开始下降，邮箱服务商也可能限流。",
+      override: "每个邮箱可以在「设置 → 邮件 → 发信邮箱」里单独设上限。",
     },
     {
       key: "sendGapMinutes",
       kind: "range",
-      label: "Gap between emails from one mailbox",
-      help: "After each send, the mailbox waits a random time in this range before the next, so sending looks human.",
-      unit: "minutes",
+      label: "同一邮箱两封信之间的间隔",
+      help: "每发一封，邮箱在这个区间内随机等一段时间再发下一封，看起来像人在发。",
+      unit: "分钟",
       default: [18, 24],
       min: 1,
       max: 240,
       safe: { below: 10 },
-      warning: "Sending more often than every 10 minutes from one mailbox looks automated to spam filters.",
+      warning: "同一个邮箱间隔不到 10 分钟连发，容易被判为机器群发。",
     },
     {
       key: "sendingHours",
       kind: "hours",
-      label: "Sending hours for new mailboxes",
-      help: "When a newly connected mailbox may send. Each mailbox can change its own hours in Email → Accounts.",
-      default: { timezone: "Asia/Kolkata", days: [1, 2, 3, 4, 5], start: "09:00", end: "18:00" },
+      label: "新邮箱的发送时段",
+      help: "新接入的邮箱在什么时间可以发信。每个邮箱可以在「发信邮箱」里改自己的时段。",
+      override: "每个邮箱可以在「设置 → 邮件 → 发信邮箱」里单独设时段。",
+      default: { timezone: "Asia/Shanghai", days: WEEKDAYS, start: "09:00", end: "18:00" },
     },
     {
       // Read by the CRM's automatic follow-up sender (src/lib/crm/autoFollowUps.ts).
       key: "crmFollowUpGapMinutes",
       kind: "number",
-      label: "Gap between automatic CRM follow-ups, per mailbox",
-      help: "A CRM sequence set to send its follow-ups automatically sends at most one from each mailbox in this time, oldest first, so follow-ups that fall due together go out spread over the day.",
-      unit: "minutes",
+      label: "同一邮箱两封自动跟进之间的间隔",
+      help: "打开了「自动发送跟进」的序列，每个邮箱在这段时间内最多发一封，按到期先后排队，所以同时到期的跟进会摊到一天里。",
+      unit: "分钟",
       default: 30,
       min: 5,
       max: 720,
       safe: { below: 15 },
-      warning: "Follow-ups less than 15 minutes apart from one mailbox look automated.",
+      warning: "同一邮箱两封跟进间隔不到 15 分钟，看起来像自动群发。",
     },
   ],
-  linkedin: [
+  wecom: [
     {
-      key: "invitesPerDayPremium",
+      key: "dailyAddLimit",
       kind: "number",
-      label: "Invitations per day, premium accounts",
-      help: "Connection requests one LinkedIn account with Premium or Sales Navigator sends a day.",
-      unit: "invitations / day",
-      default: 30,
+      label: "每个企微账号每天加好友上限",
+      help: "企微对主动添加外部联系人有频率限制，加得太快会被限制加人甚至封号。宁可按周慢慢加，也不要一天加满。",
+      unit: "人 / 天",
+      default: 20,
       min: 1,
-      max: 100,
+      max: 60,
       safe: { above: 30 },
-      warning: "LinkedIn restricts accounts that send much more than 30 invitations a day.",
-      override: "Each account can set its own limit in LinkedIn → Accounts.",
+      warning: "一天加超过 30 人，触发企微风控的概率明显上升。",
+      override: "每个账号可以在「设置 → 企业微信 → 账号」里单独设上限。",
     },
     {
-      key: "invitesPerDayFree",
-      kind: "number",
-      label: "Invitations per day, free accounts",
-      help: "Connection requests one free LinkedIn account sends a day.",
-      unit: "invitations / day",
-      default: 5,
+      key: "messageGapMinutes",
+      kind: "range",
+      label: "同一账号两条消息之间的间隔",
+      help: "每条消息发出后在这个区间内随机等待，避免整点批量发出。",
+      unit: "分钟",
+      default: [1, 3],
       min: 1,
-      max: 50,
-      safe: { above: 10 },
-      warning: "Free accounts have a much smaller weekly invitation allowance; more than 10 a day uses it up fast.",
-      override: "Each account can set its own limit in LinkedIn → Accounts.",
+      max: 60,
+      safe: { below: 1 },
+      warning: "间隔不到 1 分钟的连续消息很容易被识别为群发工具。",
     },
-    {
-      key: "invitesPerRun",
-      kind: "range",
-      label: "Invitations per run",
-      help: "Each sending run sends a random number of invitations in this range, then the account rests.",
-      unit: "invitations",
-      default: [3, 4],
-      min: 1,
-      max: 20,
-      safe: { above: 8 },
-      warning: "Large bursts look automated; keep runs small and frequent.",
-    },
-    {
-      key: "inviteDelaySeconds",
-      kind: "range",
-      label: "Delay between invitations",
-      help: "Within a run, the wait between two invitations.",
-      unit: "seconds",
-      default: [30, 60],
-      min: 5,
-      max: 600,
-      safe: { below: 20 },
-      warning: "Invitations less than 20 seconds apart look automated.",
-    },
-    {
-      key: "runGapMinutes",
-      kind: "range",
-      label: "Rest between runs",
-      help: "After a run, the account rests a random time in this range before the next one.",
-      unit: "minutes",
-      default: [30, 60],
-      min: 10,
-      max: 720,
-      safe: { below: 20 },
-      warning: "Resting less than 20 minutes between runs makes activity look continuous.",
-    },
-    {
-      key: "followUpsPerRun",
-      kind: "range",
-      label: "Follow-up messages per run",
-      help: "Messages to people who accepted, sent per run.",
-      unit: "messages",
-      default: [3, 6],
-      min: 1,
-      max: 30,
-      safe: { above: 10 },
-      warning: "Many messages in one burst look automated.",
-    },
-    {
-      key: "profileLookupsPerRun",
-      kind: "range",
-      label: "Profile lookups per run",
-      help: "Profiles opened per run to find the LinkedIn member behind a lead.",
-      unit: "profiles",
-      default: [4, 8],
-      min: 1,
-      max: 40,
-      safe: { above: 15 },
-      warning: "Viewing many profiles quickly can trigger LinkedIn's limits.",
-    },
-    {
-      key: "searchLeadsPerDay",
-      kind: "number",
-      label: "Search leads per day, per account",
-      help: "How many leads one account pulls from LinkedIn searches a day.",
-      unit: "leads / day",
-      default: 400,
-      min: 10,
-      max: 2500,
-      safe: { above: 1000 },
-      warning: "Heavy searching is one of the faster ways to have an account limited.",
-    },
-    {
-      key: "workingHours",
-      kind: "hours",
-      label: "Working hours for accounts without their own",
-      help: "Any time unless you set hours here. An account's own working hours (LinkedIn → Accounts) always win.",
-      default: null,
-      optional: true,
-    },
-    {
-      // Read by the CRM's automatic follow-up sender (src/lib/crm/autoFollowUps.ts).
-      key: "crmFollowUpGapMinutes",
-      kind: "number",
-      label: "Gap between automatic CRM follow-ups, per account",
-      help: "A CRM sequence set to send its follow-ups automatically sends at most one from each account in this time, oldest first, so follow-ups that fall due together go out spread over the day.",
-      unit: "minutes",
-      default: 30,
-      min: 5,
-      max: 720,
-      safe: { below: 15 },
-      warning: "Follow-ups less than 15 minutes apart from one account look automated.",
-    },
-  ],
-  whatsapp: [
     {
       key: "sendingHours",
       kind: "hours",
-      label: "Sending hours for campaigns and automatic follow-ups",
-      help: "Any time unless you set hours here. Campaign messages and automatic CRM follow-ups only go out inside these hours; messages you send yourself are not affected.",
-      default: null,
-      optional: true,
+      label: "企微发送时段",
+      help: "什么时间可以发消息。不要在深夜和清晨发，客户会直接拉黑。",
+      default: { timezone: "Asia/Shanghai", days: WORKDAYS_PLUS_SATURDAY, start: "09:00", end: "19:00" },
     },
     {
-      key: "warmupHours",
-      kind: "number",
-      label: "Warm-up after linking a number",
-      help: "A newly linked number replies to existing chats right away but starts no new chats for this long.",
-      unit: "hours",
-      default: 24,
-      min: 0,
-      max: 336,
-      safe: { below: 24 },
-      warning: "New numbers that message strangers on their first day are banned far more often.",
-    },
-    {
-      key: "newChatsPerDay",
-      kind: "number",
-      label: "New chats per day, per number",
-      help: "Conversations one number may start in a rolling day. Replies to people who wrote first are not counted.",
-      unit: "chats / day",
-      default: 25,
-      min: 1,
-      max: 200,
-      safe: { above: 25 },
-      warning: "WhatsApp bans numbers that start many chats with people who don't have them saved.",
-      override: "Each number can set its own limit in WhatsApp → Accounts.",
-    },
-    {
-      key: "secondsBetweenSends",
-      kind: "number",
-      label: "Seconds between messages, per number",
-      help: "The shortest gap between two messages sent from one number.",
-      unit: "seconds",
-      default: 10,
-      min: 3,
-      max: 600,
-      safe: { below: 10 },
-      warning: "Messages sent faster than every 10 seconds look automated.",
-    },
-    {
-      // Read by the CRM's automatic follow-up sender (src/lib/crm/autoFollowUps.ts).
       key: "crmFollowUpGapMinutes",
       kind: "number",
-      label: "Gap between automatic CRM follow-ups, per number",
-      help: "A CRM sequence set to send its follow-ups automatically sends at most one from each number in this time, oldest first, so follow-ups that fall due together go out spread over the day.",
-      unit: "minutes",
+      label: "同一账号两封自动跟进之间的间隔",
+      help: "企微里的自动跟进，每个账号在这段时间内最多发一条。",
+      unit: "分钟",
       default: 30,
       min: 5,
       max: 720,
       safe: { below: 15 },
-      warning: "Follow-ups less than 15 minutes apart from one number look automated.",
+      warning: "间隔太短，客户会感到被连续打扰。",
+    },
+  ],
+  sms: [
+    {
+      key: "dailySendLimit",
+      kind: "number",
+      label: "每个号码每天短信上限",
+      help: "一个发送号码一天最多发多少条。短信按条计费，也是投诉和封号的主要来源，宁少勿多。",
+      unit: "条 / 天",
+      default: 200,
+      min: 1,
+      max: 2000,
+      safe: { above: 500 },
+      warning: "单号码一天超过 500 条，运营商侧被拦截和投诉的概率会明显上升。",
+      override: "每个号码可以在「设置 → 短信 → 号码」里单独设上限。",
+    },
+    {
+      key: "sendGapMinutes",
+      kind: "range",
+      label: "同一号码两条短信之间的间隔",
+      help: "短信网关通常有自己的限速，这里控制的是我们主动放慢的节奏。",
+      unit: "分钟",
+      default: [1, 3],
+      min: 1,
+      max: 60,
+      safe: { below: 1 },
+      warning: "间隔太短会被网关限流，反而拖慢整体发送。",
+    },
+    {
+      key: "sendingHours",
+      kind: "hours",
+      label: "短信发送时段",
+      help: "营销短信有明确的时段要求：早 8 点前、晚 9 点后发送属于违规，会被投诉。",
+      default: { timezone: "Asia/Shanghai", days: [0, 1, 2, 3, 4, 5, 6], start: "09:00", end: "20:00" },
+    },
+  ],
+  call: [
+    {
+      key: "dailyCallLimit",
+      kind: "number",
+      label: "每个坐席每天外呼上限",
+      help: "一个销售一天最多拨打多少通。定得过高，接通率和记录质量都会掉。",
+      unit: "通 / 天",
+      default: 80,
+      min: 1,
+      max: 300,
+      safe: { above: 150 },
+      warning: "一天超过 150 通，多数团队的通话质量和 CRM 记录质量都会明显下降。",
+    },
+    {
+      key: "callGapMinutes",
+      kind: "range",
+      label: "两通电话之间的间隔",
+      help: "每通电话结束后等待一段时间再拨下一通，留出记录结果的时间。",
+      unit: "分钟",
+      default: [2, 5],
+      min: 1,
+      max: 60,
+      safe: { below: 1 },
+      warning: "间隔太短，销售来不及记录，线索会积压。",
+    },
+    {
+      key: "callHours",
+      kind: "hours",
+      label: "外呼时段",
+      help: "什么时间可以打电话。午休和晚上 8 点以后打，基本只会挨骂。",
+      default: { timezone: "Asia/Shanghai", days: WORKDAYS_PLUS_SATURDAY, start: "09:00", end: "18:00" },
     },
   ],
   general: [
@@ -318,23 +257,23 @@ export const CHANNEL_RULES = {
       // Read by the daily rollover (src/lib/scheduler/dailyRollover.ts).
       key: "timeZone",
       kind: "timezone",
-      label: "Time zone",
-      help: "Your organization's time zone. The new day below starts at that time here.",
-      default: "UTC",
+      label: "时区",
+      help: "组织所在时区。下面「新的一天从几点开始」按这个时区计算。",
+      default: "Asia/Shanghai",
     },
     {
       key: "dayStartsAt",
       kind: "time",
-      label: "New day starts at",
-      help: "Daily limits reset and the day's email queue is built at this time.",
+      label: "新的一天从几点开始",
+      help: "每日限额在这个时间重置，当天的发信队列也在这时生成。",
       default: "00:00",
     },
     {
       key: "defaultPhoneCountry",
       kind: "country",
-      label: "Default phone country",
-      help: "The country assumed for phone numbers typed or imported without a + and country code.",
-      default: "",
+      label: "默认电话国家",
+      help: "不带 + 和国家码的号码按这个国家解析。国内用 CN；保留海外业务时再改。",
+      default: "CN",
     },
   ],
 } as const satisfies Record<Channel, readonly Rule[]>;
@@ -387,42 +326,42 @@ export function isTimeZone(value: string): boolean {
 export function ruleError(rule: Rule, value: unknown): string | null {
   switch (rule.kind) {
     case "number": {
-      if (typeof value !== "number" || !Number.isInteger(value)) return `${rule.label} must be a whole number`;
-      if (value < rule.min || value > rule.max) return `${rule.label} must be between ${rule.min} and ${rule.max}`;
+      if (typeof value !== "number" || !Number.isInteger(value)) return `${rule.label}必须是一个整数`;
+      if (value < rule.min || value > rule.max) return `${rule.label}要在 ${rule.min} 到 ${rule.max} 之间`;
       return null;
     }
     case "range": {
       if (!Array.isArray(value) || value.length !== 2 || !value.every((n) => typeof n === "number" && Number.isInteger(n))) {
-        return `${rule.label} needs a lowest and a highest whole number`;
+        return `${rule.label}需要一个最小值和最大值（都是整数）`;
       }
       const [lo, hi] = value as [number, number];
-      if (lo < rule.min || hi > rule.max) return `${rule.label} must stay between ${rule.min} and ${rule.max}`;
-      if (lo > hi) return `${rule.label}: the lowest value can't be above the highest`;
+      if (lo < rule.min || hi > rule.max) return `${rule.label}要落在 ${rule.min} 到 ${rule.max} 之间`;
+      if (lo > hi) return `${rule.label}：最小值不能大于最大值`;
       return null;
     }
     case "hours": {
       if (value === null && rule.optional) return null;
       const h = value as Partial<WeeklyHours> | null;
-      if (!h || typeof h !== "object") return `${rule.label} is not valid`;
-      if (typeof h.timezone !== "string" || !isTimeZone(h.timezone)) return `${rule.label}: unknown time zone`;
+      if (!h || typeof h !== "object") return `${rule.label}格式不对`;
+      if (typeof h.timezone !== "string" || !isTimeZone(h.timezone)) return `${rule.label}：时区不认识`;
       if (!Array.isArray(h.days) || !h.days.length || !h.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)) {
-        return `${rule.label}: pick at least one day`;
+        return `${rule.label}：至少选一天`;
       }
       if (typeof h.start !== "string" || !HHMM.test(h.start) || typeof h.end !== "string" || !HHMM.test(h.end)) {
-        return `${rule.label}: times must look like 09:00`;
+        return `${rule.label}：时间要写成 09:00 这种格式`;
       }
-      if (h.start >= h.end) return `${rule.label}: the end must be after the start`;
+      if (h.start >= h.end) return `${rule.label}：结束时间要晚于开始时间`;
       return null;
     }
     case "country": {
       if (value === "") return null;
-      if (typeof value !== "string" || !COUNTRY.test(value)) return `${rule.label} must be a two-letter country code, like IN or US`;
+      if (typeof value !== "string" || !COUNTRY.test(value)) return `${rule.label}必须是两位国家码，比如 CN`;
       return null;
     }
     case "timezone":
-      return typeof value === "string" && value !== "" && isTimeZone(value) ? null : `${rule.label}: unknown time zone`;
+      return typeof value === "string" && value !== "" && isTimeZone(value) ? null : `${rule.label}：时区不认识`;
     case "time":
-      return typeof value === "string" && HHMM.test(value) ? null : `${rule.label}: times must look like 09:00`;
+      return typeof value === "string" && HHMM.test(value) ? null : `${rule.label}：时间要写成 09:00 这种格式`;
   }
 }
 
@@ -465,7 +404,7 @@ export function validateValues(channel: Channel, input: Record<string, unknown>)
   const values: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     const rule = known.get(key);
-    if (!rule) return { ok: false, error: `Unknown setting: ${key}` };
+    if (!rule) return { ok: false, error: `未知的设置项：${key}` };
     const error = ruleError(rule, value);
     if (error) return { ok: false, error };
     values[key] = normalize(rule, value);

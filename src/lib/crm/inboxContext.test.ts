@@ -29,33 +29,33 @@ const step = (overrides: Partial<InboxCrmStep> = {}): InboxCrmStep => ({
 
 describe("inboxCrmStepLabel", () => {
   test("workflow state wins over the step", () => {
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "closed", step: step() }), NOW), "Closed");
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "paused" }), NOW), "Paused");
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "error" }), NOW), "Needs attention");
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "classifying" }), NOW), "Classifying");
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "unclassified" }), NOW), "Classifying");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "closed", step: step() }), NOW), "已关闭");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "paused" }), NOW), "已暂停");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "error" }), NOW), "需要处理");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "classifying" }), NOW), "识别中");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "unclassified" }), NOW), "识别中");
   });
 
   test("no run: falls back to the draft flag", () => {
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "action_required", hasDraft: true }), NOW), "Reply drafted");
-    assert.equal(inboxCrmStepLabel(summary({ workflowState: "idle" }), NOW), "No next step");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "action_required", hasDraft: true }), NOW), "回复已起草");
+    assert.equal(inboxCrmStepLabel(summary({ workflowState: "idle" }), NOW), "暂无下一步");
   });
 
   test("reply step drafted or drafting", () => {
     const reply = step({ position: 1, type: "reply", name: "Reply" });
-    assert.equal(inboxCrmStepLabel(summary({ step: { ...reply, status: "awaiting_review" } }), NOW), "Reply drafted");
-    assert.equal(inboxCrmStepLabel(summary({ step: { ...reply, status: "drafting" } }), NOW), "Reply drafting");
-    assert.equal(inboxCrmStepLabel(summary({ step: { ...reply, status: "failed" } }), NOW), "Reply failed");
+    assert.equal(inboxCrmStepLabel(summary({ step: { ...reply, status: "awaiting_review" } }), NOW), "回复已起草");
+    assert.equal(inboxCrmStepLabel(summary({ step: { ...reply, status: "drafting" } }), NOW), "回复起草中");
+    assert.equal(inboxCrmStepLabel(summary({ step: { ...reply, status: "failed" } }), NOW), "回复失败");
   });
 
   test("follow-up numbering is position minus the reply step", () => {
-    assert.equal(inboxCrmStepLabel(summary({ step: step({ position: 3, status: "awaiting_review" }) }), NOW), "Follow-up 2 drafted");
+    assert.equal(inboxCrmStepLabel(summary({ step: step({ position: 3, status: "awaiting_review" }) }), NOW), "第 2 次跟进已起草");
   });
 
   test("scheduled follow-up reports relative due time", () => {
-    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: "2026-09-22T12:00:00Z" }) }), NOW), "Follow-up 1 due in 3d");
-    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: "2026-09-19T15:30:00Z" }) }), NOW), "Follow-up 1 due in 4h");
-    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: "2026-09-19T11:00:00Z" }) }), NOW), "Follow-up 1 due now");
-    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: null }) }), NOW), "Follow-up 1 scheduled");
+    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: "2026-09-22T12:00:00Z" }) }), NOW), "第 1 次跟进·3 天后到期");
+    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: "2026-09-19T15:30:00Z" }) }), NOW), "第 1 次跟进·4 小时后到期");
+    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: "2026-09-19T11:00:00Z" }) }), NOW), "第 1 次跟进·现在到期");
+    assert.equal(inboxCrmStepLabel(summary({ step: step({ dueAt: null }) }), NOW), "第 1 次跟进已排期");
   });
 });

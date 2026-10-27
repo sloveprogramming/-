@@ -7,11 +7,11 @@ import * as Badge from "@/components/alignui/badge";
 import * as Button from "@/components/alignui/button";
 import * as Modal from "@/components/alignui/modal";
 import * as Select from "@/components/alignui/select";
-import { WHATSAPP_CAMPAIGN_IMPORT_FIELDS } from "@/lib/whatsapp/campaigns/contract";
 
-type Channel = "email" | "linkedin" | "whatsapp";
+// 改造：只保留邮件活动导入。LinkedIn / WhatsApp 两种映射随频道删除。
 
-const CHANNEL_NAME: Record<Channel, string> = { email: "email", linkedin: "LinkedIn", whatsapp: "WhatsApp" };
+type Channel = "email";
+const CHANNEL_NAME: Record<Channel, string> = { email: "邮件" };
 type Preview = {
   headers: string[];
   rows: string[][];
@@ -32,21 +32,6 @@ const FIELDS: Record<Channel, { key: string; label: string; required?: boolean }
     { key: "companyDomain", label: "Company domain" },
     { key: "companyLinkedinUrl", label: "Company LinkedIn" },
   ],
-  linkedin: [
-    { key: "linkedinUrl", label: "LinkedIn URL or provider ID", required: true },
-    { key: "linkedinApi", label: "LinkedIn source type" },
-    { key: "email", label: "Email" },
-    { key: "firstName", label: "First name" },
-    { key: "lastName", label: "Last name" },
-    { key: "name", label: "Full name" },
-    { key: "headline", label: "Job title / headline" },
-    { key: "companyName", label: "Company name" },
-    { key: "companyDomain", label: "Company domain" },
-    { key: "companyLinkedinUrl", label: "Company LinkedIn" },
-    { key: "location", label: "Location" },
-    { key: "profilePictureUrl", label: "Profile picture URL" },
-  ],
-  whatsapp: WHATSAPP_CAMPAIGN_IMPORT_FIELDS.map((field) => ({ key: field.key, label: field.label, ...("required" in field ? { required: true } : {}) })),
 };
 
 function exampleFor(header: string | undefined, preview: Preview): string {
@@ -282,13 +267,6 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
                     })}
                   </div>
                 </div>
-
-                {channel === "linkedin" ? (
-                  <p className="mt-4 rounded-xl bg-information-lighter px-3.5 py-3 text-paragraph-xs text-information-dark ring-1 ring-inset ring-information-light">
-                    <span className="font-semibold">LinkedIn source type is not a profile ID.</span>{" "}
-                    Map it only when a CSV column contains <span className="font-mono">sales_navigator</span> or <span className="font-mono">recruiter</span>. For regular LinkedIn profile URLs, leave it unmapped.
-                  </p>
-                ) : null}
 
                 <p className="mt-4 rounded-xl bg-information-lighter px-3.5 py-3 text-paragraph-xs text-information-dark ring-1 ring-inset ring-information-light">
                   Mapped profile fields update People and Company. Unmapped CSV columns are preserved in People raw data and remain available as template variables. Duplicate identities are merged{channel === "email" ? ", and suppressed recipients are skipped" : ""}.

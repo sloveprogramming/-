@@ -26,7 +26,6 @@
 
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { whatsappChats, whatsappMessages } from "@/lib/whatsapp/schema";
 import { currentOrganizationId, inOrg } from "@/lib/tenancy/scope";
 import { updateCrmAiInstructions } from "@/lib/crm/aiSettings";
 import { createKnowledgeDocument } from "@/lib/crm/knowledge-service";
@@ -356,7 +355,7 @@ export async function seedCrmSetup(ctx: DemoContext): Promise<void> {
 // Words: what the (fake) model writes
 // ===========================================================================
 
-type Chan = "email" | "linkedin" | "whatsapp";
+type Chan = "email";
 
 type CopyKey =
   | "meeting" | "demo" | "info" | "case" | "trial" | "nurture" | "using" | "poc" | "other"
@@ -817,8 +816,6 @@ const HANDWRITTEN: Record<Chan, string[]> = {
     "Hi {first},\n\nThanks, and sorry for the long reply earlier. Short version: yes, we can do this, and the quickest way is a 20-minute call. Tell me what suits you this week and I'll send an invite.\n\n{rep}",
     "Hi {first},\n\nAppreciate the reply. I'd rather not send you more text: can we do 15 minutes this week? You pick the time.\n\n{rep}",
   ],
-  linkedin: ["Thanks {first}. Easiest is a quick call, you pick the time this week and I'll send an invite."],
-  whatsapp: ["Thanks {first}, easiest is a quick call. Tell me a time that suits and I'll make it work."],
 };
 
 // ===========================================================================
@@ -1295,7 +1292,7 @@ function copyCtx(env: Env, p: Plan, at: Date, variantShift = 0): CopyCtx {
     industry: p.person.company.industry,
     title: p.person.title,
     rep: TEAM[p.reply.rep].first,
-    channel: p.reply.channel,
+    channel: p.reply.channel as Chan,
     tz: tzLabel(p.person),
     inbound: inbound?.body ?? "",
     subject: inbound?.subject ?? null,
@@ -1377,33 +1374,6 @@ function sendStub(env: Env, p: Plan, at: Date): CrmSendAdapter {
   return async (input) => {
     const id = `${env.hex()}`;
     const sentAt = new Date(at.getTime() + 4000);
-    if (input.channel === "whatsapp") {
-      // What the real delivery does besides sending: the Messages tab gets the message.
-      const [chat] = input.providerThreadId
-        ? await db.select().from(whatsappChats).where(eq(whatsappChats.unipileChatId, input.providerThreadId)).limit(1)
-        : [];
-      let whatsappMessageId: string | null = null;
-      if (chat) {
-        const [row] = await db.insert(whatsappMessages).values({
-          chatId: chat.id, unipileMessageId: `demo-wa-${id}`, direction: "outbound", origin: "agentsdr",
-          body: input.bodyText, sentAt, deliveredAt: new Date(sentAt.getTime() + 2000), readAt: null, createdAt: sentAt,
-        }).returning({ id: whatsappMessages.id });
-        whatsappMessageId = row?.id ?? null;
-        await db.update(whatsappChats).set({
-          lastMessageAt: sentAt, lastMessagePreview: input.bodyText.slice(0, 120), lastDirection: "outbound", unreadCount: 0, updatedAt: sentAt,
-        }).where(eq(whatsappChats.id, chat.id));
-      }
-      return {
-        provider: "unipile", providerMessageId: `demo-wa-${id}`, providerThreadId: input.providerThreadId, rfcMessageId: null,
-        response: { messageId: `demo-wa-${id}`, chatId: input.providerThreadId, ...(whatsappMessageId ? { whatsappMessageId } : {}) },
-      };
-    }
-    if (input.channel === "linkedin") {
-      return {
-        provider: "unipile", providerMessageId: `demo-li-${id}`, providerThreadId: input.providerThreadId, rfcMessageId: null,
-        response: { message_id: `demo-li-${id}`, chat_id: input.providerThreadId },
-      };
-    }
     return {
       provider: "gmail", providerMessageId: `demo-gm-${id}`, providerThreadId: input.providerThreadId, rfcMessageId: `<demo.${id}@mail.northwind.example>`,
       response: { id: `demo-gm-${id}`, threadId: input.providerThreadId },
@@ -1540,7 +1510,7 @@ async function runRecord(env: Env, p: Plan): Promise<void> {
     const tDiscard = cap(env, mono(tDraft, atWork(p, new Date(tDraft.getTime() + (30 + cursor.next() * 400) * MINUTE), cursor.next())));
     await phase(p, tDiscard, () => discardDraft({ draftId: draft!.id, actorRef: actor }));
     const tManual = cap(env, new Date(tDiscard.getTime() + (4 + cursor.next() * 12) * MINUTE));
-    const bank = HANDWRITTEN[p.reply.channel];
+    const bank = HANDWRITTEN[p.reply.channel as Chan];
     const manualBody = bank[p.variant % bank.length].replaceAll("{first}", p.person.firstName).replaceAll("{rep}", TEAM[p.reply.rep].first);
     const inbound = env.inbound.get(p.reply.messageId);
     const subject = p.reply.channel === "email" ? (inbound?.subject ? (/^re:/i.test(inbound.subject) ? inbound.subject : `Re: ${inbound.subject}`) : `Re: Northwind Signal for ${p.person.company.name}`) : null;

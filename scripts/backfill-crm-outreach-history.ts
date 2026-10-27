@@ -41,8 +41,9 @@ async function main() {
 
   const totals: Record<CrmChannel, ChannelTotals> = {
     email: { conversations: 0, inserted: 0 },
-    linkedin: { conversations: 0, inserted: 0 },
-    whatsapp: { conversations: 0, inserted: 0 },
+    wecom: { conversations: 0, inserted: 0 },
+    sms: { conversations: 0, inserted: 0 },
+    call: { conversations: 0, inserted: 0 },
   };
 
   for (const conversation of conversations) {

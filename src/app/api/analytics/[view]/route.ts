@@ -2,22 +2,19 @@ import type { NextRequest } from "next/server";
 import { authContextErrorResponse, withOrgContext } from "@/lib/auth/context";
 import { ANALYTICS_VIEWS, type AnalyticsRange, type AnalyticsResponse, type AnalyticsView } from "@/lib/analytics/contract";
 import { getEmailAnalytics } from "@/lib/analytics/email.server";
-import { getLinkedinAnalytics } from "@/lib/analytics/linkedin.server";
 import { getOverviewAnalytics } from "@/lib/analytics/overview.server";
 import { AnalyticsRangeError, parseAnalyticsRange } from "@/lib/analytics/server";
-import { getWhatsappAnalytics } from "@/lib/analytics/whatsapp.server";
 
 export const dynamic = "force-dynamic";
 
+// 改造：linkedin / whatsapp 两个视图随频道删除，只剩总览与邮件。
 const LOADERS: Record<AnalyticsView, (range: AnalyticsRange) => Promise<AnalyticsResponse>> = {
   overview: getOverviewAnalytics,
   email: getEmailAnalytics,
-  linkedin: getLinkedinAnalytics,
-  whatsapp: getWhatsappAnalytics,
 };
 
 /**
- * GET /api/analytics/{overview|email|linkedin|whatsapp}?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=Area/City
+ * GET /api/analytics/{overview|email}?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=Area/City
  * Behind the site auth like every other /api route (src/proxy.ts).
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ view: string }> }) {

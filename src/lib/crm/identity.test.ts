@@ -10,7 +10,7 @@ function exception(overrides: Partial<IdentityException>): IdentityException {
   return {
     id: "00000000-0000-4000-8000-000000000001",
     organizationId: "00000000-0000-0000-0000-00000000000a",
-    channel: "linkedin",
+    channel: "email",
     accountRef: "account-1",
     sourceEventKey: "event-1",
     identityValue: "provider-1",
@@ -26,14 +26,14 @@ function exception(overrides: Partial<IdentityException>): IdentityException {
 }
 
 describe("CRM identity exception replay", () => {
-  it("rebuilds a LinkedIn inbound event for the selected Person", () => {
+  it("rebuilds an inbound event for the selected Person", () => {
+    // 改造：LinkedIn / WhatsApp 的重放分支随频道删除，这里用邮件载荷验证同一条路径。
     const input = identityExceptionReplayInput(exception({
       payload: {
-        providerId: "provider-1",
-        chatId: "chat-1",
-        linkedinMessageId: "message-1",
-        messageText: "Interested",
-        sentAt: "2026-09-02T11:30:00.000Z",
+        vendorLeadId: "provider-1",
+        messageId: "message-1",
+        replyBody: "Interested",
+        repliedAt: "2026-09-02T11:30:00.000Z",
       },
     }), "00000000-0000-4000-8000-000000000002");
 
@@ -49,9 +49,9 @@ describe("CRM identity exception replay", () => {
       actorRef: input.actorRef,
     }, {
       personId: "00000000-0000-4000-8000-000000000002",
-      channel: "linkedin",
+      channel: "email",
       accountRef: "account-1",
-      providerThreadId: "chat-1",
+      providerThreadId: undefined,
       providerContactId: "provider-1",
       providerMessageId: "message-1",
       idempotencyKey: "event-1",
@@ -91,7 +91,7 @@ describe("CRM identity exception replay", () => {
   it("refuses to close an exception whose stored payload cannot be replayed", () => {
     assert.throws(
       () => identityExceptionReplayInput(exception({ payload: {} }), "00000000-0000-4000-8000-000000000002"),
-      /LinkedIn message text is missing/,
+      /email reply text is missing/,
     );
   });
 });

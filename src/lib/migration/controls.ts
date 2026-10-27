@@ -13,23 +13,25 @@
 
 type Environment = Record<string, string | undefined>;
 
+/**
+ * 改造：LinkedIn / WhatsApp 两个出口开关随频道删除；国内渠道对应位置先占好，
+ * 企业微信、短信、外呼的发送引擎接入时直接用。
+ */
 export type MigrationControl =
   | "emailOutbound"
-  | "linkedinOutbound"
-  | "whatsappOutbound"
+  | "wecomOutbound"
+  | "smsOutbound"
+  | "callOutbound"
   | "crmAutoSend"
-  | "linkedinResolution"
-  | "linkedinSearch"
   | "gridWorker";
 
 const CONTROL_ENV: Record<MigrationControl, string> = {
   emailOutbound: "PAUSE_EMAIL_OUTBOUND",
-  linkedinOutbound: "PAUSE_LINKEDIN_OUTBOUND",
-  whatsappOutbound: "PAUSE_WHATSAPP_OUTBOUND",
+  wecomOutbound: "PAUSE_WECOM_OUTBOUND",
+  smsOutbound: "PAUSE_SMS_OUTBOUND",
+  callOutbound: "PAUSE_CALL_OUTBOUND",
   /** Automatic CRM follow-ups (src/lib/crm/autoFollowUps.ts); drafts wait until it is lifted. */
   crmAutoSend: "PAUSE_CRM_AUTOSEND",
-  linkedinResolution: "PAUSE_LINKEDIN_RESOLUTION",
-  linkedinSearch: "PAUSE_LINKEDIN_SEARCH",
   gridWorker: "PAUSE_GRID_WORKER",
 };
 
@@ -52,11 +54,6 @@ export function isMigrationControlPaused(
 
 const BLOCKED_MUTATION_PREFIXES = [
   "/api/grid/tables/", // enrichment runs and grid-to-campaign enrollment
-  "/api/linkedin/campaigns",
-  "/api/linkedin/jobs",
-  "/api/linkedin/leads",
-  "/api/linkedin/messages/send",
-  "/api/linkedin/search",
   "/api/outreach/campaigns",
   "/api/outreach/inbox/", // manual Email replies and draft approvals
   "/api/outreach/mailboxes/", // mailbox edits and test sends

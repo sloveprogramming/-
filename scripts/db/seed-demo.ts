@@ -134,8 +134,6 @@ async function main() {
     const { seedCore } = await import("./demo/core");
     const { seedCrmSetup, seedCrmOutcomes } = await import("./demo/crm");
     const { seedEmail } = await import("./demo/email");
-    const { seedLinkedin } = await import("./demo/linkedin");
-    const { seedWhatsapp } = await import("./demo/whatsapp");
     const { seedWorkspace } = await import("./demo/workspace");
     const { finalizeDemo } = await import("./demo/finalize");
 
@@ -143,8 +141,6 @@ async function main() {
     await step("team, companies and people", () => seedCore(ctx, owner.id));
     await step("CRM sequences, knowledge and instructions", () => seedCrmSetup(ctx));
     await step("email campaigns, mailboxes and replies", () => seedEmail(ctx));
-    await step("LinkedIn accounts, campaigns and conversations", () => seedLinkedin(ctx));
-    await step("WhatsApp numbers, chats, campaigns and calls", () => seedWhatsapp(ctx));
     await step("CRM classifications, pipeline and drafts", () => seedCrmOutcomes(ctx));
     await step("Tables and prospecting", () => seedWorkspace(ctx));
     await step("finishing touches", () => finalizeDemo(ctx));

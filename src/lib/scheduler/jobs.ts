@@ -1,6 +1,5 @@
 import "server-only";
 
-import { pruneJobHistory } from "@/jobs/resetDailyLimits";
 import { runCrmAutoFollowUps } from "@/lib/crm/autoFollowUps";
 import { pruneClaims } from "./claims";
 import type { PlatformJobName } from "./schedules";
@@ -29,7 +28,7 @@ export async function startPlatformJob(name: PlatformJobName): Promise<StartedJo
       return { body: { ok: true, summary }, done: finished };
     }
     case "history-prune": {
-      await pruneJobHistory();
+      // 改造：LinkedIn 的 JobRun / 订阅事件表随频道删除，这里只剩调度占位的清理。
       const prunedClaims = await pruneClaims();
       return { body: { ok: true, prunedClaims }, done: finished };
     }

@@ -22,13 +22,12 @@ import { createLimiter, inCurrentOrPreviousRange, inRange, num } from "./server"
  * contract.ts), so the funnel is not a cohort.
  */
 
-/** LinkedIn message types that are outbound touches (everything except RECEIVED). */
-const LINKEDIN_OUTBOUND = sql`('INVITATION', 'ACCEPTANCE', 'FOLLOW_UP_1', 'FOLLOW_UP_2', 'FOLLOW_UP_3', 'CUSTOM_SENT')`;
-
 /**
  * Every outbound touch in the current and previous period: (channel, person, ts).
- * WhatsApp messages skip history imported by backfill (same rule as
- * whatsapp.server.ts) and chats not linked to a person.
+ *
+ * 改造：原来这里 union 了三条流——邮件、LinkedIn 消息、WhatsApp 消息与通话。
+ * 后两条随频道删除。企业微信、短信、外呼接入后，按同样的形状各加一个 UNION ALL，
+ * 并把下面的 ch 换成对应渠道 key 即可。
  */
 function touches(range: AnalyticsRange) {
   const org = currentOrganizationId();
@@ -36,23 +35,7 @@ function touches(range: AnalyticsRange) {
     SELECT 'email'::text AS ch, l.person_id, e.sent_at AS ts
     FROM outreach_emails e JOIN outreach_leads l ON l.id = e.lead_id
     WHERE e.status = 'sent' AND ${inCurrentOrPreviousRange(sql`e.sent_at`, range)}
-      AND l.campaign_id IN (SELECT id FROM outreach_campaigns WHERE organization_id = ${org})
-    UNION ALL
-    SELECT 'linkedin', ld."personId", m."createdAt"
-    FROM "Message" m JOIN "Lead" ld ON ld.id = m."leadId"
-    WHERE m."organizationId" = ${org} AND ld."organizationId" = ${org} AND m.type IN ${LINKEDIN_OUTBOUND} AND m."duplicateOfMessageId" IS NULL
-      AND ${inCurrentOrPreviousRange(sql`m."createdAt"`, range)}
-    UNION ALL
-    SELECT 'whatsapp', s.person_id, s.created_at
-    FROM call_sessions s
-    WHERE s.organization_id = ${org} AND ${inCurrentOrPreviousRange(sql`s.created_at`, range)}
-    UNION ALL
-    SELECT 'whatsapp', c.person_id, m.sent_at
-    FROM whatsapp_messages m JOIN whatsapp_chats c ON c.id = m.chat_id
-    WHERE m.direction = 'outbound' AND c.person_id IS NOT NULL
-      AND c.account_id IN (SELECT id FROM whatsapp_accounts WHERE organization_id = ${org})
-      AND NOT (m.raw IS NULL AND m.origin <> 'agentsdr' AND m.created_at - m.sent_at > interval '1 hour')
-      AND ${inCurrentOrPreviousRange(sql`m.sent_at`, range)}`;
+      AND l.campaign_id IN (SELECT id FROM outreach_campaigns WHERE organization_id = ${org})`;
 }
 
 type PeopleRow = { cur: boolean; ch: string | null; people: number };
@@ -98,11 +81,10 @@ export async function getOverviewAnalytics(range: AnalyticsRange): Promise<Overv
           GROUP BY GROUPING SETS ((1), (1, 2))`),
       () =>
         // Account health; the CRM queues come from the CRM summary.
+        // 改造：LinkedIn / WhatsApp 账号的健康计数随频道删除，只剩发信邮箱。
         db.execute<Record<string, number>>(sql`
           SELECT
-            (SELECT count(*) FROM outreach_mailboxes WHERE organization_id = ${org} AND status = 'failed')::int AS mailboxes,
-            (SELECT count(*) FROM "LinkedInAccount" WHERE "organizationId" = ${org} AND status = 'DISCONNECTED')::int AS linkedin,
-            (SELECT count(*) FROM whatsapp_accounts WHERE organization_id = ${org} AND status <> 'connected')::int AS whatsapp`),
+            (SELECT count(*) FROM outreach_mailboxes WHERE organization_id = ${org} AND status = 'failed')::int AS mailboxes`),
     ],
   )]);
 

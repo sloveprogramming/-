@@ -4,7 +4,6 @@ import { formatAiInstructions } from "./ai/instructions";
 import { db } from "@/lib/db";
 import { companies, people } from "@/lib/leads/schema";
 import { generateCrmDraft, type DraftCompletion, type DraftRevisionRequest, type GenerateCrmDraftInput } from "./ai/draft";
-import { loadCallContextMessages } from "./callHistory";
 import { appendCrmEvent } from "./events";
 import { retrieveKnowledge } from "./knowledge";
 import { isPersonDoNotContact } from "./policies";
@@ -73,10 +72,8 @@ async function loadDraftSubject(
     .from(crmConversationMessages)
     .where(eq(crmConversationMessages.conversationId, conversationId))
     .orderBy(asc(crmConversationMessages.sentAt), asc(crmConversationMessages.id));
-  // A WhatsApp conversation also gets the lead's recent call summaries.
-  const calls = messages[0]?.channel === "whatsapp"
-    ? await loadCallContextMessages(tx, record.personId)
-    : [];
+  // 改造：WhatsApp 通话摘要随频道删除。外呼（电话）接入后，这里应该改为
+  // 取该客户最近的通话记录作为起草上下文。
 
   const [subcategory] = record.subcategoryId
     ? await tx.select().from(crmSubcategories).where(eq(crmSubcategories.id, record.subcategoryId)).limit(1)
@@ -128,7 +125,6 @@ async function loadDraftSubject(
         bodyText: message.bodyText,
         participants: messageParticipants(message),
       })),
-      ...calls,
     ],
     acceptedClassification: {
       categoryKey: record.categoryKey ?? "other",

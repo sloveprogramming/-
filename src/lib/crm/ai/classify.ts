@@ -47,22 +47,30 @@ const SYSTEM_PROMPT = [
 
 /**
  * What the classifier is told about channels whose messages read differently
- * from email. Empty for email and LinkedIn, so their prompts are unchanged.
+ * from email. Empty for email.
+ *
+ * 改造：原来讲的是 WhatsApp 聊天（简短、连着发几条）。国内渠道换成短信、企业微信
+ * 和电话记录，各自的"说话方式"不同——短信极短、企微口语化、电话是事后摘要，
+ * 分类器不被告知这些就会把"就俩字"当成冷淡。
  */
 export function classificationChannelNotes(
   input: Pick<ClassificationContextInput, "latestInboundMessage" | "recentConversation">,
 ): string[] {
   const channels = new Set([input.latestInboundMessage, ...input.recentConversation].map((message) => message.channel));
   const notes: string[] = [];
-  if (channels.has("whatsapp")) {
+  if (channels.has("sms")) {
     notes.push(
-      "channel 为 \"whatsapp\" 的是 WhatsApp 聊天消息：天生简短随意，常常连着发好几条。简短、用表情、或者没打招呼都不代表没兴趣；只看对方说了什么来判断意图。",
+      "channel 为 \"sms\" 的是手机短信：受字数限制，通常极短（「收到」「多少钱」「在忙」），没有称呼、没有标点、甚至只有两个字都是正常的。不要因为短就判断对方冷淡或不感兴趣，只看字面意思。",
     );
   }
-  // A call being classified itself (calls/leadStageRules.ts) carries its own framing.
-  if (channels.has("whatsapp_call") && input.latestInboundMessage.channel !== "whatsapp_call") {
+  if (channels.has("wecom")) {
     notes.push(
-      "channel 为 \"whatsapp_call\" 的消息是对销售与客户一通电话的摘要；它是背景材料，不是这次要分类的那条回复。",
+      "channel 为 \"wecom\" 的是企业微信聊天：口语化，常用语音转文字、表情和短句，经常连着发几条。缺少称呼或寒暄不代表不礼貌或没兴趣。",
+    );
+  }
+  if (channels.has("call")) {
+    notes.push(
+      "channel 为 \"call\" 的是对销售与客户一通电话的通话摘要：它是背景材料，用来理解上下文，本身不是这次要分类的那条回复。",
     );
   }
   return notes;

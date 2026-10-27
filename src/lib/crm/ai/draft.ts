@@ -267,8 +267,10 @@ export function draftJsonSchema(channel: CrmChannel): Record<string, unknown> {
           bodyHtml: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
         },
       };
-    case "linkedin":
-    case "whatsapp":
+    // 改造：企业微信、短信、电话三种草稿都没有主题行，也不需要 HTML。
+    case "wecom":
+    case "sms":
+    case "call":
       return {
         type: "object",
         additionalProperties: false,
@@ -279,8 +281,6 @@ export function draftJsonSchema(channel: CrmChannel): Record<string, unknown> {
           bodyHtml: { type: "null" },
         },
       };
-    default:
-      throw new Error(`Unsupported CRM draft channel: ${String(channel satisfies never)}`);
   }
 }
 
@@ -294,22 +294,30 @@ export function draftChannelConstraints(channel: CrmChannel): string[] {
         "Do not include threading headers or send instructions.",
         "Messages in recentConversation may list participants (from, to, cc). If others are copied on the thread, write so it reads correctly to all of them; the reply goes to the person and the rep may Cc the others.",
       ];
-    case "linkedin":
+    // 改造：三个国内渠道的约束按各自的实际形态写。短信按 70 字一条计费，写长
+    // 了会拆成多条、成本翻倍；企微是聊天口吻；电话是通话要点而不是书面语。
+    case "sms":
       return [
-        "Return subject as null. LinkedIn drafts never have a subject.",
-        "Return a plain-text body and bodyHtml as null.",
-        "Do not claim the message was sent or schedule it.",
+        "这是发给对方手机的短信，不是邮件。",
+        "subject 返回 null，bodyHtml 返回 null。",
+        "一条控制在 70 个汉字以内（超过会被拆成多条、按条计费），不要分段、不要落款、不要表情符号。",
+        "开头点明身份和来意，结尾给一个明确的动作（比如「方便的话回个电话」）。",
+        "不要声称消息已发送，也不要安排发送时间。",
       ];
-    case "whatsapp":
+    case "wecom":
       return [
-        "This is a WhatsApp chat message to the person's phone, not an email.",
-        "Return subject as null and bodyHtml as null. WhatsApp messages never have a subject.",
-        "Write a short, conversational plain-text message: one to four brief sentences, the way a person texts. No greeting line on its own, no sign-off, no signature block, no bullet lists or markdown headings.",
-        "Messages in recentConversation with channel \"whatsapp_call\" summarise a phone call with the person; you may refer to what was said on it.",
-        "Do not claim the message was sent or schedule it.",
+        "这是企业微信聊天消息，不是邮件。",
+        "subject 返回 null，bodyHtml 返回 null。",
+        "写短、说人话：一到四句，像同事之间发消息。不要单独的称呼行、不要落款、不要签名档、不要列表或 Markdown 标题。",
+        "不要声称消息已发送，也不要安排发送时间。",
       ];
-    default:
-      throw new Error(`Unsupported CRM draft channel: ${String(channel satisfies never)}`);
+    case "call":
+      return [
+        "这是一通电话，不是书面消息。这里的 bodyText 是给销售打这通电话用的「通话要点」，不是要念的稿子。",
+        "subject 返回 null，bodyHtml 返回 null。",
+        "写成 3-5 条要点：开场怎么自报家门、这次要确认什么、对方可能提的异议怎么接、结束时推进到哪一步。",
+        "要点要短，每条一句话，销售扫一眼就能打。",
+      ];
   }
 }
 
@@ -433,9 +441,7 @@ export function validateDraftOutput(raw: unknown, channel: CrmChannel): CrmDraft
     };
   }
 
-  if (channel !== "linkedin" && channel !== "whatsapp") {
-    throw new Error(`Unsupported CRM draft channel: ${String(channel satisfies never)}`);
-  }
+  // 改造：企业微信 / 短信 / 电话三种草稿都没有主题行，也没有 HTML 版本。
   const label = crmChannelLabel(channel);
   if (Object.hasOwn(value, "subject") && value.subject !== null) {
     throw new Error(`CRM ${label} draft subject must be null or absent`);

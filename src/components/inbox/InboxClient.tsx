@@ -53,7 +53,7 @@ import {
 } from "@/components/crm/InboxCrmStrip";
 import { crmFetch } from "@/components/crm/crm-utils";
 import type { InboxMessageRow } from "@/lib/inbox/queries";
-import { inboxCrmStepLabel, type InboxCrmContext } from "@/lib/linkedin/messages/crmContext";
+import { inboxCrmStepLabel, type InboxCrmContext } from "@/lib/crm/inboxContext";
 
 type ThreadResponse = {
   lead: {

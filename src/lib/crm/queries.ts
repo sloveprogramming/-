@@ -2,9 +2,9 @@ import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, sql } from
 import { db } from "@/lib/db";
 import { inboxContacts, inboxMessages } from "@/lib/inbox/schema";
 import { companies, people } from "@/lib/leads/schema";
-import { linkedInAccounts, leads as linkedinLeads, messages as linkedinMessages } from "@/lib/linkedin/schema";
+
 import { outreachEmails, outreachLeads } from "@/lib/outreach/schema";
-import { whatsappAccounts } from "@/lib/whatsapp/schema";
+
 import {
   crmClassifications,
   crmConversationMessages,
@@ -33,24 +33,10 @@ import { crmActionableSql, crmActionGroupSql } from "./actionGroups.server";
 import { inOrg } from "@/lib/tenancy/scope";
 
 /**
- * LinkedIn outreach predates the CRM: the invitation note, the acceptance
- * message and every follow-up live in the LinkedIn "Message" table and were
- * never copied into crm_conversation_messages, which only ever received the
- * inbound reply that opened the record plus whatever the CRM sent back. The
- * record timeline merges both at read time rather than backfilling, so the
- * LinkedIn tables stay the hand-maintained ones CLAUDE.md describes.
+ * 改造：原来这里维护 LinkedIn 消息类型（邀请、通过、三次跟进）到中文/英文标签
+ * 的映射，用来把领英私信并入记录时间线。LinkedIn 频道删除后这套常量一并去掉；
+ * 记录时间线现在由 crm_conversation_messages + 邮件活动发送 + 收件箱三部分组成。
  */
-const LINKEDIN_OUTBOUND_TYPES = new Set(["INVITATION", "ACCEPTANCE", "FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3", "CUSTOM_SENT"]);
-
-const LINKEDIN_TYPE_LABELS: Record<string, string> = {
-  INVITATION: "Invitation",
-  ACCEPTANCE: "Acceptance",
-  FOLLOW_UP_1: "Follow-up 1",
-  FOLLOW_UP_2: "Follow-up 2",
-  FOLLOW_UP_3: "Follow-up 3",
-  CUSTOM_SENT: "Sent",
-  RECEIVED: "Received",
-};
 
 /**
  * Column sets for list reads. The classifier and drafter store their full LLM
@@ -283,13 +269,7 @@ export async function listCrmActions(input: CrmActionFilters = {}) {
           : draft?.status === "awaiting_review"
             ? draftStep?.stepType === "follow_up" ? "Follow-up review" : "Reply review"
             : row.record.nextActionAt && row.record.nextActionAt <= new Date()
-              // Due from WhatsApp Calling (calls/crmFollowUp.ts) — a call-only
-              // record, with no reply on it: the rep calls or messages them;
-              // there is no draft to review. A WhatsApp reply makes the record
-              // inbound-driven, and it is labelled like any other from then on.
-              ? row.record.activeChannel === "whatsapp" && !row.record.latestInboundMessageId
-                ? "WhatsApp follow-up"
-                : "Due follow-up"
+              ? "Due follow-up"
               : !run
                 ? "No sequence assigned"
                 : "Human review";
@@ -351,7 +331,7 @@ export async function getCrmRecordWorkspace(recordId: string) {
   const personIdOfRecord = db.select({ personId: crmRecords.personId }).from(crmRecords).where(and(inOrg(crmRecords), eq(crmRecords.id, recordId)));
   const personEmailOfRecord = db.select({ email: sql<string>`lower(${people.email})` }).from(crmRecords)
     .innerJoin(people, eq(people.id, crmRecords.personId)).where(and(inOrg(crmRecords), eq(crmRecords.id, recordId)));
-  const [headers, conversations, messages, classifications, events, runs, drafts, stepRuns, citations, attempts, linkedinHistory, linkedinAccounts, emailOutreach, inboxHistory] = await Promise.all([
+  const [headers, conversations, messages, classifications, events, runs, drafts, stepRuns, citations, attempts, emailOutreach, inboxHistory] = await Promise.all([
     db.select({ record: crmRecords, person: people, company: companies, subcategory: crmSubcategories, policy: crmPersonContactPolicies })
       .from(crmRecords)
       .innerJoin(people, eq(people.id, crmRecords.personId))
@@ -388,28 +368,12 @@ export async function getCrmRecordWorkspace(recordId: string) {
       .innerJoin(crmDrafts, eq(crmDrafts.id, crmSendAttempts.draftId))
       .where(eq(crmDrafts.crmRecordId, recordId)).orderBy(desc(crmSendAttempts.createdAt))
       .then((rows) => rows.map((row) => row.attempt)),
-    db.select({ message: linkedinMessages })
-      .from(linkedinMessages)
-      .innerJoin(linkedinLeads, eq(linkedinLeads.id, linkedinMessages.leadId))
-      .where(and(
-        inOrg(linkedinLeads),
-        eq(linkedinLeads.personId, personIdOfRecord),
-        isNull(linkedinMessages.duplicateOfMessageId),
-      ))
-      .orderBy(asc(linkedinMessages.createdAt)),
-    // accountRef is the address for email but a Unipile account id for
-    // LinkedIn, which is unreadable in a "send through" picker. Resolve those
-    // ids to the sending profile so both channels name the account the way a
-    // person would.
-    db.selectDistinct({ linkedinId: linkedInAccounts.linkedinId, username: linkedInAccounts.username, name: linkedInAccounts.name, profilePictureUrl: linkedInAccounts.profilePictureUrl })
-      .from(linkedInAccounts)
-      .innerJoin(crmConversations, and(eq(crmConversations.accountRef, linkedInAccounts.linkedinId), eq(crmConversations.channel, "linkedin")))
-      .where(and(inOrg(linkedInAccounts), inOrg(crmConversations), eq(crmConversations.crmRecordId, recordId))),
-    // Email has the same split LinkedIn does: campaign sends live in
-    // outreach_emails and Master Inbox traffic in crm_messages, and only what
-    // arrived after the CRM started backfilling made it into
+    // Email has the same split the old LinkedIn channel did: campaign sends
+    // live in outreach_emails and Master Inbox traffic in crm_messages, and
+    // only what arrived after the CRM started backfilling made it into
     // crm_conversation_messages. Read both here so the thread is the whole
     // relationship, then drop whatever the CRM already holds.
+    // 改造：LinkedIn / WhatsApp 两条历史流随频道删除。
     db.select({
       id: outreachEmails.id, subject: outreachEmails.subject, body: outreachEmails.body, messageId: outreachEmails.messageId,
       sentAt: outreachEmails.sentAt, stepNumber: outreachEmails.stepNumber, campaignId: outreachLeads.campaignId, mailboxId: outreachEmails.mailboxId,
@@ -434,39 +398,17 @@ export async function getCrmRecordWorkspace(recordId: string) {
 
   const latestClassification = classifications[0] ?? null;
   const currentDraft = drafts.find((draft) => ["awaiting_review", "failed", "delivery_uncertain"].includes(draft.status)) ?? null;
-  const linkedinAccountByRef = new Map(linkedinAccounts.map((account) => [account.linkedinId, account]));
-  // WhatsApp's accountRef is a Unipile account id too; name it by the rep's
-  // number. Only read when the record has a WhatsApp conversation.
-  const whatsappRefs = [...new Set(conversations.filter((conversation) => conversation.channel === "whatsapp").map((conversation) => conversation.accountRef))];
-  const whatsappAccountRows = whatsappRefs.length
-    ? await db.select({ unipileAccountId: whatsappAccounts.unipileAccountId, name: whatsappAccounts.name, phone: whatsappAccounts.phone })
-      .from(whatsappAccounts).where(and(inOrg(whatsappAccounts), inArray(whatsappAccounts.unipileAccountId, whatsappRefs)))
-    : [];
-  const whatsappAccountByRef = new Map(whatsappAccountRows.map((account) => [account.unipileAccountId, account]));
+  // 改造：账号名原来要查 LinkedIn / WhatsApp 的账号表（accountRef 是渠道侧的 id）。
+  // 现在账号的唯一来源是发信邮箱，地址本身就是可读的，不再需要额外的解析查询。
+  // 企业微信、短信、外呼接入后，各自在这里加一段解析（用各自的号码/账号表）。
   const conversationAccount = (conversation: (typeof conversations)[number]) => {
     switch (conversation.channel) {
       case "email":
         return { label: conversation.accountRef, name: conversation.accountRef, avatarUrl: null };
-      case "linkedin": {
-        const account = linkedinAccountByRef.get(conversation.accountRef);
-        return {
-          label: account
-            ? [account.name, account.username && `@${account.username}`].filter(Boolean).join(" · ")
-            : "Unknown LinkedIn account",
-          name: account?.name ?? account?.username ?? null,
-          avatarUrl: account?.profilePictureUrl ?? null,
-        };
-      }
-      case "whatsapp": {
-        const account = whatsappAccountByRef.get(conversation.accountRef);
-        return {
-          label: account
-            ? [account.name, account.phone].filter(Boolean).join(" · ") || "WhatsApp number"
-            : "Unknown WhatsApp number",
-          name: account?.name ?? account?.phone ?? null,
-          avatarUrl: null,
-        };
-      }
+      case "wecom":
+      case "sms":
+      case "call":
+        return { label: conversation.accountRef, name: conversation.accountRef, avatarUrl: null };
     }
   };
   const conversationsWithMessages = conversations.map((conversation) => {
@@ -483,12 +425,9 @@ export async function getCrmRecordWorkspace(recordId: string) {
       })),
     };
   });
-  // Every CRM LinkedIn row carries the provider id of its "Message" twin, so
-  // keying on it drops the duplicates without losing anything either side holds
-  // alone.
-  const storedProviderMessageIds = new Set(messages
-    .filter((message) => message.channel === "linkedin" && message.providerMessageId)
-    .map((message) => message.providerMessageId));
+  // 改造：原来这里按 LinkedIn 的 provider id 去重（同一条消息在 CRM 与
+  // "Message" 表各一份）。那个来源删掉后不再需要；下面 knownIds 已经覆盖了
+  // 邮件侧的去重。
   // Every id the CRM rows already carry, so a message reachable from two
   // stores shows once. Inbox inbound rows share the CRM message's
   // idempotency key; CRM-sent mail is mirrored into the inbox with the CRM
@@ -551,24 +490,6 @@ export async function getCrmRecordWorkspace(recordId: string) {
         label: "Inbox",
       }];
     }),
-    ...linkedinHistory
-      .filter(({ message }) => !message.linkedinMessageId || !storedProviderMessageIds.has(message.linkedinMessageId))
-      .map(({ message }) => ({
-        id: `linkedin-message:${message.id}`,
-        conversationId: null,
-        personId: header.record.personId,
-        channel: "linkedin" as const,
-        direction: LINKEDIN_OUTBOUND_TYPES.has(message.type) ? "outbound" as const : "inbound" as const,
-        subject: null,
-        body: message.text,
-        bodyText: message.text,
-        bodyHtml: null,
-        providerMessageId: message.linkedinMessageId,
-        sentAt: message.createdAt,
-        createdAt: message.createdAt,
-        source: "linkedin" as const,
-        label: LINKEDIN_TYPE_LABELS[message.type] ?? null,
-      })),
   ].sort((a, b) => new Date(a.sentAt ?? a.createdAt).getTime() - new Date(b.sentAt ?? b.createdAt).getTime());
   return {
     ...header.record,

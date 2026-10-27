@@ -2,12 +2,10 @@ import "server-only";
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { resetDailyLimits } from "@/jobs/resetDailyLimits";
 import { organizations } from "@/lib/auth/schema";
 import { resolveValues } from "@/lib/channels/rules";
 import { channelSettings } from "@/lib/channels/schema";
-import { startTrackedJob } from "@/lib/linkedin/jobTracker";
-import { serializeError } from "@/lib/linkedin/serializeError";
+import { serializeError } from "@/lib/errors";
 import { migrationMutationBlockReason } from "@/lib/migration/controls";
 import { buildMailboxQueues } from "@/lib/outreach/buildQueue";
 import { renewMailboxWatches } from "@/lib/outreach/mailboxWatch";
@@ -17,12 +15,14 @@ import { latestDailySlot } from "./slots";
 
 /**
  * The daily rollover: once per organization, at the start of that
- * organization's day (Settings → Organization → Time zone and New day starts
- * at, stored with the other organization defaults in channel_settings), it
+ * organization's day (Settings → 组织 → 时区 / 新的一天从几点开始, stored with
+ * the other organization defaults in channel_settings), it
  *
  *   a. builds the organization's email send queues (buildQueue.ts),
- *   b. renews its mailboxes' Gmail push watches (mailboxWatch.ts),
- *   c. resets its LinkedIn accounts' daily limits (resetDailyLimits).
+ *   b. renews its mailboxes' Gmail push watches (mailboxWatch.ts).
+ *
+ * 改造：原来还有第三步——重置 LinkedIn 账号的每日限额。LinkedIn 删除后这一步
+ * 没有了；将来企业微信/短信/外呼有自己的每日限额时，在这里加回来。
  *
  * Its slot is the instant the organization's current day began, so a
  * claim key is (`daily-rollover:<organization id>`, that instant) — DST-safe,
@@ -56,7 +56,7 @@ export async function organizationDays(now: Date): Promise<OrganizationDay[]> {
   });
 }
 
-/** Runs the three parts for one organization; each part's failure is reported, none stops the others. */
+/** Runs the two parts for one organization; each part's failure is reported, none stops the other. */
 export async function runDailyRollover(organizationId: string): Promise<{ summary: string; error: string | null }> {
   const notes: string[] = [];
   const errors: string[] = [];
@@ -69,8 +69,8 @@ export async function runDailyRollover(organizationId: string): Promise<{ summar
     errors.push(`email queue: ${serializeError(error)}`);
   }
 
-  // b and c are skipped whenever the proxy would refuse their endpoints to an
-  // external cron (PEOPLE_MIGRATION_MODE, PAUSE_CAMPAIGN_MUTATIONS).
+  // b is skipped whenever the proxy would refuse its endpoint to an external
+  // cron (PEOPLE_MIGRATION_MODE, PAUSE_CAMPAIGN_MUTATIONS).
   const watchBlocked = migrationMutationBlockReason("/api/outreach/mailboxes/watch", "POST");
   if (watchBlocked) {
     notes.push("gmail watch: paused");
@@ -81,21 +81,6 @@ export async function runDailyRollover(organizationId: string): Promise<{ summar
       notes.push(`gmail watch: ${watch.results.length - failed} renewed${failed ? `, ${failed} failed` : ""}${watch.skipped.length ? ` (${watch.skipped[0].reason})` : ""}`);
     } catch (error) {
       errors.push(`gmail watch: ${serializeError(error)}`);
-    }
-  }
-
-  const resetBlocked = migrationMutationBlockReason("/api/linkedin/jobs/reset-daily-limits", "POST");
-  if (resetBlocked) {
-    notes.push("linkedin reset: paused");
-  } else {
-    try {
-      // Tracked like the old daily reset, so it shows in LinkedIn Job History.
-      const { runId, done } = await startTrackedJob("reset-daily-limits", () => resetDailyLimits({ organizationId }));
-      const error = await done;
-      if (error) errors.push(`linkedin reset: ${error}`);
-      else notes.push(`linkedin reset: run ${runId}`);
-    } catch (error) {
-      errors.push(`linkedin reset: ${serializeError(error)}`);
     }
   }
 
