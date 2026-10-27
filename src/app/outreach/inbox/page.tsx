@@ -2,7 +2,7 @@ import InboxClient from "@/components/inbox/InboxClient";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Master Inbox" };
+export const metadata = { title: "收件箱" };
 
 export default function InboxPage() {
   return (

@@ -765,7 +765,7 @@ function Catalog({
     <>
       <label className="flex h-[58px] shrink-0 items-center gap-3 border-b border-stroke-soft-200 px-6">
         <RiSearchLine className="size-5 text-text-soft-400" />
-        <input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search providers and enrichments…" className="min-w-0 flex-1 text-[15px] outline-none placeholder:text-text-soft-400" />
+        <input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索服务商与补全数据…" className="min-w-0 flex-1 text-[15px] outline-none placeholder:text-text-soft-400" />
       </label>
       <div className="flex h-[54px] shrink-0 items-end gap-6 border-b border-stroke-soft-200 px-6">
         <span className="border-b-2 border-blue-600 px-1 pb-3 text-[14px] font-semibold text-blue-600 dark:text-blue-400">Integrations</span>

@@ -170,27 +170,27 @@ export default function CrmSequencesClient() {
     <>
       <PageHeader
         title="Sequences"
-        description="Reusable Email and LinkedIn reply flows for CRM subcategories. Every message waits for approval — nothing sends on its own."
+        description="给 CRM 子分类复用的邮件回复流程。每条消息都要人工批准，不会自动发出。"
         actions={
           <Button.Root variant="primary" mode="filled" size="small" disabled={Boolean(busyKey)} onClick={() => setShowCreate(true)}>
             <Button.Icon as={RiAddLine} />
-            Create sequence
+            新建序列
           </Button.Root>
         }
       />
 
       <KpiStrip className="mt-6" columns={3}>
         <KpiCell icon={RiSendPlaneLine} label="Published" value={loaded ? counts.published.toLocaleString() : "—"} context={loaded ? `${counts.draft} draft · ${counts.archived} archived` : undefined} hint="Only a published version runs. Editing a sequence changes its draft until you publish again." />
-        <KpiCell icon={RiGitBranchLine} label="In use" value={loaded ? inUse.toLocaleString() : "—"} context={loaded ? `Assigned to ${covered} subcategor${covered === 1 ? "y" : "ies"}` : undefined} hint="Sequences assigned to at least one subcategory in CRM Settings. A reply classified into that subcategory starts it." />
-        <KpiCell icon={RiLoopLeftLine} label="Not assigned" value={loaded ? Math.max(counts.all - counts.archived - inUse, 0).toLocaleString() : "—"} context="Built but not started by any subcategory" />
+        <KpiCell icon={RiGitBranchLine} label="使用中" value={loaded ? inUse.toLocaleString() : "—"} context={loaded ? `已分配给 ${covered} 个子分类` : undefined} hint="在 CRM 设置里分配给至少一个子分类的序列。回复被归到该子分类时会自动启动它。" />
+        <KpiCell icon={RiLoopLeftLine} label="未分配" value={loaded ? Math.max(counts.all - counts.archived - inUse, 0).toLocaleString() : "—"} context="已建好，但没有子分类使用" />
       </KpiStrip>
 
       {error && <div className="mt-5"><ErrorState message={error} onRetry={() => void load()} /></div>}
 
       <Frame className="mt-5">
         <FrameHeader
-          title="Sequence library"
-          description="Build once, publish a version, then assign it to subcategories from CRM Settings."
+          title="序列库"
+          description="建一次、发布一个版本，然后到 CRM 设置里分配给子分类。"
           actions={<>
             <SegmentedControl.Root value={tab} onValueChange={(value) => setTab(value as Tab)} className="w-full sm:w-auto">
               <SegmentedControl.List className="w-full sm:w-auto">
@@ -205,7 +205,7 @@ export default function CrmSequencesClient() {
             <Input.Root size="small" className="w-full sm:w-56">
               <Input.Wrapper>
                 <Input.Icon as={RiSearchLine} />
-                <Input.Input type="search" aria-label="Search sequences" placeholder="Search sequences…" value={search} onChange={(event) => setSearch(event.target.value)} />
+                <Input.Input type="search" aria-label="搜索序列" placeholder="搜索序列…" value={search} onChange={(event) => setSearch(event.target.value)} />
               </Input.Wrapper>
             </Input.Root>
           </>}
@@ -214,7 +214,7 @@ export default function CrmSequencesClient() {
           {!loaded && loading ? <RowsSkeleton rows={5} />
             : filtered.length === 0 ? (
               sequences.length === 0
-                ? <EmptyState icon={RiLoopLeftLine} title="No sequences yet" description="Create a sequence, add its follow-up steps, publish it, then assign it from CRM Settings." action={<Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowCreate(true)}><Button.Icon as={RiAddLine} />Create sequence</Button.Root>} />
+                ? <EmptyState icon={RiLoopLeftLine} title="还没有序列" description="新建一个序列，加上跟进步骤，发布后到 CRM 设置里分配。" action={<Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowCreate(true)}><Button.Icon as={RiAddLine} />新建序列</Button.Root>} />
                 : <EmptyState icon={RiSearchLine} title="No sequences match" description="Try another status or search." />
             ) : (
               <div aria-busy={loading || undefined} className={cn("overflow-x-auto p-2 transition-opacity", loading && "opacity-60")}>
@@ -331,7 +331,7 @@ function SequenceRow({
             )}
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-paragraph-xs text-text-soft-400"><RiPriceTag3Line className="size-3.5" aria-hidden="true" />Not assigned</span>
+          <span className="inline-flex items-center gap-1.5 text-paragraph-xs text-text-soft-400"><RiPriceTag3Line className="size-3.5" aria-hidden="true" />未分配</span>
         )}
       </Table.Cell>
       <Table.Cell className="px-4 py-3">

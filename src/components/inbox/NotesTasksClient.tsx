@@ -55,9 +55,9 @@ type Item = {
 
 type StatusFilter = "all" | "pending" | "completed";
 const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "pending", label: "Pending" },
-  { key: "completed", label: "Done" },
+  { key: "all", label: "全部" },
+  { key: "pending", label: "待办" },
+  { key: "completed", label: "已完成" },
 ];
 
 const labelOf = (item: Item, isTasks: boolean) => (isTasks ? item.name : item.title) ?? "";
@@ -66,8 +66,8 @@ const leadNameOf = (item: Item) => fullName(item.leadFirstName, item.leadLastNam
 export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) {
   const dialogs = useDialogs();
   const isTasks = mode === "tasks";
-  const noun = isTasks ? "task" : "note";
-  const Noun = isTasks ? "Task" : "Note";
+  const noun = isTasks ? "任务" : "备忘";
+  const Noun = noun;
   const endpoint = isTasks ? "/api/outreach/inbox/tasks" : "/api/outreach/inbox/notes";
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,8 +181,8 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
 
   async function handleDelete(item: Item) {
     const ok = await dialogs.confirm({
-      title: `Delete this ${noun}?`,
-      description: "This cannot be undone.",
+      title: `删除这条${noun}？`,
+      description: "这个操作不能撤销。",
       confirmLabel: "Delete",
       variant: "error",
     });
@@ -209,17 +209,17 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
 
   const header = (
     <PageHeader
-      back={{ href: "/outreach/inbox", label: "Master Inbox" }}
-      title={isTasks ? "Tasks" : "Notes"}
+      back={{ href: "/outreach/inbox", label: "收件箱" }}
+      title={isTasks ? "任务" : "备忘"}
       description={
         isTasks
-          ? "Follow-ups to do, added here or from a thread in the Master Inbox."
-          : "What you want to remember about a lead, added here or from a thread in the Master Inbox."
+          ? "待办跟进事项，可在这里添加，也可在收件箱的会话里添加。"
+          : "关于线索的备忘，可在这里添加，也可在收件箱的会话里添加。"
       }
       actions={
         <Button.Root variant="primary" mode="filled" size="small" onClick={openForCreate}>
           <Button.Icon as={RiAddLine} />
-          New {noun}
+          新建{noun}
         </Button.Root>
       }
     />
@@ -228,13 +228,13 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
   return (
     <InboxLayout header={header} threadOpen={paneOpen}>
       <ListPane
-        label={isTasks ? "Tasks" : "Notes"}
+        label={isTasks ? "任务" : "备忘"}
         hidden={paneOpen}
         busy={refreshing}
         scrollRef={listRef}
         toolbar={
           <>
-            <ListSearch value={search} onChange={setSearch} placeholder={`Search ${noun}s…`} label={`Search ${noun}s`} />
+            <ListSearch value={search} onChange={setSearch} placeholder={`搜索${noun}…`} label={`搜索${noun}`} />
             <div className="flex items-center justify-between gap-2">
               {isTasks ? (
                 <SegmentedControl.Root value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
@@ -248,33 +248,33 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
                   </SegmentedControl.List>
                 </SegmentedControl.Root>
               ) : (
-                <span className="text-label-sm text-text-strong-950">All notes</span>
+                <span className="text-label-sm text-text-strong-950">全部备忘</span>
               )}
-              {!isTasks && <ListCount shown={filtered.length} total={items.length} noun={items.length === 1 ? "note" : "notes"} loading={loading} />}
+              {!isTasks && <ListCount shown={filtered.length} total={items.length} noun="条" loading={loading} />}
             </div>
           </>
         }
       >
         {loadError && (
           <InlineError className="m-3" onRetry={() => void reload()}>
-            Could not load {noun}s.
+            无法加载{noun}。
           </InlineError>
         )}
         {loading && items.length === 0 ? (
           <RowsSkeleton />
         ) : filtered.length === 0 ? (
           loadError ? null : narrowing && items.length > 0 ? (
-            <EmptyState compact icon={RiSearchLine} title={`No ${noun}s match`} description="Try another search or status." />
+            <EmptyState compact icon={RiSearchLine} title={`没有匹配的${noun}`} description="换个搜索词或状态试试。" />
           ) : (
             <EmptyState
               compact
               icon={isTasks ? RiTaskLine : RiStickyNoteLine}
-              title={`No ${noun}s yet`}
-              description={`Add one here, or with “+ ${Noun}” on a thread in the Master Inbox.`}
+              title={`还没有${noun}`}
+              description={`在这里添加，或在收件箱的会话里点「+ ${Noun}」。`}
               action={
                 <Button.Root variant="neutral" mode="stroke" size="xsmall" onClick={openForCreate}>
                   <Button.Icon as={RiAddLine} />
-                  New {noun}
+                  新建{noun}
                 </Button.Root>
               }
             />
@@ -314,7 +314,7 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
                       <Checkbox.Root
                         checked={item.isCompleted === true}
                         onCheckedChange={() => void handleToggleComplete(item)}
-                        aria-label={item.isCompleted ? `Mark “${label}” as not done` : `Mark “${label}” as done`}
+                        aria-label={item.isCompleted ? `把「${label}」标为未完成` : `把「${label}」标为完成`}
                       />
                     </span>
                   )}
@@ -345,7 +345,7 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
       <ReadingPane shown={paneOpen}>
         {editing ? (
           <>
-            <ThreadHeader onBack={closeForm} backLabel={`Back to ${noun}s`} title={creating ? `New ${noun}` : `Edit ${noun}`} />
+            <ThreadHeader onBack={closeForm} backLabel={`返回${noun}列表`} title={creating ? `新建${noun}` : `编辑${noun}`} />
             <form
               className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5"
               onSubmit={(e) => {
@@ -355,16 +355,16 @@ export default function NotesTasksClient({ mode }: { mode: "tasks" | "notes" }) 
             >
               <div className="max-w-xl space-y-4">
                 <label className="block space-y-1.5">
-                  <span className="block text-label-sm text-text-strong-950">{isTasks ? "Task" : "Title"}</span>
+                  <span className="block text-label-sm text-text-strong-950">{isTasks ? "任务名称" : "标题"}</span>
                   <Input.Root>
                     <Input.Wrapper>
-                      <Input.Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={isTasks ? "Task name" : "Note title"} autoFocus />
+                      <Input.Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={isTasks ? "任务名称" : "备忘标题"} autoFocus />
                     </Input.Wrapper>
                   </Input.Root>
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="block text-label-sm text-text-strong-950">Description</span>
-                  <Textarea.Root simple rows={6} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="Description…" />
+                  <span className="block text-label-sm text-text-strong-950">描述</span>
+                  <Textarea.Root simple rows={6} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="描述…" />
                 </label>
                 <div className="flex items-center gap-2">
                   <Button.Root type="submit" variant="primary" mode="filled" size="small" disabled={!formName.trim() || saving}>

@@ -66,7 +66,7 @@ function validate(blocks: AiInstructionBlock[]): string | null {
   if (longTitle) return `“${longTitle.title.slice(0, 30)}…” has a title over ${MAX_AI_INSTRUCTION_TITLE_LENGTH} characters.`;
   const longContent = blocks.find((b) => b.content.length > MAX_AI_INSTRUCTION_CONTENT_LENGTH);
   if (longContent) {
-    return `“${longContent.title.trim() || "Untitled instruction"}” is over ${MAX_AI_INSTRUCTION_CONTENT_LENGTH} characters.`;
+    return `“${longContent.title.trim() || "未命名指令"}” is over ${MAX_AI_INSTRUCTION_CONTENT_LENGTH} characters.`;
   }
   const total = renderAiInstructions(blocks)?.length ?? 0;
   if (total > MAX_AI_INSTRUCTIONS_TOTAL_LENGTH) {
@@ -127,7 +127,7 @@ function InstructionRow({
           type="text"
           value={block.title}
           maxLength={MAX_AI_INSTRUCTION_TITLE_LENGTH}
-          placeholder="Untitled instruction"
+          placeholder="未命名指令"
           aria-label="Instruction title"
           onChange={(event) => onChange({ title: event.target.value })}
           className="h-8 min-w-0 flex-1 rounded-lg bg-transparent px-2 text-label-sm text-text-strong-950 outline-none ring-1 ring-inset ring-transparent transition placeholder:text-text-soft-400 hover:ring-stroke-soft-200 focus:bg-bg-white-0 focus:shadow-button-important-focus focus:ring-stroke-strong-950"
@@ -148,7 +148,7 @@ function InstructionRow({
             value={block.content}
             placeholder={placeholder}
             hasError={over}
-            aria-label={`${block.title.trim() || "Untitled instruction"} — instruction text`}
+            aria-label={`${block.title.trim() || "未命名指令"} — instruction text`}
             onChange={(event) => onChange({ content: event.target.value })}
             className="resize-y"
           />
@@ -227,7 +227,7 @@ export function InstructionSection({
     if (block.content.trim()) {
       const confirmed = await dialogs.confirm({
         title: "Delete instruction?",
-        description: `“${block.title.trim() || "Untitled instruction"}” will be removed from this list. Save to apply it.`,
+        description: `“${block.title.trim() || "未命名指令"}” will be removed from this list. Save to apply it.`,
         confirmLabel: "Delete instruction",
         variant: "error",
       });

@@ -139,7 +139,7 @@ export default function LeadsClient({ initialTab, initialRows, initialTotal }: P
   };
 
   const total = data?.total ?? 0;
-  const noun = isPeople ? "people" : "companies";
+  const noun = isPeople ? "联系人" : "公司";
   const rowCount = data?.rows.length ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filtersOn = isPeople ? activeFilterCount(peopleState.filters) : 0;
@@ -163,22 +163,22 @@ export default function LeadsClient({ initialTab, initialRows, initialTotal }: P
       <PageContainer>
         <PageHeader
           title="客户线索"
-          description="Every person and company you can reach, with their outreach and CRM state."
+          description="你能触达的所有个人与企业，以及它们的触达记录与 CRM 状态。"
           actions={isPeople && <Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowImport(true)}><Button.Icon as={RiUpload2Line} />导入线索</Button.Root>}
         />
 
-        <PageTabs className="mt-6" label="Lead type" tabs={tabs} value={tab} onChange={switchTab} />
+        <PageTabs className="mt-6" label="线索类型" tabs={tabs} value={tab} onChange={switchTab} />
 
         <Frame className="mt-5">
           <FrameHeader
             title={isPeople ? "联系人" : "公司"}
-            description={<span aria-live="polite">{data ? `${total.toLocaleString("en-US")} ${total === 1 ? (isPeople ? "person" : "company") : noun}${filtersOn || searching ? " match" : ""}` : `Loading ${noun}…`}</span>}
+            description={<span aria-live="polite">{data ? `${total.toLocaleString("zh-CN")} ${isPeople ? "位联系人" : "家公司"}${filtersOn || searching ? "匹配当前条件" : ""}` : "正在加载…"}</span>}
             actions={
               <>
                 <Input.Root size="small" className="w-40 sm:w-72">
                   <Input.Wrapper>
                     <Input.Icon as={RiSearchLine} />
-                    <Input.Input type="search" aria-label={`Search ${noun}`} placeholder={isPeople ? "Search people…" : "Search companies…"} value={state.query} onChange={(event) => patch({ query: event.target.value })} />
+                    <Input.Input type="search" aria-label={`搜索${noun}`} placeholder={isPeople ? "搜索联系人…" : "搜索公司…"} value={state.query} onChange={(event) => patch({ query: event.target.value })} />
                   </Input.Wrapper>
                 </Input.Root>
                 {isPeople && (
@@ -191,19 +191,19 @@ export default function LeadsClient({ initialTab, initialRows, initialTotal }: P
                 )}
                 <Dropdown.Root>
                   <Dropdown.Trigger asChild>
-                    <Button.Root variant="neutral" mode="stroke" size="small" aria-label="More options"><Button.Icon as={RiMore2Line} /></Button.Root>
+                    <Button.Root variant="neutral" mode="stroke" size="small" aria-label="更多选项"><Button.Icon as={RiMore2Line} /></Button.Root>
                   </Dropdown.Trigger>
                   <Dropdown.Content align="end">
-                    <Dropdown.Item asChild><Link href="/settings/columns"><Dropdown.ItemIcon as={RiTable2} />Manage lead columns</Link></Dropdown.Item>
-                    {isPeople && <Dropdown.Item asChild><a href="/api/leads/people/import/template"><Dropdown.ItemIcon as={RiDownloadLine} />Download import template</a></Dropdown.Item>}
+                    <Dropdown.Item asChild><Link href="/settings/columns"><Dropdown.ItemIcon as={RiTable2} />管理线索字段</Link></Dropdown.Item>
+                    {isPeople && <Dropdown.Item asChild><a href="/api/leads/people/import/template"><Dropdown.ItemIcon as={RiDownloadLine} />下载导入模板</a></Dropdown.Item>}
                     <Dropdown.Separator />
-                    <p className="px-2 pb-1 pt-1.5 text-label-xs text-text-soft-400">Sort by</p>
+                    <p className="px-2 pb-1 pt-1.5 text-label-xs text-text-soft-400">排序方式</p>
                     {SORTS[tab].map((option) => {
                       const active = state.sort === option.key;
                       return (
                         <Dropdown.Item key={option.key} onSelect={() => onSort(option.key)} className={cn(active && "text-text-strong-950")}>
                           <span className="flex-1">{option.label}</span>
-                          {active && <Dropdown.ItemIcon as={state.direction === "asc" ? RiArrowUpLine : RiArrowDownLine} aria-label={state.direction === "asc" ? "ascending" : "descending"} className="size-4" />}
+                          {active && <Dropdown.ItemIcon as={state.direction === "asc" ? RiArrowUpLine : RiArrowDownLine} aria-label={state.direction === "asc" ? "升序" : "降序"} className="size-4" />}
                         </Dropdown.Item>
                       );
                     })}
@@ -217,29 +217,29 @@ export default function LeadsClient({ initialTab, initialRows, initialTotal }: P
             {showEmpty ? (
               <EmptyState
                 icon={isPeople ? RiUserSearchLine : RiBuilding2Line}
-                title={filtersOn || searching ? `No ${noun} match ${filtersOn ? "these filters" : "this search"}` : `No ${noun} yet`}
-                description={filtersOn || searching ? "Try broadening your search or changing a filter." : isPeople ? "Import a spreadsheet to add people." : "Companies appear as people are imported."}
+                title={filtersOn || searching ? `没有${noun}匹配当前条件` : `还没有${noun}`}
+                description={filtersOn || searching ? "换个关键词，或调整一下筛选条件再试。" : isPeople ? "导入一份表格就能添加联系人。" : "导入联系人后，这里会出现对应的公司。"}
                 action={
                   filtersOn > 0 || searching
-                    ? <Button.Root variant="neutral" mode="stroke" size="small" onClick={() => patch({ query: "", ...(isPeople ? { filters: EMPTY_FILTERS } : {}) })}>Clear {filtersOn ? "filters" : "search"}</Button.Root>
+                    ? <Button.Root variant="neutral" mode="stroke" size="small" onClick={() => patch({ query: "", ...(isPeople ? { filters: EMPTY_FILTERS } : {}) })}>清除{filtersOn ? "筛选" : "搜索"}</Button.Root>
                     : isPeople && <Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowImport(true)}><Button.Icon as={RiUpload2Line} />导入线索</Button.Root>
                 }
               />
             ) : table}
           </FramePanel>
           {(rowCount > 0 || pages > 1) && (
-            <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pb-1 pt-2.5">
-              <p className="text-paragraph-sm tabular-nums text-text-sub-600">{rowCount ? `${from.toLocaleString("en-US")}–${to.toLocaleString("en-US")} of ${total.toLocaleString("en-US")}` : `0 ${noun}`}</p>
+            <nav aria-label="分页" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pb-1 pt-2.5">
+              <p className="text-paragraph-sm tabular-nums text-text-sub-600">{rowCount ? `${from.toLocaleString("zh-CN")}–${to.toLocaleString("zh-CN")} / 共 ${total.toLocaleString("zh-CN")}` : `0 ${noun}`}</p>
               {pages > 1 && (
                 <Pagination.Root variant="basic" className="gap-1">
-                  <Pagination.NavButton aria-label="Previous page" disabled={state.page === 0} onClick={() => patch({ page: state.page - 1 })} className="hover:bg-bg-white-0 disabled:text-text-disabled-300 disabled:hover:bg-transparent"><Pagination.NavIcon as={RiArrowLeftSLine} /></Pagination.NavButton>
+                  <Pagination.NavButton aria-label="上一页" disabled={state.page === 0} onClick={() => patch({ page: state.page - 1 })} className="hover:bg-bg-white-0 disabled:text-text-disabled-300 disabled:hover:bg-transparent"><Pagination.NavIcon as={RiArrowLeftSLine} /></Pagination.NavButton>
                   <span className="hidden items-center gap-1 sm:flex">
                     {pageItems(state.page, pages).map((item) => typeof item === "number"
                       ? <Pagination.Item key={item} current={item === state.page} aria-current={item === state.page ? "page" : undefined} onClick={() => patch({ page: item })} className={cn("tabular-nums ring-0 hover:bg-bg-white-0", item === state.page && "bg-bg-white-0 shadow-regular-xs ring-1 ring-stroke-soft-200")}>{(item + 1).toLocaleString("en-US")}</Pagination.Item>
                       : <span key={item} className="px-1 text-label-sm text-text-soft-400">…</span>)}
                   </span>
                   <span className="px-2 text-paragraph-sm tabular-nums text-text-sub-600 sm:hidden">{state.page + 1} / {pages}</span>
-                  <Pagination.NavButton aria-label="Next page" disabled={state.page >= pages - 1} onClick={() => patch({ page: state.page + 1 })} className="hover:bg-bg-white-0 disabled:text-text-disabled-300 disabled:hover:bg-transparent"><Pagination.NavIcon as={RiArrowRightSLine} /></Pagination.NavButton>
+                  <Pagination.NavButton aria-label="下一页" disabled={state.page >= pages - 1} onClick={() => patch({ page: state.page + 1 })} className="hover:bg-bg-white-0 disabled:text-text-disabled-300 disabled:hover:bg-transparent"><Pagination.NavIcon as={RiArrowRightSLine} /></Pagination.NavButton>
                 </Pagination.Root>
               )}
             </nav>

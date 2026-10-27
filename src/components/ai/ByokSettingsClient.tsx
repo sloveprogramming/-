@@ -231,7 +231,7 @@ function ProviderModelPicker({
                   <Input.Root size="xsmall" className="min-w-0 flex-1">
                     <Input.Wrapper>
                       <Input.Icon as={RiSearchLine} />
-                      <Input.Input value={search} onChange={(event) => onSearch(event.target.value)} aria-label={`Search ${provider.name} models`} placeholder={`Search ${provider.name} models…`} />
+                      <Input.Input value={search} onChange={(event) => onSearch(event.target.value)} aria-label={`搜索 ${provider.name} 模型`} placeholder={`搜索 ${provider.name} 模型…`} />
                     </Input.Wrapper>
                   </Input.Root>
                   <Button.Root type="button" variant="neutral" mode="ghost" size="xsmall" onClick={() => onToggleVisible(models)} disabled={!models.length}>
@@ -665,7 +665,7 @@ export default function ByokSettingsClient() {
         <Input.Root size="small">
           <Input.Wrapper>
             <Input.Icon as={RiSearchLine} />
-            <Input.Input type="search" aria-label="Search providers" value={providerSearch} onChange={(event) => setProviderSearch(event.target.value)} placeholder="Search providers…" />
+            <Input.Input type="search" aria-label="搜索服务商" value={providerSearch} onChange={(event) => setProviderSearch(event.target.value)} placeholder="搜索服务商…" />
           </Input.Wrapper>
         </Input.Root>
         {filteredProviders.length ? (

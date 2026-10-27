@@ -15,7 +15,7 @@ import { cn } from "@/utils/cn";
 export function DocsLink({
   page,
   href,
-  children = "How to connect",
+  children = "如何连接",
   appearance = "button",
   size = "small",
   className,

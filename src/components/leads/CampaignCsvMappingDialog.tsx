@@ -22,15 +22,15 @@ type Operation = "preview" | "import" | null;
 
 const FIELDS: Record<Channel, { key: string; label: string; required?: boolean }[]> = {
   email: [
-    { key: "email", label: "Email", required: true },
-    { key: "linkedinUrl", label: "LinkedIn URL" },
-    { key: "firstName", label: "First name" },
-    { key: "lastName", label: "Last name" },
-    { key: "fullName", label: "Full name" },
-    { key: "title", label: "Job title" },
-    { key: "companyName", label: "Company name" },
-    { key: "companyDomain", label: "Company domain" },
-    { key: "companyLinkedinUrl", label: "Company LinkedIn" },
+    { key: "email", label: "邮箱", required: true },
+    { key: "linkedinUrl", label: "LinkedIn 链接" },
+    { key: "firstName", label: "名" },
+    { key: "lastName", label: "姓" },
+    { key: "fullName", label: "姓名" },
+    { key: "title", label: "职位" },
+    { key: "companyName", label: "公司名称" },
+    { key: "companyDomain", label: "公司域名" },
+    { key: "companyLinkedinUrl", label: "公司 LinkedIn" },
   ],
 };
 
@@ -75,12 +75,12 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
       .then(async (response) => ({ response, data: await response.json().catch(() => ({})) }))
       .then(({ response, data }) => {
         if (cancelled) return;
-        if (!response.ok) throw new Error(data.error ?? "Could not preview file");
+        if (!response.ok) throw new Error(data.error ?? "无法预览文件");
         setPreview(data);
         setMapping(data.suggestedMapping ?? {});
       })
       .catch((cause) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : "Could not preview file");
+        if (!cancelled) setError(cause instanceof Error ? cause.message : "无法预览文件");
       })
       .finally(() => {
         if (!cancelled) {
@@ -151,10 +151,10 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
       form.append("mapping", JSON.stringify(mapping));
       const response = await fetch(endpoint, { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.ok === false) throw new Error(data.error ?? "Import failed");
+      if (!response.ok || data.ok === false) throw new Error(data.error ?? "导入失败");
       onImported(data);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Import failed");
+      setError(cause instanceof Error ? cause.message : "导入失败");
     } finally {
       setBusy(false);
       setOperation(null);
@@ -165,7 +165,7 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
     <Modal.Root open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
       <Modal.Content size="max-w-5xl" hideClose={busy} aria-describedby={`${fieldIdPrefix}-description`}>
         <Modal.Header icon={FileSpreadsheet}>
-          <Modal.Title>Map campaign columns</Modal.Title>
+          <Modal.Title>映射营销活动字段</Modal.Title>
           <Modal.Description id={`${fieldIdPrefix}-description`}>
             Match the columns in {file.name} to the fields used by this {CHANNEL_NAME[channel]} campaign.
           </Modal.Description>
@@ -178,8 +178,8 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
                 <Loader2 className="size-5 animate-spin" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-label-sm text-text-strong-950">Reading spreadsheet</p>
-                <p className="mt-1 text-paragraph-xs text-text-sub-600">Preparing columns and sample values…</p>
+                <p className="text-label-sm text-text-strong-950">正在读取表格</p>
+                <p className="mt-1 text-paragraph-xs text-text-sub-600">正在准备字段与样例值…</p>
               </div>
             </div>
           ) : null}
@@ -191,7 +191,7 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
                 <Badge.Root variant="lighter" color="green">{mappedFieldCount} mapped</Badge.Root>
                 <Badge.Root variant="lighter" color="gray">{unmappedColumnCount} kept as variables</Badge.Root>
                 <p className="w-full text-paragraph-xs text-text-sub-600 sm:ml-auto sm:w-auto">
-                  One platform field can be mapped only once.
+                  同一个平台字段只能映射一次。
                 </p>
               </div>
 
@@ -223,9 +223,9 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
 
                 <div className="overflow-hidden rounded-xl ring-1 ring-inset ring-stroke-soft-200">
                   <div className="hidden grid-cols-[minmax(12rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1fr)] gap-4 bg-bg-weak-50 px-4 py-2.5 text-subheading-xs uppercase tracking-wide text-text-soft-400 sm:grid">
-                    <span>Source CSV column</span>
+                    <span>CSV 来源列</span>
                     <span>Example</span>
-                    <span>Platform field</span>
+                    <span>平台字段</span>
                   </div>
                   <div className="divide-y divide-stroke-soft-200">
                     {preview.headers.map((header, headerIndex) => {
@@ -250,7 +250,7 @@ export default function CampaignCsvMappingDialog({ file, endpoint, channel, onCl
                             >
                               <Select.Trigger id={controlId} className="min-w-0 flex-1"><Select.Value /></Select.Trigger>
                               <Select.Content>
-                                <Select.Item value="">Keep as variable (do not map)</Select.Item>
+                                <Select.Item value="">保留为变量（不映射）</Select.Item>
                                 {fields.map((field) => {
                                   const usedElsewhere = Boolean(mapping[field.key] && mapping[field.key] !== header);
                                   return (

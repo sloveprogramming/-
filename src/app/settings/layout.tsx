@@ -3,8 +3,8 @@ import { SettingsShell } from "@/components/settings/SettingsShell";
 
 export const metadata: Metadata = {
   title: {
-    default: "Settings · AgentSDR",
-    template: "%s · Settings · AgentSDR",
+    default: "设置 · 新农哥拓客",
+    template: "%s · 设置 · 新农哥拓客",
   },
 };
 

@@ -100,6 +100,15 @@ export type DraftPromptInput = {
   revision?: DraftRevisionRequest | null;
   /** crm_settings.draft_instructions; appended to the system prompt. */
   instructions?: string | null;
+  /**
+   * Agent 调研后整理的写作材料。
+   *
+   * 改造：起草前由 research.ts 的只读 Agent 主动查（客户档案、历史、知识库、
+   * 事件），把结论放在这里。它和 knowledge 的区别是：knowledge 是调用方按
+   * 标签检索出来的静态摘录，findings 是模型自己判断"缺什么"之后去拿的。
+   * 为空时提示词与改造前完全一致（老测试不受影响）。
+   */
+  findings?: string | null;
 };
 
 export type BuiltDraftPrompt = {
@@ -392,6 +401,10 @@ export function buildDraftPrompt(input: DraftPromptInput): BuiltDraftPrompt {
       note: cleanOptionalText(input.stageChange.note),
     };
   }
+  // 只有调研真的产出了东西才放进 snapshot：空的 findings 会改变提示词的
+  // JSON 形状，让老测试与已有草稿的审计记录对不上。
+  const findings = input.findings?.trim();
+  if (findings) snapshot.agentFindings = findings;
 
   return {
     systemPrompt: withAiInstructions(SYSTEM_PROMPT, "draft", input.instructions),

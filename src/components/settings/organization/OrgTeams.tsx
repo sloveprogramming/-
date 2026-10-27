@@ -45,7 +45,7 @@ export function OrgTeams() {
     void loadTeams();
   }, [loadTeams]);
 
-  if (loading) return <p className="text-paragraph-sm text-text-sub-600">Loading…</p>;
+  if (loading) return <p className="text-paragraph-sm text-text-sub-600">加载中…</p>;
   if (!org || !role) return <Callout tone="error">{loadError || "No active organization."}</Callout>;
 
   const canCreate = can({ team: ["create"] });

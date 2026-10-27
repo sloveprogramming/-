@@ -107,7 +107,7 @@ export function DetailsPanel({ open, wide, onClose, children }: { open: boolean;
     <>
       {!wide && <div aria-hidden="true" onClick={onClose} className="absolute inset-0 z-20 bg-bg-strong-950/10 backdrop-blur-[1px]" />}
       <aside
-        aria-label="Contact details"
+        aria-label="联系人详情"
         onKeyDown={onKeyDown}
         className={cn(
           "flex flex-col bg-bg-white-0",
@@ -115,8 +115,8 @@ export function DetailsPanel({ open, wide, onClose, children }: { open: boolean;
         )}
       >
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-stroke-soft-200 pl-5 pr-3">
-          <h2 className="text-label-sm text-text-strong-950">Details</h2>
-          <Button.Root variant="neutral" mode="ghost" size="xxsmall" onClick={onClose} aria-label="Close details" title="Close details" autoFocus={!wide}>
+          <h2 className="text-label-sm text-text-strong-950">详情</h2>
+          <Button.Root variant="neutral" mode="ghost" size="xxsmall" onClick={onClose} aria-label="关闭详情" title="关闭详情" autoFocus={!wide}>
             <Button.Icon as={RiCloseLine} />
           </Button.Root>
         </div>
@@ -193,7 +193,7 @@ export function ContactDetails({
               </Link>
             </Button.Root>
           )}
-          {linkedinHref && <QuickLink href={linkedinHref} icon={RiLinkedinBoxLine} label="LinkedIn profile" external />}
+          {linkedinHref && <QuickLink href={linkedinHref} icon={RiLinkedinBoxLine} label="LinkedIn 主页" external />}
           {links.email && <QuickLink href={`mailto:${links.email}`} icon={RiMailLine} label={`Email ${links.email}`} />}
           {links.phone && <QuickLink href={`tel:${links.phone}`} icon={RiPhoneLine} label={`Phone ${links.phone}`} />}
           {actions}
@@ -208,22 +208,22 @@ export function ContactDetails({
               {crm.doNotContact && (
                 <p className="mb-3 flex items-start gap-1.5 rounded-lg bg-error-lighter px-2.5 py-2 text-paragraph-xs text-error-dark ring-1 ring-inset ring-error-light">
                   <RiErrorWarningLine className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-                  Do not contact — this lead opted out.
+                  请勿联系——该线索已退订。
                 </p>
               )}
               <dl className="space-y-2.5">
-                <Fact label="Category">
+                <Fact label="分类">
                   <span className="inline-flex min-w-0 items-center gap-1.5">
                     <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ backgroundColor: categoryColor(crm.categoryKey).color }} />
                     <span className="truncate">{crm.categoryLabel}</span>
                   </span>
                 </Fact>
-                {crm.stage && <Fact label="Stage">{crm.stage}</Fact>}
-                {crm.sequence && <Fact label="Sequence">{crm.sequence}</Fact>}
-                {crm.step && <Fact label="Next step">{crm.step}</Fact>}
-                {crm.nextActionAt && <Fact label="Next action"><When iso={crm.nextActionAt} /></Fact>}
-                {crm.lastInboundAt && <Fact label="Last reply"><When iso={crm.lastInboundAt} /></Fact>}
-                {crm.lastOutboundAt && <Fact label="Last sent"><When iso={crm.lastOutboundAt} /></Fact>}
+                {crm.stage && <Fact label="阶段">{crm.stage}</Fact>}
+                {crm.sequence && <Fact label="序列">{crm.sequence}</Fact>}
+                {crm.step && <Fact label="下一步">{crm.step}</Fact>}
+                {crm.nextActionAt && <Fact label="下次动作"><When iso={crm.nextActionAt} /></Fact>}
+                {crm.lastInboundAt && <Fact label="上次回复"><When iso={crm.lastInboundAt} /></Fact>}
+                {crm.lastOutboundAt && <Fact label="上次发送"><When iso={crm.lastOutboundAt} /></Fact>}
               </dl>
             </>
           ) : (
@@ -237,9 +237,9 @@ export function ContactDetails({
       )}
 
       <section className="px-5 py-4">
-        <SectionTitle>Conversation</SectionTitle>
+        <SectionTitle>会话</SectionTitle>
         <dl className="space-y-2.5">
-          <Fact label="Channel">
+          <Fact label="渠道">
             <ChannelTag channel={channel} />
           </Fact>
           {facts.map((fact) => (
@@ -252,15 +252,15 @@ export function ContactDetails({
 
       {(links.email || links.phone || linkedinHref) && (
         <section className="px-5 py-4">
-          <SectionTitle>Contact</SectionTitle>
+          <SectionTitle>联系方式</SectionTitle>
           <dl className="space-y-2.5">
             {links.email && (
-              <Fact label="Email" title={links.email}>
+              <Fact label="邮箱" title={links.email}>
                 <a href={`mailto:${links.email}`} className="truncate text-text-strong-950 underline-offset-2 hover:underline">{links.email}</a>
               </Fact>
             )}
             {links.phone && (
-              <Fact label="Phone">
+              <Fact label="电话">
                 <a href={`tel:${links.phone}`} className="tabular-nums text-text-strong-950 underline-offset-2 hover:underline">{links.phone}</a>
               </Fact>
             )}
@@ -314,14 +314,14 @@ function QuickLink({ href, icon: Icon, label, external }: { href: string; icon: 
   );
 }
 
-/** "in 3h", "2d ago", "just now" — with the full stamp in the tooltip. */
+/** "in 3h", "2d ago", "刚刚" — with the full stamp in the tooltip. */
 export function relativeWhen(date: Date, now = Date.now()): string {
   const delta = date.getTime() - now;
   const abs = Math.abs(delta);
   const minutes = Math.round(abs / 60_000);
-  if (minutes < 1) return "just now";
-  const unit = minutes < 60 ? `${minutes}m` : minutes < 60 * 24 ? `${Math.round(minutes / 60)}h` : `${Math.round(minutes / (60 * 24))}d`;
-  return delta > 0 ? `in ${unit}` : `${unit} ago`;
+  if (minutes < 1) return "刚刚";
+  const unit = minutes < 60 ? `${minutes} 分钟` : minutes < 60 * 24 ? `${Math.round(minutes / 60)} 小时` : `${Math.round(minutes / (60 * 24))} 天`;
+  return delta > 0 ? `${unit}后` : `${unit}前`;
 }
 
 export function toLinkedinHref(value: string): string {

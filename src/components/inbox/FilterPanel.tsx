@@ -47,18 +47,18 @@ type CampaignOption = { id: string; name: string };
 type StatusOption = { statusKey: string; label: string; statusGroup: string };
 
 const LEAD_STATUS_GROUPS: { key: string; label: string }[] = [
-  { key: "interested", label: "Interested" },
-  { key: "not_interested", label: "Not interested" },
-  { key: "wrong_poc", label: "Wrong POC" },
-  { key: "other", label: "Other" },
+  { key: "interested", label: "有意向" },
+  { key: "not_interested", label: "无意向" },
+  { key: "wrong_poc", label: "对接人不对" },
+  { key: "other", label: "其他" },
 ];
 
 type TimeMode = "all" | "today" | "yesterday" | "custom";
 const TIME_MODES: { key: TimeMode; label: string }[] = [
-  { key: "all", label: "All time" },
-  { key: "today", label: "Today" },
-  { key: "yesterday", label: "Yesterday" },
-  { key: "custom", label: "Custom" },
+  { key: "all", label: "全部时间" },
+  { key: "today", label: "今天" },
+  { key: "yesterday", label: "昨天" },
+  { key: "custom", label: "自定义" },
 ];
 
 /** A collapsible checklist: the section title with how many are ticked, the options when open. */
@@ -91,7 +91,7 @@ function CollapsibleMultiSelect<T extends { id: string; label: string; subtitle?
         <span className="flex items-center gap-2">
           {selected.length > 0 && (
             <Badge.Root size="medium" variant="lighter" color="blue">
-              {selected.length} selected
+              已选 {selected.length} 项
             </Badge.Root>
           )}
           <RiArrowDownSLine className={cn("size-4 text-text-soft-400 transition-transform", open && "rotate-180")} aria-hidden="true" />
@@ -104,13 +104,13 @@ function CollapsibleMultiSelect<T extends { id: string; label: string; subtitle?
               <Input.Root size="xsmall">
                 <Input.Wrapper>
                   <Input.Icon as={RiSearchLine} />
-                  <Input.Input type="search" aria-label={`Search ${title.toLowerCase()}`} placeholder="Search…" onChange={(e) => onSearch?.(e.target.value)} />
+                  <Input.Input type="search" aria-label={`搜索${title}`} placeholder="搜索…" onChange={(e) => onSearch?.(e.target.value)} />
                 </Input.Wrapper>
               </Input.Root>
             </div>
           )}
           <div className="max-h-44 overflow-y-auto p-1">
-            {options.length === 0 && <p className="px-2 py-2 text-paragraph-xs text-text-soft-400">No results</p>}
+            {options.length === 0 && <p className="px-2 py-2 text-paragraph-xs text-text-soft-400">没有结果</p>}
             {options.map((opt) => {
               const id = `${baseId}-${opt.id}`;
               return (
@@ -223,7 +223,7 @@ export default function FilterPanel({
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button.Root variant="neutral" mode="stroke" size="xsmall" onClick={() => setOpen(false)}>
-            Cancel
+            取消
           </Button.Root>
           <Button.Root
             variant="primary"
@@ -235,7 +235,7 @@ export default function FilterPanel({
               setOpen(false);
             }}
           >
-            Apply filters
+            应用筛选
           </Button.Root>
         </div>
       }
@@ -243,7 +243,7 @@ export default function FilterPanel({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <CollapsibleMultiSelect
-            title="Leads"
+            title="联系人"
             searchable
             onSearch={searchLeads}
             options={leads.map((l) => ({ id: l.id, label: l.name, subtitle: l.subtitle }))}
@@ -251,13 +251,13 @@ export default function FilterPanel({
             onToggle={(id) => toggle("leadIds", id)}
           />
           <CollapsibleMultiSelect
-            title="Campaigns"
+            title="营销活动"
             options={campaigns.map((c) => ({ id: c.id, label: c.name }))}
             selected={draft.campaignIds}
             onToggle={(id) => toggle("campaignIds", id)}
           />
           <CollapsibleMultiSelect
-            title="Mailboxes"
+            title="发信邮箱"
             options={accounts.map((a) => ({ id: a, label: a }))}
             selected={draft.accounts}
             onToggle={(id) => toggle("accounts", id)}
@@ -265,13 +265,13 @@ export default function FilterPanel({
         </div>
         <div className="flex flex-col gap-2">
           <CollapsibleMultiSelect
-            title="Lead status"
+            title="线索状态"
             options={statuses.map((s) => ({ id: s.statusKey, label: s.label }))}
             selected={draft.statusKeys}
             onToggle={(id) => toggle("statusKeys", id)}
           />
           <CollapsibleMultiSelect
-            title="Status group"
+            title="状态分组"
             options={LEAD_STATUS_GROUPS.map((g) => ({ id: g.key, label: g.label }))}
             selected={draft.statusGroups}
             onToggle={(id) => toggle("statusGroups", id)}
@@ -279,7 +279,7 @@ export default function FilterPanel({
         </div>
       </div>
 
-      <FilterField label="Time">
+      <FilterField label="时间">
         <SegmentedControl.Root value={timeMode} onValueChange={(v) => applyTimeMode(v as TimeMode)}>
           <SegmentedControl.List>
             {TIME_MODES.map((mode) => (
@@ -295,17 +295,17 @@ export default function FilterPanel({
               <Input.Wrapper>
                 <Input.Input
                   type="date"
-                  aria-label="From date"
+                  aria-label="开始日期"
                   onChange={(e) => setDraft((p) => ({ ...p, startDate: e.target.value ? new Date(e.target.value).toISOString() : null }))}
                 />
               </Input.Wrapper>
             </Input.Root>
-            <span className="text-paragraph-xs text-text-soft-400">to</span>
+            <span className="text-paragraph-xs text-text-soft-400">至</span>
             <Input.Root size="xsmall" className="flex-1">
               <Input.Wrapper>
                 <Input.Input
                   type="date"
-                  aria-label="To date"
+                  aria-label="结束日期"
                   onChange={(e) => setDraft((p) => ({ ...p, endDate: e.target.value ? new Date(e.target.value).toISOString() : null }))}
                 />
               </Input.Wrapper>

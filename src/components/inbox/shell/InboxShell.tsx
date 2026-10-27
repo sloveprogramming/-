@@ -141,13 +141,13 @@ export function ReadingEmpty({
         <p className="-mt-10 hidden items-center gap-1.5 text-paragraph-xs text-text-soft-400 md:flex">
           <Kbd>J</Kbd>
           <Kbd>K</Kbd>
-          to move
+          切换
           <span aria-hidden="true" className="mx-1">·</span>
           <Kbd>Enter</Kbd>
-          to open
+          打开
           <span aria-hidden="true" className="mx-1">·</span>
           <Kbd>Esc</Kbd>
-          back to the list
+          返回列表
         </p>
       )}
     </div>
@@ -243,7 +243,7 @@ export function TriageTabs({
             <button
               type="button"
               data-triage-tab
-              aria-label={activeMore ? `Showing ${activeMore.label}. Other views` : "More views"}
+              aria-label={activeMore ? `正在查看 ${activeMore.label}。其他视图` : "更多视图"}
               className={cn(
                 "relative inline-flex h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-label-sm outline-none transition focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-base",
                 activeMore ? "text-text-strong-950" : "text-text-sub-600 hover:text-text-strong-950",

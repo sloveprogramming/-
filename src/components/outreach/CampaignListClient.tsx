@@ -49,21 +49,21 @@ const STATUS_COLOR: Record<string, React.ComponentProps<typeof Badge.Root>["colo
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  active: "Active",
-  paused: "Paused",
-  draft: "Draft",
-  completed: "Completed",
+  active: "进行中",
+  paused: "已暂停",
+  draft: "草稿",
+  completed: "已完成",
 };
 
 const TABS = ["all", "active", "paused", "draft", "completed"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABEL: Record<Tab, string> = {
-  all: "All",
-  active: "Active",
-  paused: "Paused",
-  draft: "Draft",
-  completed: "Completed",
+  all: "全部",
+  active: "进行中",
+  paused: "已暂停",
+  draft: "草稿",
+  completed: "已完成",
 };
 
 const EMAIL = CHANNEL_META.email.color;
@@ -73,17 +73,17 @@ const toDate = (date: string | Date) => (typeof date === "string" ? new Date(dat
 /** "Sep 14" — the created-at line under each campaign name. */
 function shortDate(date: string | Date | null): string {
   if (!date) return "—";
-  return toDate(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return toDate(date).toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
 }
 
 /** "3h ago" / "2d ago" — when the campaign last sent. */
 function ago(date: string | Date | null, now: number): string {
-  if (!date) return "Never";
+  if (!date) return "从未";
   const minutes = Math.round((now - toDate(date).getTime()) / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
-  return `${Math.round(minutes / (60 * 24))}d ago`;
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} 小时前`;
+  return `${Math.round(minutes / (60 * 24))} 天前`;
 }
 
 const num = "text-paragraph-sm tabular-nums text-text-strong-950";
@@ -113,7 +113,7 @@ function RowActions({ campaign }: { campaign: Campaign }) {
     if (!res.ok) {
       await dialogs.alert({
         title: `Could not ${status === "paused" ? "pause" : "resume"} the campaign`,
-        description: "Something went wrong. Please try again.",
+        description: "出错了，请重试。",
         variant: "error",
       });
       return;
@@ -123,11 +123,11 @@ function RowActions({ campaign }: { campaign: Campaign }) {
 
   async function remove() {
     const confirmed = await dialogs.confirm({
-      title: "Delete campaign?",
+      title: "删除这个营销活动？",
       description: `“${campaign.name}” and its ${campaign.leadCount.toLocaleString()} lead${
         campaign.leadCount === 1 ? "" : "s"
       } and send history will be permanently deleted. This cannot be undone.`,
-      confirmLabel: "Delete campaign",
+      confirmLabel: "删除活动",
       variant: "error",
     });
     if (!confirmed) return;
@@ -137,8 +137,8 @@ function RowActions({ campaign }: { campaign: Campaign }) {
     setBusy(false);
     if (!res.ok) {
       await dialogs.alert({
-        title: "Could not delete campaign",
-        description: "Something went wrong. Please try again.",
+        title: "无法删除营销活动",
+        description: "出错了，请重试。",
         variant: "error",
       });
       return;
@@ -163,19 +163,19 @@ function RowActions({ campaign }: { campaign: Campaign }) {
       <Dropdown.Content>
         <Dropdown.Item onSelect={() => router.push(`/outreach/campaigns/${campaign.id}`)}>
           <Dropdown.ItemIcon as={RiPencilLine} />
-          Edit campaign
+          编辑活动
         </Dropdown.Item>
 
         {canPause && (
           <Dropdown.Item onSelect={() => setStatus("paused")}>
             <Dropdown.ItemIcon as={RiPauseCircleLine} />
-            Pause campaign
+            暂停活动
           </Dropdown.Item>
         )}
         {canResume && (
           <Dropdown.Item onSelect={() => setStatus("active")}>
             <Dropdown.ItemIcon as={RiPlayCircleLine} />
-            Resume campaign
+            恢复活动
           </Dropdown.Item>
         )}
 
@@ -183,7 +183,7 @@ function RowActions({ campaign }: { campaign: Campaign }) {
 
         <Dropdown.Item destructive onSelect={remove}>
           <Dropdown.ItemIcon as={RiDeleteBinLine} />
-          Delete campaign
+          删除活动
         </Dropdown.Item>
       </Dropdown.Content>
     </Dropdown.Root>
@@ -230,29 +230,29 @@ export default function CampaignListClient({ campaigns }: { campaigns: Campaign[
   return (
     <PageContainer>
       <PageHeader
-        title="Send campaigns"
-        description="Email sequences sent from your mailboxes, and how each one is landing."
+        title="邮件营销活动"
+        description="从你的发信邮箱发出的邮件序列，以及每个活动的效果。"
         actions={
           <Button.Root variant="primary" mode="filled" size="small" asChild>
             <Link href="/outreach/campaigns/new">
               <Button.Icon as={RiAddLine} />
-              Create campaign
+              创建营销活动
             </Link>
           </Button.Root>
         }
       />
 
       <KpiStrip className="mt-6" columns={4}>
-        <KpiCell icon={RiSendPlaneLine} label="Active campaigns" value={formatCompact(counts.active ?? 0)} context={`${counts.paused ?? 0} paused · ${counts.draft ?? 0} draft · ${counts.completed ?? 0} completed`} />
-        <KpiCell icon={RiTeamLine} label="Leads" value={formatCompact(totals.leads)} context={`across ${campaigns.length} ${campaigns.length === 1 ? "campaign" : "campaigns"}`} />
-        <KpiCell icon={RiMailSendLine} label="Emails sent" value={formatCompact(totals.sent)} context={totals.lastSend ? `Last send ${ago(new Date(totals.lastSend), now)}` : "Nothing sent yet"} />
-        <KpiCell icon={RiReplyLine} label="Replies" value={formatCompact(totals.replied)} context={totals.leads > 0 ? `${formatPercent(totals.replied / totals.leads, 2)} of leads replied` : undefined} hint="Leads who replied to any email in the campaign, all time." />
+        <KpiCell icon={RiSendPlaneLine} label="进行中的活动" value={formatCompact(counts.active ?? 0)} context={`${counts.paused ?? 0} 已暂停 · ${counts.draft ?? 0} 草稿 · ${counts.completed ?? 0} 已完成`} />
+        <KpiCell icon={RiTeamLine} label="联系人" value={formatCompact(totals.leads)} context={`覆盖 ${campaigns.length} 个活动`} />
+        <KpiCell icon={RiMailSendLine} label="已发邮件" value={formatCompact(totals.sent)} context={totals.lastSend ? `最近发送 ${ago(new Date(totals.lastSend), now)}` : "还没有发送记录"} />
+        <KpiCell icon={RiReplyLine} label="回复" value={formatCompact(totals.replied)} context={totals.leads > 0 ? `回复率 ${formatPercent(totals.replied / totals.leads, 2)}` : undefined} hint="活动期内回复过任意一封邮件的联系人，统计全部时间。" />
       </KpiStrip>
 
       <Frame className="mt-5">
         <FrameHeader
-          title="Campaigns"
-          description="All time. Select a campaign to see its sends, leads and sequence."
+          title="营销活动"
+          description="统计全部时间。点开一个活动可查看发送、联系人和序列明细。"
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <SegmentedControl.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
@@ -268,7 +268,7 @@ export default function CampaignListClient({ campaigns }: { campaigns: Campaign[
               <Input.Root size="small" className="w-56">
                 <Input.Wrapper>
                   <Input.Icon as={RiSearchLine} />
-                  <Input.Input type="search" aria-label="Search campaigns" placeholder="Search campaigns…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <Input.Input type="search" aria-label="搜索营销活动" placeholder="搜索营销活动…" value={search} onChange={(e) => setSearch(e.target.value)} />
                 </Input.Wrapper>
               </Input.Root>
             </div>
@@ -277,19 +277,19 @@ export default function CampaignListClient({ campaigns }: { campaigns: Campaign[
         <FramePanel className="overflow-x-auto p-2 sm:p-2">
           {filtered.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <p className="text-label-sm text-text-strong-950">{campaigns.length === 0 ? "No campaigns yet" : "No campaigns match"}</p>
-              <p className="mt-1 text-paragraph-sm text-text-sub-600">{campaigns.length === 0 ? "Create one to start sending." : "Try another status or search."}</p>
+              <p className="text-label-sm text-text-strong-950">{campaigns.length === 0 ? "还没有营销活动" : "没有匹配的营销活动"}</p>
+              <p className="mt-1 text-paragraph-sm text-text-sub-600">{campaigns.length === 0 ? "创建一个就能开始发送。" : "换个状态或搜索词试试。"}</p>
             </div>
           ) : (
             <Table.Root className="min-w-[860px]">
               <Table.Header>
                 <Table.Row>
-                  <Table.Head scope="col" className="px-4">Campaign</Table.Head>
-                  <Table.Head scope="col" className="w-28 px-4 text-right">Leads</Table.Head>
-                  <Table.Head scope="col" className="w-28 px-4 text-right">Sent</Table.Head>
-                  <Table.Head scope="col" className="w-64 px-4">Replies</Table.Head>
-                  <Table.Head scope="col" className="w-32 px-4">Last send</Table.Head>
-                  <Table.Head scope="col" className="w-16 px-4"><span className="sr-only">Actions</span></Table.Head>
+                  <Table.Head scope="col" className="px-4">活动名称</Table.Head>
+                  <Table.Head scope="col" className="w-28 px-4 text-right">联系人</Table.Head>
+                  <Table.Head scope="col" className="w-28 px-4 text-right">已发送</Table.Head>
+                  <Table.Head scope="col" className="w-64 px-4">回复</Table.Head>
+                  <Table.Head scope="col" className="w-32 px-4">最近发送</Table.Head>
+                  <Table.Head scope="col" className="w-16 px-4"><span className="sr-only">操作</span></Table.Head>
                 </Table.Row>
               </Table.Header>
               <Table.Body spacing={4}>
@@ -313,16 +313,16 @@ export default function CampaignListClient({ campaigns }: { campaigns: Campaign[
                             </Badge.Root>
                           </div>
                           <p className="mt-0.5 truncate text-paragraph-xs text-text-sub-600">
-                            {c.sequence.length} {c.sequence.length === 1 ? "step" : "steps"} · Created {shortDate(c.createdAt)}
+                            {c.sequence.length} 个步骤 · 创建于 {shortDate(c.createdAt)}
                           </p>
                         </div>
                       </div>
                     </Table.Cell>
-                    <Table.Cell className={cn("px-4 text-right", num)}>{c.leadCount.toLocaleString("en-US")}</Table.Cell>
-                    <Table.Cell className={cn("px-4 text-right", num)}>{c.sentCount.toLocaleString("en-US")}</Table.Cell>
+                    <Table.Cell className={cn("px-4 text-right", num)}>{c.leadCount.toLocaleString("zh-CN")}</Table.Cell>
+                    <Table.Cell className={cn("px-4 text-right", num)}>{c.sentCount.toLocaleString("zh-CN")}</Table.Cell>
                     <Table.Cell className="px-4">
                       <div className="flex items-center gap-3">
-                        <span className={cn("w-10 text-right", num)}>{c.repliedCount.toLocaleString("en-US")}</span>
+                        <span className={cn("w-10 text-right", num)}>{c.repliedCount.toLocaleString("zh-CN")}</span>
                         <span className="w-12 text-paragraph-xs tabular-nums text-text-sub-600">{formatPercent(c.replyRate, 2)}</span>
                         <span aria-hidden="true" className="h-1.5 w-20 rounded-full bg-bg-weak-50">
                           <span className="block h-full rounded-full" style={{ width: `${((c.replyRate ?? 0) / maxRate) * 100}%`, backgroundColor: EMAIL }} />

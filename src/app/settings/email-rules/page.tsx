@@ -1,8 +1,8 @@
 import { RulesSettingsPage } from "@/components/settings/ChannelSettingsPages";
 
-export const metadata = { title: "Email sending rules" };
+export const metadata = { title: "发信规则" };
 export const dynamic = "force-dynamic";
 
 export default function Page() {
-  return <RulesSettingsPage channel="email" title="Email sending rules" description="How fast and when mailboxes send. Defaults suit a warm Google Workspace mailbox; change them only if you know your sending reputation." />;
+  return <RulesSettingsPage channel="email" title="发信规则" description="邮箱的发送速度与时段。默认值适合已预热的 Google Workspace 邮箱；不清楚发信信誉的话建议别改。" />;
 }

@@ -58,14 +58,14 @@ export function ComingSoonCard({ connection }: { connection: ComingSoonConnectio
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-label-md text-text-strong-950">{connection.name}</h3>
-              <Badge.Root size="medium" variant="lighter" color="purple">Coming soon</Badge.Root>
+              <Badge.Root size="medium" variant="lighter" color="purple">即将支持</Badge.Root>
             </div>
             <p className="mt-1 text-paragraph-sm text-text-sub-600">{connection.description}</p>
-            <p className="mt-1 text-paragraph-xs text-text-soft-400">Will power: {connection.enables.join(", ")}</p>
+            <p className="mt-1 text-paragraph-xs text-text-soft-400">将支撑：{connection.enables.join("、")}</p>
           </div>
         </div>
         <Button.Root variant="neutral" mode="stroke" size="small" disabled className="shrink-0">
-          Coming soon
+          即将支持
         </Button.Root>
       </FramePanel>
     </Frame>
@@ -103,7 +103,7 @@ function PlatformCard({
       if (!res.ok) throw new Error();
       startTransition(() => router.refresh());
     } catch {
-      await dialogs.alert({ title: `Could not disconnect ${integration.name}`, description: "Something went wrong. Please try again.", variant: "error" });
+      await dialogs.alert({ title: `无法断开 ${integration.name}`, description: "出错了，请重试。", variant: "error" });
     } finally {
       setBusy(false);
     }
@@ -119,14 +119,14 @@ function PlatformCard({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-label-md text-text-strong-950">{integration.name}</h3>
                 <Badge.Root size="medium" variant="lighter" color={connected ? "green" : "gray"}>
-                  {connected ? "Connected" : "Not connected"}
+                  {connected ? "已连接" : "未连接"}
                 </Badge.Root>
               </div>
               <p className="mt-1 text-paragraph-sm text-text-sub-600">{integration.description}</p>
-              <p className="mt-1 text-paragraph-xs text-text-soft-400">Powers: {integration.enables.join(", ")}</p>
+              <p className="mt-1 text-paragraph-xs text-text-soft-400">支撑：{integration.enables.join("、")}</p>
               {connected && integration.guideUrl && (
                 <DocsLink href={integration.guideUrl} appearance="inline" className="mt-1.5 text-paragraph-xs">
-                  Setup guide
+                  配置指南
                 </DocsLink>
               )}
             </div>
@@ -135,7 +135,7 @@ function PlatformCard({
             {!connected && integration.guideUrl && <DocsLink href={integration.guideUrl} />}
             {connected && (
               <Button.Root variant="error" mode="ghost" size="small" disabled={busy} onClick={disconnect}>
-                Disconnect
+                断开连接
               </Button.Root>
             )}
             <Button.Root variant={connected ? "neutral" : "primary"} mode={connected ? "stroke" : "filled"} size="small" onClick={onEdit}>
@@ -154,7 +154,7 @@ function PlatformCard({
             ))}
             {status?.verifiedAt && (
               <div>
-                <dt className="text-text-soft-400">Last verified</dt>
+                <dt className="text-text-soft-400">最近验证</dt>
                 <dd className="text-text-strong-950">{formatVerified(status.verifiedAt)}</dd>
               </div>
             )}
@@ -249,7 +249,7 @@ function UnipileWebhooks({ registration }: { registration: UnipileWebhookRegistr
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Button.Root variant="neutral" mode="ghost" size="small" disabled={loadingSetup} onClick={() => void toggleSetup()}>
-            {setup ? "Hide URLs" : loadingSetup ? "Loading…" : "Show URLs and secret"}
+            {setup ? "Hide URLs" : loadingSetup ? "加载中…" : "Show URLs and secret"}
           </Button.Root>
           <Button.Root variant="neutral" mode="stroke" size="small" disabled={registering} onClick={() => void register()}>
             {registering ? "Registering…" : current?.status === "registered" ? "Register again" : "Register webhooks"}
@@ -401,7 +401,7 @@ export function PlatformLogo({ src, size = "medium" }: { src: string; size?: "sm
 function formatVerified(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+  return date.toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" });
 }
 
 function IntegrationDialog({

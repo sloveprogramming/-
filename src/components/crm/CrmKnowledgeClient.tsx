@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-// Renders its own SettingsPage so "Add document", which opens the editor held here, sits in the section header.
+// Renders its own SettingsPage so "添加文档", which opens the editor held here, sits in the section header.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   RiAddLine,
@@ -157,14 +157,14 @@ export default function CrmKnowledgeClient() {
   const addButton = (
     <Button.Root variant="primary" mode="filled" size="small" onClick={addDocument}>
       <Button.Icon as={RiAddLine} />
-      Add document
+      添加文档
     </Button.Root>
   );
 
   return (
     <SettingsPage
       title="Knowledge"
-      description="Product facts, pricing and policies the AI grounds its drafts in. Documents marked Always included go into every draft."
+      description="AI 起草时依据的产品信息、价格与政策。标记为「始终包含」的文档会进入每一封草稿。"
       actions={addButton}
     >
       <div className="space-y-5">
@@ -211,7 +211,7 @@ export default function CrmKnowledgeClient() {
                 <Input.Root size="small" className="w-full sm:w-48">
                   <Input.Wrapper>
                     <Input.Icon as={RiSearchLine} />
-                    <Input.Input type="search" aria-label="Search documents" placeholder="Search documents…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <Input.Input type="search" aria-label="搜索文档" placeholder="搜索文档…" value={search} onChange={(e) => setSearch(e.target.value)} />
                   </Input.Wrapper>
                 </Input.Root>
               </div>

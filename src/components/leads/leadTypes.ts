@@ -39,7 +39,7 @@ export const linkedInPersonHref = (value: string) => (value.startsWith("http") ?
 export const linkedInCompanyHref = (value: string) => (value.startsWith("http") ? value : `https://www.linkedin.com/company/${value}`);
 export const initials = (value: string | null) => (value || "?").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 export const dateLabel = (value: string | Date | null | undefined) => (value
-  ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value))
+  ? new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value))
   : "—");
 
 /** "Oct 3" this year, "Oct 3, 2025" otherwise — for dates inside a table cell. */
@@ -47,7 +47,7 @@ export const shortDate = (value: string | Date | null | undefined) => {
   if (!value) return "—";
   const date = new Date(value);
   const sameYear = date.getUTCFullYear() === new Date().getUTCFullYear();
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" }).format(date);
+  return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), timeZone: "UTC" }).format(date);
 };
 
 /** Whether a timestamp is still ahead of now. */
@@ -56,17 +56,17 @@ export const isFuture = (value: string | Date) => new Date(value).getTime() > Da
 /** Sort choices per tab, for the toolbar's sort menu (keys match the API). */
 export const SORTS: Record<LeadsTab, Array<{ key: string; label: string }>> = {
   people: [
-    { key: "updated", label: "Last updated" },
-    { key: "created", label: "Date added" },
-    { key: "name", label: "Name" },
-    { key: "company", label: "Company" },
-    { key: "title", label: "Title" },
-    { key: "email", label: "Email" },
+    { key: "updated", label: "最近更新" },
+    { key: "created", label: "添加时间" },
+    { key: "name", label: "姓名" },
+    { key: "company", label: "公司" },
+    { key: "title", label: "职位" },
+    { key: "email", label: "邮箱" },
   ],
   companies: [
-    { key: "updated", label: "Last updated" },
-    { key: "name", label: "Name" },
-    { key: "domain", label: "Domain" },
-    { key: "people", label: "People" },
+    { key: "updated", label: "最近更新" },
+    { key: "name", label: "名称" },
+    { key: "domain", label: "域名" },
+    { key: "people", label: "联系人" },
   ],
 };

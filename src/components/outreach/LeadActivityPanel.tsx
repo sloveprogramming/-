@@ -500,7 +500,7 @@ export default function LeadActivityPanel({
       />
       <div className="relative flex h-full w-135 max-w-full flex-col bg-bg-white-0 shadow-regular-md">
         {loading || !lead ? (
-          <div className="p-6 text-paragraph-sm text-text-soft-400">Loading…</div>
+          <div className="p-6 text-paragraph-sm text-text-soft-400">加载中…</div>
         ) : (
           <>
             {/* Header */}

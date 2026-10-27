@@ -62,7 +62,7 @@ function RecipientChips({
         {values.map((v) => (
           <span key={v} className="inline-flex max-w-full items-center gap-1 rounded-md bg-bg-weak-50 py-0.5 pl-2 pr-1 text-paragraph-xs text-text-strong-950 ring-1 ring-inset ring-stroke-soft-200">
             <span className="truncate">{v}</span>
-            <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} aria-label={`Remove ${v}`} className="rounded text-text-soft-400 outline-none hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base">
+            <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} aria-label={`移除 ${v}`} className="rounded text-text-soft-400 outline-none hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base">
               <RiCloseLine className="size-3.5" />
             </button>
           </span>
@@ -77,8 +77,8 @@ function RecipientChips({
             }
           }}
           onBlur={addFromInput}
-          aria-label={`${label} recipients`}
-          placeholder={values.length === 0 ? "Add recipient…" : ""}
+          aria-label={`${label} 收件人`}
+          placeholder={values.length === 0 ? "添加收件人…" : ""}
           className="min-w-24 flex-1 bg-transparent py-0.5 text-paragraph-sm text-text-strong-950 outline-none placeholder:text-text-soft-400"
         />
       </div>
@@ -244,7 +244,7 @@ export default function ReplyComposer({
       >
         <RiReplyLine className="size-4 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1 truncate">
-          {replyToName ? `Reply to ${replyToName}…` : "Reply…"}
+          {replyToName ? `回复 ${replyToName}…` : "回复…"}
           <span className="ml-2 hidden text-paragraph-xs sm:inline">from {from}</span>
         </span>
         <kbd className="hidden shrink-0 rounded-md bg-bg-weak-50 px-1.5 py-0.5 font-sans text-[11px] text-text-sub-600 ring-1 ring-inset ring-stroke-soft-200 sm:inline">R</kbd>
@@ -277,13 +277,13 @@ export default function ReplyComposer({
           {isDraftApproval && (
             <>
               <RiSparkling2Line className="size-4 shrink-0 text-primary-base" aria-hidden="true" />
-              <span className="text-label-xs text-text-strong-950">AI-generated draft</span>
-              <span className="truncate text-paragraph-xs text-text-sub-600">Review, edit and approve to send</span>
+              <span className="text-label-xs text-text-strong-950">AI 生成草稿</span>
+              <span className="truncate text-paragraph-xs text-text-sub-600">检查、修改后批准发送</span>
             </>
           )}
           <span className="flex-1" />
           {onCancel && (
-            <button type="button" onClick={onCancel} className="flex size-6 items-center justify-center rounded-md text-text-soft-400 outline-none hover:bg-bg-white-0 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base" aria-label="Close composer">
+            <button type="button" onClick={onCancel} className="flex size-6 items-center justify-center rounded-md text-text-soft-400 outline-none hover:bg-bg-white-0 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base" aria-label="关闭编辑器">
               <RiCloseLine className="size-4" />
             </button>
           )}
@@ -329,7 +329,7 @@ export default function ReplyComposer({
                 setShowCc(false);
               }}
               className={linkish}
-              aria-label="Remove Cc"
+              aria-label="移除抄送"
             >
               <RiCloseLine className="size-3.5" />
             </button>
@@ -349,7 +349,7 @@ export default function ReplyComposer({
                 setShowBcc(false);
               }}
               className={linkish}
-              aria-label="Remove Bcc"
+              aria-label="移除密送"
             >
               <RiCloseLine className="size-3.5" />
             </button>
@@ -362,8 +362,8 @@ export default function ReplyComposer({
         <input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          aria-label="Subject"
-          placeholder="Subject"
+          aria-label="主题"
+          placeholder="主题"
           className="min-w-0 flex-1 bg-transparent py-0.5 text-paragraph-sm text-text-strong-950 outline-none placeholder:text-text-soft-400"
         />
       </div>

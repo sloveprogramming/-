@@ -83,7 +83,7 @@ export function KpiCell({
             <Tooltip.Provider delayDuration={150}>
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
-                  <button type="button" aria-label={`What is “${label}”?`} className="relative z-10 rounded text-text-soft-400 outline-none hover:text-text-sub-600 focus-visible:ring-2 focus-visible:ring-primary-base">
+                  <button type="button" aria-label={`什么是“${label}”？`} className="relative z-10 rounded text-text-soft-400 outline-none hover:text-text-sub-600 focus-visible:ring-2 focus-visible:ring-primary-base">
                     <RiInformationLine className="size-3.5" aria-hidden="true" />
                   </button>
                 </Tooltip.Trigger>

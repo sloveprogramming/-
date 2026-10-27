@@ -42,7 +42,7 @@ const BOOKKEEPING_COLUMNS: Record<LeadEntity, number> = {
   company: 5,
 };
 
-const ENTITY_LABEL: Record<LeadEntity, string> = { person: "People", company: "Companies" };
+const ENTITY_LABEL: Record<LeadEntity, string> = { person: "联系人", company: "公司" };
 
 /**
  * The type picker offers exactly what the API accepts.
@@ -56,7 +56,7 @@ const TYPE_OPTIONS: { value: LeadColumnType; label: string; description: string 
   (type) => ({
     value: type,
     label: columnTypeMeta(type).label,
-    description: `Stored as ${PG_TYPE_FOR_COLUMN_TYPE[type]}`,
+    description: `以 ${PG_TYPE_FOR_COLUMN_TYPE[type]} 存储`,
   }),
 );
 
@@ -208,7 +208,7 @@ export default function ColumnSettings({ columns }: Props) {
       description:
         "The column and every value stored in it will be destroyed. This cannot be undone, " +
         "and restoring it later will not bring the data back.",
-      confirmLabel: "Delete permanently",
+      confirmLabel: "永久删除",
       variant: "error",
     });
     if (!confirmed) return;
@@ -232,8 +232,8 @@ export default function ColumnSettings({ columns }: Props) {
       <Frame>
         <header className="flex flex-col gap-3 px-4 pb-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h3 className="text-label-sm text-text-strong-950">{ENTITY_LABEL[entity]} fields</h3>
-            <p className="mt-0.5 text-paragraph-xs text-text-sub-600">Rename any field. Built-in fields keep their type.</p>
+            <h3 className="text-label-sm text-text-strong-950">{ENTITY_LABEL[entity]}字段</h3>
+            <p className="mt-0.5 text-paragraph-xs text-text-sub-600">可以给任意字段改名。内置字段的类型保持不变。</p>
           </div>
           <SegmentedControl.Root value={entity} onValueChange={(v) => setEntity(v as LeadEntity)}>
             <SegmentedControl.List className="w-auto auto-cols-auto">
@@ -261,8 +261,8 @@ export default function ColumnSettings({ columns }: Props) {
                 <Input.Wrapper>
                   <Input.Icon as={RiAddLine} />
                   <Input.Input
-                    aria-label={`New ${entity === "person" ? "person" : "company"} field name`}
-                    placeholder={`New ${entity === "person" ? "person" : "company"} field…`}
+                    aria-label={`新${entity === "person" ? "联系人" : "公司"}字段名称`}
+                    placeholder={`新${entity === "person" ? "联系人" : "公司"}字段…`}
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                   />
@@ -272,7 +272,7 @@ export default function ColumnSettings({ columns }: Props) {
             <div className="flex gap-2">
               <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
                 <Select.Root size="small" value={newType} onValueChange={(v) => setNewType(v as LeadColumnType)}>
-                  <Select.Trigger aria-label="Field type" title={TYPE_OPTIONS.find((o) => o.value === newType)?.description}>
+                  <Select.Trigger aria-label="字段类型" title={TYPE_OPTIONS.find((o) => o.value === newType)?.description}>
                     <Select.Value />
                   </Select.Trigger>
                   <Select.Content>
@@ -283,7 +283,7 @@ export default function ColumnSettings({ columns }: Props) {
                 </Select.Root>
               </div>
               <Button.Root type="submit" variant="primary" mode="filled" size="small" disabled={!newName.trim() || busyId === "new"}>
-                {busyId === "new" ? "Adding…" : "Add field"}
+                {busyId === "new" ? "Adding…" : "添加字段"}
               </Button.Root>
             </div>
           </form>
@@ -303,7 +303,7 @@ export default function ColumnSettings({ columns }: Props) {
               ))}
             </ul>
           ) : (
-            <EmptyState compact icon={RiLayoutColumnLine} title="No fields yet" description="Add one above; it appears on every record and in imports." />
+            <EmptyState compact icon={RiLayoutColumnLine} title="还没有字段" description="在上方添加一个，它会出现在每条记录和导入里。" />
           )}
         </FramePanel>
 
@@ -311,13 +311,13 @@ export default function ColumnSettings({ columns }: Props) {
         <div className="px-4 pb-2 pt-2.5">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
             <p className={cn("text-paragraph-xs", nearLimit ? "text-warning-dark" : "text-text-sub-600")}>
-              Postgres columns used on {ENTITY_LABEL[entity]}
+              {ENTITY_LABEL[entity]}在 Postgres 中占用的字段数
             </p>
             <Meter value={used} max={PG_MAX_COLUMNS} color={nearLimit ? STATUS.warning : MUTED_STRONG} label={`Postgres columns used on ${ENTITY_LABEL[entity]}`} className="w-full sm:w-64" />
           </div>
           {nearLimit && (
             <p className="mt-1 text-paragraph-xs text-warning-dark">
-              Removed columns still count until the table is rebuilt — delete unused ones permanently to reclaim slots.
+              已删除的字段在重建表之前仍占位置——把不用的永久删除才能腾出位置。
             </p>
           )}
         </div>
@@ -336,7 +336,7 @@ export default function ColumnSettings({ columns }: Props) {
             <span className="min-w-0">
               <span className="block text-label-sm text-text-strong-950">Removed fields ({archived.length})</span>
               <span className="mt-0.5 block text-paragraph-xs text-text-sub-600">
-                Hidden from imports and views, but their data is intact and they still occupy a column slot.
+                导入和视图里看不到它们，但数据还在，仍然占着一个字段位。
               </span>
             </span>
           </button>
@@ -356,11 +356,11 @@ export default function ColumnSettings({ columns }: Props) {
                     <div className="flex items-center gap-1.5">
                       <Button.Root variant="neutral" mode="stroke" size="xsmall" onClick={() => handleArchive(column, false)} disabled={busy(column.id)}>
                         <Button.Icon as={RiRefreshLine} />
-                        Restore
+                        恢复
                       </Button.Root>
                       <Button.Root variant="error" mode="ghost" size="xsmall" onClick={() => handleDelete(column)} disabled={busy(column.id)}>
                         <Button.Icon as={RiDeleteBinLine} />
-                        Delete permanently
+                        永久删除
                       </Button.Root>
                     </div>
                   </li>
@@ -408,8 +408,8 @@ function ColumnRow({
         <input
           value={draft}
           disabled={busy}
-          aria-label={`Rename ${column.name}`}
-          title="Click to rename"
+          aria-label={`重命名 ${column.name}`}
+          title="点击改名"
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => onRename(draft)}
           onKeyDown={(e) => {
@@ -428,13 +428,13 @@ function ColumnRow({
         {column.isCore ? (
           <Badge.Root variant="lighter" color="gray" size="medium">
             <Badge.Icon as={RiLockLine} />
-            Built-in · {columnTypeMeta(column.type).label}
+            内置 · {columnTypeMeta(column.type).label}
           </Badge.Root>
         ) : (
           <>
             <div className="w-40">
               <Select.Root size="xsmall" value={column.type} disabled={busy} onValueChange={(v) => onRetype(v as LeadColumnType)}>
-                <Select.Trigger aria-label={`Type of ${column.name}`}>
+                <Select.Trigger aria-label={`${column.name} 的字段类型`}>
                   <Select.Value />
                 </Select.Trigger>
                 <Select.Content>
@@ -444,9 +444,9 @@ function ColumnRow({
                 </Select.Content>
               </Select.Root>
             </div>
-            <Button.Root variant="neutral" mode="ghost" size="xsmall" onClick={onArchive} disabled={busy} aria-label={`Remove ${column.name}`} title="Remove (keeps the data)">
+            <Button.Root variant="neutral" mode="ghost" size="xsmall" onClick={onArchive} disabled={busy} aria-label={`移除 ${column.name}`} title="移除（保留数据）">
               <Button.Icon as={RiEyeOffLine} />
-              <span className="hidden sm:inline">Remove</span>
+              <span className="hidden sm:inline">移除</span>
             </Button.Root>
           </>
         )}

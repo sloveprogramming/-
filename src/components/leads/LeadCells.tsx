@@ -157,7 +157,7 @@ const statusLabel = (status?: string) => (status ? status.charAt(0).toUpperCase(
  * there is one), plus "+N" for the rest. The full list is in the tooltip.
  */
 export function CampaignSummary({ campaigns }: { campaigns: Campaign[] }) {
-  if (!campaigns.length) return <Empty label="Not in a campaign" />;
+  if (!campaigns.length) return <Empty label="未在营销活动中" />;
   const lead = campaigns.find(isActive) ?? campaigns[0];
   const rest = campaigns.length - 1;
   const channels = [...new Set(campaigns.map((campaign) => campaign.channel))];
@@ -214,7 +214,7 @@ const NOTABLE_STATE: Record<string, string> = { action_required: "Action require
  * there is one, and a muted line only when it says something actionable.
  */
 export function CrmSummary({ crm }: { crm: PersonRow["crm"] }) {
-  if (!crm) return <Empty label="No CRM record" />;
+  if (!crm) return <Empty label="无 CRM 记录" />;
   const key = crm.categoryKey ?? "unclassified";
   const category = crm.categoryKey ? humanize(crm.categoryKey) : "Unclassified";
   const dot = CRM_CATEGORY_COLOR[key as keyof typeof CRM_CATEGORY_COLOR] ?? CRM_CATEGORY_COLOR.unclassified;
@@ -234,7 +234,7 @@ export function CrmSummary({ crm }: { crm: PersonRow["crm"] }) {
       {(facts || crm.unacknowledgedAiChange) && (
         <p className="mt-1 flex min-w-0 items-center gap-1 text-paragraph-xs text-text-sub-600">
           {crm.unacknowledgedAiChange && (
-            <span className="flex shrink-0 items-center gap-0.5 text-warning-base" title="The AI changed this classification; review it on the record">
+            <span className="flex shrink-0 items-center gap-0.5 text-warning-base" title="AI 改动了这个分类，去记录里复核一下">
               <RiSparkling2Fill className="size-3" aria-hidden="true" />AI change{facts ? " ·" : ""}
             </span>
           )}

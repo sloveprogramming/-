@@ -81,7 +81,7 @@ export default function AppFilter({ value, onChange }: Props) {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search apps..."
+                  placeholder="搜索应用..."
                   className="w-full pl-7 pr-3 py-1.5 text-sm border border-stroke-soft-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 dark:focus:ring-violet-500/30 focus:border-transparent placeholder-text-disabled-300"
                 />
               </div>

@@ -19,7 +19,7 @@ import { cn } from "@/utils/cn";
  * warning shown past the safe edge, and a way back to the default.
  */
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const COMMON_TIMEZONES = ["Asia/Kolkata", "Asia/Singapore", "Asia/Dubai", "Europe/London", "Europe/Berlin", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Australia/Sydney", "UTC"];
 
 type Values = Record<string, unknown>;
@@ -33,9 +33,9 @@ function describeDefault(rule: Rule): string {
     case "range":
       return `${rule.default[0]}–${rule.default[1]} ${rule.unit}`;
     case "hours":
-      return rule.default ? hoursSummary(rule.default) : "any time";
+      return rule.default ? hoursSummary(rule.default) : "不限时段";
     case "country":
-      return rule.default ? countryName(rule.default) : "none";
+      return rule.default ? countryName(rule.default) : "无";
     case "timezone":
     case "time":
       return rule.default;
@@ -48,7 +48,7 @@ function hoursSummary(h: WeeklyHours): string {
 
 function countryName(code: string): string {
   try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(code) ?? code;
+    return new Intl.DisplayNames(["zh-CN"], { type: "region" }).of(code) ?? code;
   } catch {
     return code;
   }
@@ -85,7 +85,7 @@ function TimeZoneInput({ id, value, onChange, disabled }: { id: string; value: s
   const zones = useTimeZones(value);
   return (
     <Select.Root size="small" value={value} onValueChange={onChange} disabled={disabled}>
-      <Select.Trigger id={id} aria-label="Time zone">
+      <Select.Trigger id={id} aria-label="时区">
         <Select.Value />
       </Select.Trigger>
       <Select.Content>
@@ -116,7 +116,7 @@ function HoursInput({ id, rule, value, onChange, disabled }: { id: string; rule:
   return (
     <div className="flex flex-col gap-2.5">
       <Select.Root size="small" value={h.timezone} onValueChange={(timezone) => set({ timezone })} disabled={disabled}>
-        <Select.Trigger id={id} aria-label="Time zone">
+        <Select.Trigger id={id} aria-label="时区">
           <Select.Value />
         </Select.Trigger>
         <Select.Content>
@@ -287,12 +287,12 @@ export function ChannelRulesForm({
                   {error && <p role="alert" className="text-paragraph-xs text-error-base">{error}</p>}
                   {warning && <Callout tone="warning" className="w-full py-2 text-left">{warning}</Callout>}
                   <p className="text-paragraph-xs text-text-soft-400">
-                    Default: {describeDefault(rule)}
+                    默认：{describeDefault(rule)}
                     {!isDefault && canEdit && (
                       <>
                         {" · "}
                         <button type="button" onClick={() => set(rule.key, rule.default)} className="text-text-sub-600 underline-offset-2 hover:underline">
-                          Use default
+                          使用默认值
                         </button>
                       </>
                     )}
@@ -310,7 +310,7 @@ export function ChannelRulesForm({
             Discard
           </Button.Root>
           <Button.Root type="button" variant="primary" mode="filled" size="small" disabled={!dirty || hasErrors || saving} onClick={() => void save()}>
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? "Saving…" : "保存修改"}
           </Button.Root>
         </div>
       )}

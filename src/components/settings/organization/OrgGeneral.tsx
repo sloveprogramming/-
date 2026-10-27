@@ -32,7 +32,7 @@ export function OrgGeneral() {
     setLogo(org.logo ?? "");
   }, [org]);
 
-  if (loading) return <p className="text-paragraph-sm text-text-sub-600">Loading…</p>;
+  if (loading) return <p className="text-paragraph-sm text-text-sub-600">加载中…</p>;
   if (!org || !role) return <Callout tone="error">{loadError || "No active organization."}</Callout>;
 
   const canEdit = can({ organization: ["update"] });
@@ -108,7 +108,7 @@ export function OrgGeneral() {
             {canEdit ? (
               <div>
                 <Button.Root type="submit" variant="primary" mode="filled" size="small" disabled={!dirty || busy === "save"}>
-                  {busy === "save" ? "Saving…" : "Save changes"}
+                  {busy === "save" ? "Saving…" : "保存修改"}
                 </Button.Root>
               </div>
             ) : (

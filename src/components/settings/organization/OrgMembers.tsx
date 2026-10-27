@@ -21,7 +21,7 @@ export function OrgMembers() {
   const [inviteRole, setInviteRole] = useState<OrgRole>("member");
   const [copied, setCopied] = useState<string | null>(null);
 
-  if (loading) return <p className="text-paragraph-sm text-text-sub-600">Loading…</p>;
+  if (loading) return <p className="text-paragraph-sm text-text-sub-600">加载中…</p>;
   if (!org || !role) return <Callout tone="error">{loadError || "No active organization."}</Callout>;
 
   const isOwner = role === "owner";

@@ -10,17 +10,17 @@ const PRIMARY: InboxSectionKey[] = ["inbox", "replied", "pendingApproval"];
 
 /** Shorter names for the tab bar, where space is tight. */
 const TAB_LABEL: Partial<Record<InboxSectionKey, string>> = {
-  replied: "Replies",
-  pendingApproval: "To approve",
+  replied: "回复",
+  pendingApproval: "待审批",
 };
 
 const TAB_TITLE: Partial<Record<InboxSectionKey, string>> = {
-  inbox: "Every email received",
-  replied: "Replies from leads, without out-of-office auto-replies",
-  pendingApproval: "AI-drafted replies waiting for your review",
-  outOfOffice: "Auto-replies and out-of-office notices",
-  important: "Messages you starred",
-  scheduled: "Queued to send",
+  inbox: "收到的全部邮件",
+  replied: "线索的回复，不含自动回复与外出通知",
+  pendingApproval: "AI 起草、等待你审核的回复",
+  outOfOffice: "自动回复与外出通知",
+  important: "你标星的邮件",
+  scheduled: "排队待发送",
 };
 
 function toTab(key: InboxSectionKey, counts: Counts): TriageTab {

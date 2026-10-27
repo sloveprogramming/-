@@ -82,13 +82,13 @@ const STATUS_GROUP_TONE: Record<string, BadgeTone> = { interested: "green", not_
 
 /** What an empty folder means, when no search or filter is narrowing it. */
 const SECTION_EMPTY: Record<InboxSectionKey, string> = {
-  inbox: "Replies to your campaigns land here as they arrive.",
-  replied: "Replies from leads, without the out-of-office auto-replies.",
-  outOfOffice: "Auto-replies and out-of-office notices collect here.",
-  pendingApproval: "AI-drafted replies waiting for your review show up here.",
-  sent: "Emails sent from your mailboxes show up here.",
-  important: "Star a message in a thread to keep it here.",
-  scheduled: "Nothing is queued to send right now.",
+  inbox: "营销活动的回复到了就会出现在这里。",
+  replied: "线索的真实回复，不含外出自动回复。",
+  outOfOffice: "自动回复与外出通知会归到这里。",
+  pendingApproval: "AI 起草、等你审核的回复会出现在这里。",
+  sent: "从你的发信邮箱发出的邮件会出现在这里。",
+  important: "在会话里给邮件标星，就会留在这里。",
+  scheduled: "当前没有排队待发的邮件。",
 };
 
 export default function InboxClient() {
@@ -313,7 +313,7 @@ export default function InboxClient() {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      const message = typeof data?.error === "string" && data.error ? data.error : `Could not send (HTTP ${res.status})`;
+      const message = typeof data?.error === "string" && data.error ? data.error : `发送失败（HTTP ${res.status}）`;
       setSendError(message);
       void loadCrmContext(leadId);
       throw new Error(message);
@@ -341,8 +341,8 @@ export default function InboxClient() {
 
   const header = (
     <PageHeader
-      title="Master Inbox"
-      description="Every email reply across your mailboxes, in one place."
+      title="收件箱"
+      description="所有发信邮箱收到的回复，集中在这里。"
       actions={
         <>
           <Button.Root variant="neutral" mode="stroke" size="small" asChild>
@@ -395,9 +395,9 @@ export default function InboxClient() {
           }
           crmLoading={Boolean(recordId) && recordLoading && !crmContext}
           facts={[
-            ...(thread?.lead.mailbox ? [{ label: "Mailbox", value: thread.lead.mailbox, title: thread.lead.mailbox }] : []),
-            ...(thread?.statusConfig ? [{ label: "Lead status", value: thread.statusConfig.label }] : []),
-            ...(thread ? [{ label: "Messages", value: String(thread.messages.length) }] : []),
+            ...(thread?.lead.mailbox ? [{ label: "发信邮箱", value: thread.lead.mailbox, title: thread.lead.mailbox }] : []),
+            ...(thread?.statusConfig ? [{ label: "线索状态", value: thread.statusConfig.label }] : []),
+            ...(thread ? [{ label: "邮件数", value: String(thread.messages.length) }] : []),
             ...(thread && thread.ccs.length > 0 ? [{ label: "Cc", value: thread.ccs.join(", "), title: thread.ccs.join(", ") }] : []),
           ]}
         />
@@ -408,7 +408,7 @@ export default function InboxClient() {
     <>
       <Dropdown.Root>
         <Dropdown.Trigger asChild>
-          <Button.Root variant="neutral" mode="stroke" size="xsmall" className="@max-3xl:w-8 @max-3xl:px-0" title="Add a task or note" aria-label="Add a task or note">
+          <Button.Root variant="neutral" mode="stroke" size="xsmall" className="@max-3xl:w-8 @max-3xl:px-0" title="添加任务或备忘" aria-label="添加任务或备忘">
             <Button.Icon as={RiAddLine} />
             <span className="hidden @3xl:inline">Add</span>
           </Button.Root>
@@ -425,27 +425,27 @@ export default function InboxClient() {
         </Dropdown.Content>
       </Dropdown.Root>
       {recordId && (
-        <Button.Root variant="neutral" mode="stroke" size="xsmall" asChild className="@max-3xl:w-8 @max-3xl:px-0" title="Open CRM record">
-          <Link href={`/crm/records/${recordId}`} aria-label="Open CRM record">
+        <Button.Root variant="neutral" mode="stroke" size="xsmall" asChild className="@max-3xl:w-8 @max-3xl:px-0" title="打开 CRM 记录">
+          <Link href={`/crm/records/${recordId}`} aria-label="打开 CRM 记录">
             <Button.Icon as={RiUserSearchLine} />
-            <span className="hidden @3xl:inline">Record</span>
+            <span className="hidden @3xl:inline">记录</span>
           </Link>
         </Button.Root>
       )}
-      <HeaderAction icon={RiLayoutRightLine} label={details.open ? "Hide details" : "Show details"} onClick={details.toggle} pressed={details.open} iconOnly />
+      <HeaderAction icon={RiLayoutRightLine} label={details.open ? "收起详情" : "Show details"} onClick={details.toggle} pressed={details.open} iconOnly />
     </>
   );
 
   return (
     <InboxLayout header={header} threadOpen={selected !== null}>
       <ListPane
-        label={`${sectionLabel} emails`}
+        label={`${sectionLabel}邮件`}
         hidden={selected !== null}
         busy={refetching}
         scrollRef={listRef}
         toolbar={
           <div className="flex items-center gap-2">
-            <ListSearch value={search} onChange={setSearch} placeholder="Search emails, leads…" label="Search emails" />
+            <ListSearch value={search} onChange={setSearch} placeholder="搜索邮件、客户…" label="搜索邮件" />
             <FilterPanel value={filters} onApply={setFilters} />
           </div>
         }
@@ -466,8 +466,8 @@ export default function InboxClient() {
             <EmptyState
               compact
               icon={RiSearchLine}
-              title="No emails match"
-              description="Try another search, or clear the filters."
+              title="没有匹配的邮件"
+              description="换个搜索词，或清空筛选条件。"
               action={
                 filtersActive(filters) ? (
                   <Button.Root variant="neutral" mode="stroke" size="xsmall" onClick={() => setFilters(EMPTY_FILTERS)}>
@@ -480,7 +480,7 @@ export default function InboxClient() {
             <EmptyState
               compact
               icon={RiInboxLine}
-              title={section === "inbox" ? "No replies yet" : `Nothing in ${sectionLabel}`}
+              title={section === "inbox" ? "还没有回复" : `${sectionLabel}里还没有邮件`}
               description={SECTION_EMPTY[section]}
             />
           )
@@ -495,8 +495,8 @@ export default function InboxClient() {
               bundleAutomated={section === "inbox" || section === "replied"}
             />
             <div ref={sentinelRef} className="h-4" />
-            {loading && rows.length > 0 && page > 1 && <ListEnd>Loading more…</ListEnd>}
-            {!loading && rows.length >= total && rows.length > 0 && <ListEnd>That&apos;s everything in {sectionLabel}</ListEnd>}
+            {loading && rows.length > 0 && page > 1 && <ListEnd>加载更多…</ListEnd>}
+            {!loading && rows.length >= total && rows.length > 0 && <ListEnd>「{sectionLabel}」已全部显示</ListEnd>}
           </>
         )}
       </ListPane>
@@ -506,7 +506,7 @@ export default function InboxClient() {
           <>
             <ThreadHeader
               onBack={closeThread}
-              backLabel="Back to emails"
+              backLabel="返回邮件列表"
               avatar={<InboxAvatar name={rowName} />}
               title={rowName}
               badges={
@@ -515,25 +515,25 @@ export default function InboxClient() {
                 </RowBadge>
               }
               channel="email"
-              subtitle={`To ${selected.toEmail} · from ${selected.fromEmail ?? "unassigned mailbox"}`}
+              subtitle={`收件 ${selected.toEmail} · 发件 from ${selected.fromEmail ?? "未分配邮箱"}`}
             />
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6">
                 <h2 className="mb-4 text-label-lg text-text-strong-950">{selected.subject || "(no subject)"}</h2>
                 <article className="rounded-xl bg-bg-weak-50 p-4 ring-1 ring-inset ring-stroke-soft-200 sm:px-5">
-                  <p className="text-paragraph-xs text-text-soft-400">Queued in the campaign — edit or cancel it from the campaign.</p>
+                  <p className="text-paragraph-xs text-text-soft-400">已排入营销活动队列——请到活动里编辑或取消。</p>
                   <p className="mt-3 whitespace-pre-wrap wrap-break-word text-paragraph-sm leading-6 text-text-strong-950">{selected.bodyText}</p>
                 </article>
               </div>
             </div>
           </>
         ) : !selected ? (
-          <ReadingEmpty icon={RiMailOpenLine} title="Select an email" description="Pick a conversation from the list to read the thread and reply." />
+          <ReadingEmpty icon={RiMailOpenLine} title="选择一封邮件" description="从左侧选一个会话，查看往来邮件并回复。" />
         ) : !thread || (threadLoading && !threadRefreshing) ? (
           <>
             <ThreadHeader
               onBack={closeThread}
-              backLabel="Back to emails"
+              backLabel="返回邮件列表"
               avatar={<InboxAvatar name={rowName} />}
               title={rowName}
               channel="email"
@@ -546,7 +546,7 @@ export default function InboxClient() {
           <>
             <ThreadHeader
               onBack={closeThread}
-              backLabel="Back to emails"
+              backLabel="返回邮件列表"
               avatar={<InboxAvatar name={leadName} src={record?.profilePictureUrl} />}
               title={leadName}
               badges={
@@ -567,7 +567,7 @@ export default function InboxClient() {
               }
               channel="email"
               subtitle={[thread.lead.company, thread.lead.email].filter(Boolean).join(" · ")}
-              extra={thread.ccs.length > 0 ? `Cc: ${thread.ccs.join(", ")}` : undefined}
+              extra={thread.ccs.length > 0 ? `抄送：${thread.ccs.join("、")}` : undefined}
               actions={headerActions(thread.lead.id)}
             />
             <div aria-busy={threadRefreshing || undefined} className={cn("min-h-0 flex-1 overflow-y-auto transition-opacity", threadRefreshing && "opacity-60")}>
@@ -578,7 +578,7 @@ export default function InboxClient() {
               {doNotContact ? (
                 <DoNotContactNotice />
               ) : !thread.lead.mailbox ? (
-                <p className="py-1 text-center text-paragraph-xs text-text-soft-400">No sending mailbox is linked to this lead, so replies can&apos;t be sent from here.</p>
+                <p className="py-1 text-center text-paragraph-xs text-text-soft-400">这个线索没有关联发信邮箱，无法从这里回复。</p>
               ) : (
                 <>
                   {crmContext?.draft && (
@@ -595,7 +595,7 @@ export default function InboxClient() {
                     <InlineError>
                       <span className="flex items-start gap-2">
                         {sendError}
-                        <button type="button" onClick={() => setSendError(null)} className="text-error-dark/70 hover:text-error-dark" aria-label="Dismiss">
+                        <button type="button" onClick={() => setSendError(null)} className="text-error-dark/70 hover:text-error-dark" aria-label="关闭">
                           ×
                         </button>
                       </span>
@@ -616,7 +616,7 @@ export default function InboxClient() {
                     onSend={handleSendReply}
                     onCancel={activeDraft ? () => setActiveDraftId(null) : undefined}
                   />
-                  {activeDraft && <p className="text-right text-paragraph-xs text-text-soft-400">Sending as the CRM draft — your edits are kept</p>}
+                  {activeDraft && <p className="text-right text-paragraph-xs text-text-soft-400">以 CRM 草稿身份发送——你的修改会保留</p>}
                 </>
               )}
             </ComposerDock>

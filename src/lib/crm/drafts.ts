@@ -32,6 +32,7 @@ import {
 } from "./schema";
 import { assertCurrentCrmContext } from "./stateMachine";
 import { inOrg } from "@/lib/tenancy/scope";
+import { draftSubjectOf, findDraftMaterials } from "@/lib/agent/bridge";
 
 export type CrmDraft = typeof crmDrafts.$inferSelect;
 
@@ -499,11 +500,48 @@ export async function generateFallbackDraft(
   const prepared = await withCrmTransaction((tx) => loadFallbackDraftContext(tx, recordId));
   if (!prepared) return null;
   try {
-    const generated = await generateCrmDraft({ ...prepared.promptInput, revision }, dependencies);
+    // 改造：起草前让只读 Agent 自己查材料。关闭开关或调研失败时返回空字符串，
+    // 提示词与改造前完全一致。
+    const findings = await collectFindings(prepared, null);
+    const generated = await generateCrmDraft({ ...prepared.promptInput, revision, findings }, dependencies);
     return await finishGeneratedDraft(prepared, generated);
   } catch (error) {
     await failDraftGeneration(prepared.draft.id, error);
     throw error;
+  }
+}
+
+/**
+ * 起草前的调研：把已有上下文给只读 Agent，它决定还要查什么，返回材料摘要。
+ *
+ * 任何失败都退回空字符串——调研是增强，不是前置条件。它不该让一次起草失败。
+ */
+async function collectFindings(
+  prepared: PreparedDraft,
+  requestedModel: { provider: string; modelId: string } | null | undefined,
+): Promise<string> {
+  try {
+    const subject = await draftSubjectOf(prepared.draft.crmRecordId);
+    if (!subject) return "";
+    const input = prepared.promptInput;
+    const brief = [
+      `客户：${input.person.fullName ?? "未知"}${input.person.title ? `（${input.person.title}）` : ""}`,
+      input.company?.name ? `公司：${input.company.name}` : "",
+      `这一步：${input.sequenceStep.name}（${input.sequenceStep.stepType === "reply" ? "回复" : "跟进"}）`,
+      `已检索到的知识：${input.knowledge.map((item) => item.title).join("、") || "无"}`,
+      `最近对话条数：${input.recentConversation.length}`,
+    ].filter(Boolean).join("\n");
+    return await findDraftMaterials({
+      personId: subject.personId,
+      organizationId: subject.organizationId,
+      channel: subject.channel,
+      stepLabel: input.sequenceStep.name,
+      brief,
+      requestedModel: requestedModel ?? undefined,
+    });
+  } catch (error) {
+    console.error("[crm/drafts] 调研前置失败，使用原有上下文：", error);
+    return "";
   }
 }
 
@@ -515,7 +553,9 @@ export async function generateDraftForStep(
 ): Promise<CrmDraft> {
   const prepared = await withCrmTransaction((tx) => loadDraftContext(tx, stepRunId, regenerating));
   try {
-    const generated = await generateCrmDraft({ ...prepared.promptInput, revision }, dependencies);
+    // 改造：与 fallback 路径一致，起草前先做只读调研（默认关闭，见 bridge.ts）。
+    const findings = await collectFindings(prepared, null);
+    const generated = await generateCrmDraft({ ...prepared.promptInput, revision, findings }, dependencies);
     return await finishGeneratedDraft(prepared, generated, { personRequested: regenerating });
   } catch (error) {
     await failDraftGeneration(prepared.draft.id, error);

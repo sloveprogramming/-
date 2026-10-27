@@ -156,7 +156,7 @@ export default function CellDetailsPanel({
         </div>
         <label className="flex items-center gap-2 rounded-lg border border-stroke-soft-200 bg-bg-white-0 px-3 py-2.5 focus-within:border-blue-500">
           <RiSearchLine className="size-5 text-text-soft-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${payload} fields`} className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-text-soft-400" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`搜索 ${payload} 字段`} className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-text-soft-400" />
         </label>
       </div>
 

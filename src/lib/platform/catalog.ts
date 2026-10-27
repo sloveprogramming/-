@@ -147,8 +147,8 @@ export const PLATFORM_INTEGRATIONS: readonly PlatformIntegration[] = [
   {
     key: "google",
     name: "Google Workspace",
-    description: "Sends and reads Gmail through a service account with domain-wide delegation.",
-    enables: ["Email accounts", "Email campaigns and reply sync"],
+    description: "通过带全域委派的服务账号收发 Gmail。",
+    enables: ["发信邮箱", "邮件营销活动与回复同步"],
     websiteUrl: "https://workspace.google.com",
     iconUrl: "/Integrations - Icon/google.svg",
     guideUrl: docsPageUrl("integrations/google-workspace"),
@@ -166,7 +166,7 @@ export const PLATFORM_INTEGRATIONS: readonly PlatformIntegration[] = [
     fields: [
       {
         key: "clientEmail",
-        label: "Service account email",
+        label: "服务账号邮箱",
         placeholder: "agentsdr@my-project.iam.gserviceaccount.com",
         help: "Google Cloud console → IAM & Admin → Service accounts, in the Email column. It ends in .iam.gserviceaccount.com.",
         inputType: "text",
@@ -175,7 +175,7 @@ export const PLATFORM_INTEGRATIONS: readonly PlatformIntegration[] = [
       },
       {
         key: "privateKey",
-        label: "Private key",
+        label: "私钥",
         placeholder: "-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----",
         help: "Google only gives this out inside a JSON key file (service account → Keys → Add key → Create new key → JSON). Upload that file above, or open it and copy the private_key value, from -----BEGIN to END PRIVATE KEY-----.",
         inputType: "textarea",
@@ -184,7 +184,7 @@ export const PLATFORM_INTEGRATIONS: readonly PlatformIntegration[] = [
       },
       {
         key: "gmailWatchTopic",
-        label: "Gmail Pub/Sub topic",
+        label: "Gmail Pub/Sub 主题",
         placeholder: "projects/my-project/topics/agentsdr-inbox",
         help: "Google Cloud console → Pub/Sub → Topics: create a topic, give gmail-api-push@system.gserviceaccount.com the Pub/Sub Publisher role on it, and copy its full name. Sending works without it, but email replies are not picked up.",
         inputType: "text",
@@ -193,7 +193,7 @@ export const PLATFORM_INTEGRATIONS: readonly PlatformIntegration[] = [
       },
     ],
     keyFile: {
-      label: "Upload key file",
+      label: "上传密钥文件",
       accept: "application/json,.json",
       read: (text) => {
         let parsed: unknown;

@@ -18,11 +18,11 @@ export default function AppearanceSettings() {
 
   return (
     <Frame>
-      <FrameHeader title="Theme" description="How AgentSDR looks on this browser." />
+      <FrameHeader title="Theme" description="新农哥拓客在这个浏览器里的外观。" />
       <FramePanel>
         <FieldRow
-          label="Colour theme"
-          description="System follows your computer's light or dark setting and switches when it does."
+          label="配色主题"
+          description="跟随系统会根据电脑的浅色/深色设置自动切换。"
         >
           <ThemeSwitch className="w-full" />
           {preference === "system" && (
@@ -34,7 +34,7 @@ export default function AppearanceSettings() {
         </FieldRow>
       </FramePanel>
       <FrameFooter>
-        Remembered on this browser only. Other browsers and devices keep their own choice, and nothing is saved to your workspace.
+        只在这个浏览器里记住。其他浏览器和设备各有各的选择，也不会保存到你的工作区。
       </FrameFooter>
     </Frame>
   );

@@ -13,7 +13,7 @@ export default function AddMailboxButton() {
     <>
       <Button.Root variant="primary" mode="filled" size="small" onClick={() => setOpen(true)}>
         <Button.Icon as={RiAddLine} />
-        Add mailbox
+        添加发信邮箱
       </Button.Root>
       {open && <ConnectMailboxDialog onClose={() => setOpen(false)} />}
     </>

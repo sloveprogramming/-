@@ -4,7 +4,7 @@ import { requirePageOrgContext } from "@/lib/auth/context";
 import { runInOrganization } from "@/lib/tenancy/scope";
 import { listColumns } from "@/lib/leads/columns";
 
-export const metadata = { title: "Lead columns" };
+export const metadata = { title: "线索字段" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -23,7 +23,7 @@ export default async function LeadColumnSettingsPage() {
   const columns = await runInOrganization(ctx.organizationId, () => listColumns(undefined, { includeArchived: true }));
 
   return (
-    <SettingsPage title="Lead columns" description="The fields on People and Companies, including ones you add.">
+    <SettingsPage title="线索字段" description="联系人与公司的字段，包括你自己添加的。">
       <ColumnSettings columns={columns} />
     </SettingsPage>
   );

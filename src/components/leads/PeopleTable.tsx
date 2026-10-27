@@ -62,7 +62,7 @@ function PersonTableRow({ row }: { row: PersonRow }) {
             <CompanyFavicon domain={company.domain} className="size-7" />
             <TwoLine primary={companyName} primaryTitle={companyName ?? undefined} secondary={company.name && company.name !== company.domain ? company.domain : null} />
           </div>
-        ) : <Empty label="No company" />}
+        ) : <Empty label="无公司" />}
       </Table.Cell>
       <Table.Cell className={rowCell}><MatchScore person={person} company={company} /></Table.Cell>
       <Table.Cell className={rowCell}><ReachIcons person={person} /></Table.Cell>

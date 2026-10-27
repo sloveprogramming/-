@@ -46,10 +46,10 @@ const STAGES = Object.keys(STAGE_META) as PipelineStage[];
 const BOARD_PAGE = 20;
 
 const EMPTY_COPY: Record<PipelineStage | "all", { title: string; detail: string }> = {
-  all: { title: "No open leads", detail: "Anyone who replies will show up here until their record is closed." },
-  needs_action: { title: "Nothing needs attention", detail: "New replies and due follow-ups land here." },
-  waiting: { title: "No one is waiting", detail: "Leads you have replied to, or with a follow-up scheduled, land here." },
-  exhausted: { title: "No exhausted sequences", detail: "Leads whose every follow-up went out without a reply land here." },
+  all: { title: "没有进行中的线索", detail: "对方回复后会出现在这里，直到记录被关闭。" },
+  needs_action: { title: "没有待处理事项", detail: "新回复和到期的跟进会出现在这里。" },
+  waiting: { title: "没有等待中的线索", detail: "已回复对方、或已排好跟进的联系人会出现在这里。" },
+  exhausted: { title: "没有用尽跟进的线索", detail: "所有跟进都发出但仍无回复的联系人会出现在这里。" },
 };
 
 type Filters = { category: string; channel: string };
@@ -164,11 +164,11 @@ export function CrmPipelineClient() {
   return <>
     <PageHeader
       title="Pipeline"
-      description="Every open lead, by where it stands: waiting on you, waiting on them, or out of follow-ups."
+      description="所有进行中的线索，按当前状态归类：等你处理、等对方回复、跟进已用尽。"
     />
 
     <KpiStrip className="mt-6" columns={4}>
-      <KpiCell icon={RiTeamLine} label="Open leads" value={format(total)} context={filters.category === "potential" ? "Not counting “Not interested”" : "Under the current filters"} hint="Every CRM record that is not closed, under the category and channel filters below." />
+      <KpiCell icon={RiTeamLine} label="进行中的线索" value={format(total)} context={filters.category === "potential" ? "不含「无意向」" : "按当前筛选条件"} hint="所有未关闭的 CRM 记录，按下方分类与渠道筛选统计。" />
       <KpiCell icon={STAGE_META.needs_action.icon} label={STAGE_META.needs_action.label} value={format(countFor("needs_action"))} context={STAGE_META.needs_action.detail} hint="The same records as Action required." />
       <KpiCell icon={STAGE_META.waiting.icon} label={STAGE_META.waiting.label} value={format(countFor("waiting"))} context={STAGE_META.waiting.detail} />
       <KpiCell icon={STAGE_META.exhausted.icon} label={STAGE_META.exhausted.label} value={format(countFor("exhausted"))} context={STAGE_META.exhausted.detail} hint="The last sequence run finished its final step without an answer. Move their stage or close them." />
@@ -187,7 +187,7 @@ export function CrmPipelineClient() {
           <Select.Item value="">All categories</Select.Item>
           {categoryItems()}
         </CompactSelect>
-        <CompactSelect label="Channel" placeholder="All channels" value={filters.channel} onChange={(value) => setFilter("channel", value)}><Select.Item value="">All channels</Select.Item>{channelItems()}</CompactSelect>
+        <CompactSelect label="Channel" placeholder="全部渠道" value={filters.channel} onChange={(value) => setFilter("channel", value)}><Select.Item value="">全部渠道</Select.Item>{channelItems()}</CompactSelect>
         {filtered && <Button.Root variant="neutral" mode="ghost" size="xsmall" onClick={() => setFilters(DEFAULT_FILTERS)}>Reset</Button.Root>}
       </div>
     </div>
@@ -221,14 +221,14 @@ export function CrmPipelineClient() {
       </HoverPreviewProvider>
     </> : <Frame className="mt-4">
       <FrameHeader
-        title="Open leads"
-        description={list.loaded ? `${format(countFor(listStage))} leads · most recent activity first` : "Loading…"}
+        title="进行中的线索"
+        description={list.loaded ? `${format(countFor(listStage))} 条线索 · 按最近活动排序` : "加载中…"}
         actions={
           <SegmentedControl.Root value={listStage} onValueChange={(value) => setListStage(value as PipelineStage | "all")}>
-            <SegmentedControl.List className="w-full sm:inline-grid sm:w-auto" aria-label="Pipeline stage">
+            <SegmentedControl.List className="w-full sm:inline-grid sm:w-auto" aria-label="商机阶段">
               {(["all", ...STAGES] as const).map((stage) => <SegmentedControl.Trigger key={stage} value={stage} className="gap-1.5 px-2 sm:px-3">
                 {stage !== "all" && <StageGlyph stage={stage} className="hidden sm:flex" />}
-                {stage === "all" ? "All" : STAGE_META[stage].short}
+                {stage === "all" ? "全部" : STAGE_META[stage].short}
                 <span className="tabular-nums text-text-soft-400">{format(countFor(stage))}</span>
               </SegmentedControl.Trigger>)}
             </SegmentedControl.List>
@@ -301,7 +301,7 @@ function BoardColumn({ stage, page, columns, count, categories, filtered, onRese
         <h2 id={`stage-${stage}`} className="truncate text-label-md text-text-strong-950">{meta.label}</h2>
         <p className="truncate text-paragraph-xs text-text-sub-600">{meta.detail}</p>
       </div>
-      <span className="flex h-7 min-w-9 shrink-0 items-center justify-center rounded-lg bg-bg-white-0 px-2 text-label-sm tabular-nums text-text-strong-950 shadow-regular-xs ring-1 ring-inset ring-stroke-soft-200" title={`${count === null ? "—" : count.toLocaleString()} leads`}>{count === null ? "—" : count.toLocaleString()}</span>
+      <span className="flex h-7 min-w-9 shrink-0 items-center justify-center rounded-lg bg-bg-white-0 px-2 text-label-sm tabular-nums text-text-strong-950 shadow-regular-xs ring-1 ring-inset ring-stroke-soft-200" title={`${count === null ? "—" : count.toLocaleString()} 条线索`}>{count === null ? "—" : count.toLocaleString()}</span>
     </header>
     <NoticeBar notice={notice} onDismiss={() => setNotice(null)} className="mb-1 rounded-lg" />
     {!page.loaded && page.loading ? <div className="space-y-2">{Array.from({ length: 4 }, (_, i) => <div key={i} className="h-36 animate-pulse rounded-xl bg-bg-white-0 ring-1 ring-inset ring-stroke-soft-200" />)}</div>
@@ -329,7 +329,7 @@ function BoardColumn({ stage, page, columns, count, categories, filtered, onRese
           />;
         })}
         {page.hasMore && <Button.Root variant="neutral" mode="ghost" size="small" className="w-full" onClick={page.loadMore} disabled={page.loadingMore}>
-          {page.loadingMore ? "Loading…" : "Load more"}
+          {page.loadingMore ? "加载中…" : "加载更多"}
         </Button.Root>}
       </div>}
   </Frame>;

@@ -35,7 +35,7 @@ function CompanyTableRow({ row, onOpen }: { row: CompanyRow; onOpen: (row: Compa
   return (
     <Table.Row
       tabIndex={0}
-      aria-label={`Show people at ${name}`}
+      aria-label={`查看 ${name} 的联系人`}
       onClick={open}
       onKeyDown={(event) => { if (event.target === event.currentTarget && event.key === "Enter") open(); }}
       className="cursor-pointer outline-none focus-visible:[&>td]:bg-bg-weak-50"
@@ -50,8 +50,8 @@ function CompanyTableRow({ row, onOpen }: { row: CompanyRow; onOpen: (row: Compa
       <Table.Cell className={rowCell}><CampaignSummary campaigns={campaigns} /></Table.Cell>
       <Table.Cell className={rowCell}>
         <div className="-ml-1.5 flex items-center gap-0.5">
-          <LinkIcon href={`https://${company.domain}`} label="website" icon={RiGlobalLine} />
-          <LinkIcon href={linkedin} label="LinkedIn page" icon={RiLinkedinBoxFill} color={HUE.blue} />
+          <LinkIcon href={`https://${company.domain}`} label="官网" icon={RiGlobalLine} />
+          <LinkIcon href={linkedin} label="LinkedIn 主页" icon={RiLinkedinBoxFill} color={HUE.blue} />
         </div>
       </Table.Cell>
       <Table.Cell className={cn(rowCell, "whitespace-nowrap text-paragraph-sm tabular-nums text-text-sub-600")}>{shortDate(company.updatedAt)}</Table.Cell>
@@ -62,10 +62,10 @@ function CompanyTableRow({ row, onOpen }: { row: CompanyRow; onOpen: (row: Compa
               <Button.Root variant="neutral" mode="ghost" size="xsmall" aria-label={`More actions for ${name}`}><Button.Icon as={RiMore2Line} /></Button.Root>
             </Dropdown.Trigger>
             <Dropdown.Content>
-              <Dropdown.Item onSelect={open}><Dropdown.ItemIcon as={RiTeamLine} />Show people</Dropdown.Item>
-              <Dropdown.Item onSelect={() => window.open(`https://${company.domain}`, "_blank", "noopener,noreferrer")}><Dropdown.ItemIcon as={RiExternalLinkLine} />Open website</Dropdown.Item>
-              {linkedin && <Dropdown.Item onSelect={() => window.open(linkedin, "_blank", "noopener,noreferrer")}><Dropdown.ItemIcon as={RiLinkedinBoxFill} />Open LinkedIn page</Dropdown.Item>}
-              <Dropdown.Item onSelect={() => void navigator.clipboard?.writeText(company.domain)}><Dropdown.ItemIcon as={RiFileCopyLine} />Copy domain</Dropdown.Item>
+              <Dropdown.Item onSelect={open}><Dropdown.ItemIcon as={RiTeamLine} />查看联系人</Dropdown.Item>
+              <Dropdown.Item onSelect={() => window.open(`https://${company.domain}`, "_blank", "noopener,noreferrer")}><Dropdown.ItemIcon as={RiExternalLinkLine} />打开官网</Dropdown.Item>
+              {linkedin && <Dropdown.Item onSelect={() => window.open(linkedin, "_blank", "noopener,noreferrer")}><Dropdown.ItemIcon as={RiLinkedinBoxFill} />打开 LinkedIn 主页</Dropdown.Item>}
+              <Dropdown.Item onSelect={() => void navigator.clipboard?.writeText(company.domain)}><Dropdown.ItemIcon as={RiFileCopyLine} />复制域名</Dropdown.Item>
             </Dropdown.Content>
           </Dropdown.Root>
         </div>
@@ -89,12 +89,12 @@ export function CompaniesTable({ rows, sort, direction, onSort, loading, onOpen 
       <Table.Root style={fixedTableStyle}>
         <Table.Header>
           <tr>
-            <SortableHead label="Company" sortKey="name" className="w-[26%]" {...head} />
-            <SortableHead label="People" sortKey="people" className="w-24 text-right" {...head} />
-            <SortableHead label="Outreach" />
-            <SortableHead label="Links" className="w-28" />
-            <SortableHead label="Updated" sortKey="updated" className="w-32" {...head} />
-            <SortableHead label={<span className="sr-only">Actions</span>} className="w-12" />
+            <SortableHead label="公司" sortKey="name" className="w-[26%]" {...head} />
+            <SortableHead label="联系人" sortKey="people" className="w-24 text-right" {...head} />
+            <SortableHead label="触达" />
+            <SortableHead label="链接" className="w-28" />
+            <SortableHead label="更新时间" sortKey="updated" className="w-32" {...head} />
+            <SortableHead label={<span className="sr-only">操作</span>} className="w-12" />
           </tr>
         </Table.Header>
         <Table.Body spacing={4} className={cn("transition-opacity", loading && rows && "opacity-60")} aria-busy={loading}>

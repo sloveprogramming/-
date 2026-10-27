@@ -29,24 +29,24 @@ const STATUS_COLOR: Record<OutreachLeadStatus, React.ComponentProps<typeof Badge
   suppressed: "orange",
 };
 const STATUS_LABEL: Record<OutreachLeadStatus, string> = {
-  pending: "Pending",
-  initial_sent: "In sequence",
-  in_follow_up: "In sequence",
-  reply_processing: "Processing reply",
-  sequence_completed: "Completed",
-  reply_received: "Replied",
-  bounced: "Bounced",
-  suppressed: "Suppressed",
+  pending: "待发送",
+  initial_sent: "序列中",
+  in_follow_up: "序列中",
+  reply_processing: "处理回复中",
+  sequence_completed: "已完成",
+  reply_received: "已回复",
+  bounced: "退信",
+  suppressed: "已屏蔽",
 };
 
 const FILTERS: { id: string; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "pending", label: "Pending" },
-  { id: "in_sequence", label: "In sequence" },
-  { id: "replied", label: "Replied" },
-  { id: "completed", label: "Completed" },
-  { id: "bounced", label: "Bounced" },
-  { id: "suppressed", label: "Suppressed" },
+  { id: "all", label: "全部" },
+  { id: "pending", label: "待发送" },
+  { id: "in_sequence", label: "序列中" },
+  { id: "replied", label: "已回复" },
+  { id: "completed", label: "已完成" },
+  { id: "bounced", label: "退信" },
+  { id: "suppressed", label: "已屏蔽" },
 ];
 
 /** Avatar tint is derived from the email so a lead keeps the same colour. */
@@ -195,17 +195,17 @@ export default function LeadsTab({
     <div>
       <Frame>
         <FrameHeader
-          title="Leads"
-          description={filtering ? `${meta.total.toLocaleString("en-US")} ${meta.total === 1 ? "lead matches" : "leads match"}. Select a lead to see its emails.` : "Select a lead to see its emails and replies."}
+          title="联系人"
+          description={filtering ? `${meta.total.toLocaleString("zh-CN")} 位联系人匹配。选一位查看邮件记录。` : "选一位联系人，查看其邮件与回复。"}
           actions={
             <>
               <Button.Root variant="neutral" mode="stroke" size="xsmall" onClick={() => setShowPeople(true)}>
                 <Button.Icon as={RiAddLine} />
-                Add from People
+                从联系人添加
               </Button.Root>
               <Button.Root variant="primary" mode="filled" size="xsmall" onClick={() => setShowImport(true)}>
                 <Button.Icon as={RiUploadCloud2Line} />
-                Upload CSV
+                上传 CSV
               </Button.Root>
             </>
           }
@@ -218,7 +218,7 @@ export default function LeadsTab({
                   {FILTERS.map((f) => (
                     <SegmentedControl.Trigger key={f.id} value={f.id} className="gap-1.5 whitespace-nowrap px-3">
                       {f.label}
-                      <span className="tabular-nums text-text-soft-400">{(counts[f.id] ?? 0).toLocaleString("en-US")}</span>
+                      <span className="tabular-nums text-text-soft-400">{(counts[f.id] ?? 0).toLocaleString("zh-CN")}</span>
                     </SegmentedControl.Trigger>
                   ))}
                 </SegmentedControl.List>
@@ -227,26 +227,26 @@ export default function LeadsTab({
             <Input.Root size="small" className="w-full sm:w-72">
               <Input.Wrapper>
                 <Input.Icon as={RiSearchLine} />
-                <Input.Input type="search" aria-label="Search leads" placeholder="Search name, email or company…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input.Input type="search" aria-label="搜索联系人" placeholder="搜索姓名、邮箱或公司…" value={search} onChange={(e) => setSearch(e.target.value)} />
               </Input.Wrapper>
             </Input.Root>
           </div>
 
           {leads.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <p className="text-label-sm text-text-strong-950">{meta.total === 0 && !filtering ? "No leads yet" : "No leads match"}</p>
-              <p className="mt-1 text-paragraph-sm text-text-sub-600">{meta.total === 0 && !filtering ? "Upload a CSV or add people to get started." : "Try another status or search."}</p>
+              <p className="text-label-sm text-text-strong-950">{meta.total === 0 && !filtering ? "还没有联系人" : "没有匹配的联系人"}</p>
+              <p className="mt-1 text-paragraph-sm text-text-sub-600">{meta.total === 0 && !filtering ? "上传一份 CSV 或从联系人里添加即可开始。" : "换个状态或搜索词试试。"}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table.Root className="min-w-[880px]">
                 <Table.Header>
                   <Table.Row>
-                    <Table.Head scope="col" className="px-4">Lead</Table.Head>
-                    <Table.Head scope="col" className="w-72 px-4">Last message</Table.Head>
-                    <Table.Head scope="col" className="w-48 px-4">Progress</Table.Head>
-                    <Table.Head scope="col" className="w-40 px-4">Next send</Table.Head>
-                    <Table.Head scope="col" className="w-40 px-4">Status</Table.Head>
+                    <Table.Head scope="col" className="px-4">联系人</Table.Head>
+                    <Table.Head scope="col" className="w-72 px-4">最近邮件</Table.Head>
+                    <Table.Head scope="col" className="w-48 px-4">进度</Table.Head>
+                    <Table.Head scope="col" className="w-40 px-4">下次发送</Table.Head>
+                    <Table.Head scope="col" className="w-40 px-4">状态</Table.Head>
                   </Table.Row>
                 </Table.Header>
 

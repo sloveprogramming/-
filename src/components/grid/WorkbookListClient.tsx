@@ -377,7 +377,7 @@ export default function WorkbookListClient({
                 {...dropZone(null)}
                 className={cn("rounded px-1 py-0.5 transition hover:text-text-strong-950", dropTarget === "root" && dropClass)}
               >
-                All files
+                全部文件
               </Link>
               {breadcrumbs.map((crumb, index) => (
                 <span key={crumb.id} className="flex items-center gap-1">
@@ -398,7 +398,7 @@ export default function WorkbookListClient({
               ))}
             </nav>
           ) : (
-            "Workbooks and folders that hold your tables, imports and scraped data."
+            "存放数据表、导入结果与采集数据的工作簿和文件夹。"
           )
         }
         actions={newMenu}
@@ -406,7 +406,7 @@ export default function WorkbookListClient({
 
       <Frame className="mt-6">
         <FrameHeader
-          title={here ? "This folder" : "All files"}
+          title={here ? "当前文件夹" : "全部文件"}
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <SegmentedControl.Root value={view} onValueChange={(v) => setView(v as View)}>
@@ -422,7 +422,7 @@ export default function WorkbookListClient({
               <Input.Root size="small" className="w-56">
                 <Input.Wrapper>
                   <Input.Icon as={RiSearchLine} />
-                  <Input.Input type="search" aria-label="Search files" placeholder="Search files…" value={search} onChange={(event) => setSearch(event.target.value)} />
+                  <Input.Input type="search" aria-label="搜索文件" placeholder="搜索文件…" value={search} onChange={(event) => setSearch(event.target.value)} />
                 </Input.Wrapper>
               </Input.Root>
             </div>
@@ -436,8 +436,8 @@ export default function WorkbookListClient({
             nothingYet ? (
               <EmptyState
                 icon={WorkbookIcon}
-                title={here ? `“${here.name}” is empty` : "No workbooks yet"}
-                description="Create a workbook, import a spreadsheet, or add a folder to organise them."
+                title={here ? `“${here.name}” is empty` : "还没有工作簿"}
+                description="新建一个工作簿、导入一份表格，或者建个文件夹来整理它们。"
                 action={newMenu}
               />
             ) : (

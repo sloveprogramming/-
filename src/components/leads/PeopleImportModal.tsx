@@ -28,10 +28,10 @@ export function PeopleImportModal({ onClose, onImported }: { onClose: () => void
       const form = new FormData(); form.append("file", file);
       const response = await fetch("/api/leads/people/import", { method: "POST", body: form });
       const data = await response.json() as ImportResult & { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Import failed");
+      if (!response.ok) throw new Error(data.error ?? "导入失败");
       setResult(data); onImported();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Import failed");
+      setError(cause instanceof Error ? cause.message : "导入失败");
     } finally { setSubmitting(false); }
   }
 
@@ -39,11 +39,11 @@ export function PeopleImportModal({ onClose, onImported }: { onClose: () => void
     <Modal.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
       <Modal.Content size="max-w-lg">
         <Modal.Header icon={RiUploadCloud2Line}>
-          <Modal.Title>Import people</Modal.Title>
-          <Modal.Description>Creates or updates canonical People only. CRM records begin after a reply.</Modal.Description>
+          <Modal.Title>导入联系人</Modal.Title>
+          <Modal.Description>只创建或更新联系人主数据。收到回复后才会生成 CRM 记录。</Modal.Description>
         </Modal.Header>
         <Modal.Body>
-          <a href="/api/leads/people/import/template" className="inline-flex items-center gap-1.5 text-label-sm text-primary-base hover:underline"><RiDownloadLine className="size-4" aria-hidden="true" />Download Excel template</a>
+          <a href="/api/leads/people/import/template" className="inline-flex items-center gap-1.5 text-label-sm text-primary-base hover:underline"><RiDownloadLine className="size-4" aria-hidden="true" />下载 Excel 模板</a>
           <label className="mt-3 flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-stroke-soft-200 px-4 py-8 text-center transition hover:border-primary-base hover:bg-bg-weak-50">
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} />
             <RiUploadCloud2Line className="size-6 text-text-soft-400" aria-hidden="true" />

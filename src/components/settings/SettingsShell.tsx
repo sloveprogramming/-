@@ -27,7 +27,7 @@ const rowState = (active: boolean) =>
  */
 function SectionTabs({ tabs, activeHref, modal, label }: { tabs: SettingsTab[]; activeHref: string; modal: boolean; label: string }) {
   return (
-    <nav aria-label={`${label} pages`} className={cn("shrink-0 border-b border-stroke-soft-200 px-4 sm:px-6 lg:px-8 lg:pt-3", modal && "lg:pr-16")}>
+    <nav aria-label={`${label}页面`} className={cn("shrink-0 border-b border-stroke-soft-200 px-4 sm:px-6 lg:px-8 lg:pt-3", modal && "lg:pr-16")}>
       <div className="-mb-px flex gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map(({ href, label: tabLabel, icon: Icon }) => {
           const active = href === activeHref;
@@ -54,7 +54,7 @@ function SectionTabs({ tabs, activeHref, modal, label }: { tabs: SettingsTab[]; 
 function CloseButton({ className }: { className?: string }) {
   return (
     <Modal.Close
-      aria-label="Close settings"
+      aria-label="关闭设置"
       className={cn(
         "flex size-8 shrink-0 items-center justify-center rounded-lg text-text-soft-400 outline-none transition hover:bg-bg-weak-50 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base",
         className,
@@ -104,11 +104,11 @@ function SettingsFrame({ children, modal }: { children: React.ReactNode; modal: 
             <RiSettings3Line className="size-4 text-text-sub-600" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <Title className="text-label-md text-text-strong-950">Settings</Title>
-            <Description className="sr-only">Connected accounts, AI, CRM and your preferences.</Description>
+            <Title className="text-label-md text-text-strong-950">设置</Title>
+            <Description className="sr-only">已连接的账号、AI、CRM 以及你的偏好设置。</Description>
           </div>
         </div>
-        <nav aria-label="Settings sections" className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+        <nav aria-label="设置分类" className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
           {SETTINGS_NAV.map((group, index) => (
             <div key={group.label} className={cn(index > 0 && "mt-4")}>
               <p className="mb-1 px-2 text-paragraph-xs text-text-soft-400">{group.label}</p>
@@ -142,11 +142,11 @@ function SettingsFrame({ children, modal }: { children: React.ReactNode; modal: 
           <div className="flex min-w-0 items-center gap-2.5">
             <RiSettings3Line className="size-5 shrink-0 text-text-soft-400" aria-hidden="true" />
             {/* The rail's title is hidden here; one Title per dialog is enough for screen readers. */}
-            <p className="text-label-md text-text-strong-950" aria-hidden="true">Settings</p>
+            <p className="text-label-md text-text-strong-950" aria-hidden="true">设置</p>
           </div>
           {modal && <CloseButton />}
         </div>
-        <nav aria-label="Settings sections">
+        <nav aria-label="设置分类">
           <div
             ref={stripRef}
             className="flex gap-1 overflow-x-auto px-3 pb-2.5 sm:px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

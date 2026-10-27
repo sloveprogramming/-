@@ -230,14 +230,14 @@ export function CrmActionsClient() {
 
   const refresh = () => { void load(0); void reloadSummary(); };
   const shown = actions.length;
-  const detail = !loaded ? "Loading…"
+  const detail = !loaded ? "加载中…"
     : total !== null && !(postFiltered && hasMore) ? `${(postFiltered ? shown : total).toLocaleString()} ${(postFiltered ? shown : total) === 1 ? "item" : "items"}${activeFilterCount ? " match these filters" : ""} · newest reply first`
     : `${shown}+ items · newest reply first`;
 
   return <>
     <PageHeader
       title="待处理"
-      description="Replies, drafts and follow-ups that need a person's decision before the CRM moves on."
+      description="需要人来拍板的回复、草稿和跟进——处理完流程才会往下走。"
       actions={<Button.Root variant="neutral" mode="stroke" size="small" onClick={refresh} disabled={loading}>
         <Button.Icon as={RiRefreshLine} className={cn(loading && loaded && "animate-spin")} />刷新</Button.Root>}
     />
@@ -324,7 +324,7 @@ export function LoadMoreOnScroll({ onLoadMore, busy, className }: { onLoadMore: 
   return <div className={cn("flex items-center justify-center border-t border-stroke-soft-200 p-3", className)}>
     <div ref={sentinel} aria-hidden="true" className="h-px w-px" />
     <Button.Root variant="neutral" mode="stroke" size="xsmall" onClick={onLoadMore} disabled={busy}>
-      {busy ? "Loading…" : "Load more"}
+      {busy ? "加载中…" : "加载更多"}
     </Button.Root>
   </div>;
 }
@@ -561,9 +561,9 @@ type IconType = React.ComponentType<{ className?: string }>;
  * do now, a wait, and a sequence that has run out.
  */
 export const STAGE_META = {
-  needs_action: { label: "Needs action", short: "Needs action", color: HUE.amber, badge: "orange", icon: RiFlashlightFill as IconType, detail: "A reply, draft or follow-up is due" },
-  waiting: { label: "Waiting on them", short: "Waiting", color: HUE.purple, badge: "purple", icon: RiHourglass2Fill as IconType, detail: "Replied to, or a follow-up is scheduled" },
-  exhausted: { label: "Follow-ups exhausted", short: "Exhausted", color: MUTED_STRONG, badge: "gray", icon: RiArchiveStackFill as IconType, detail: "Every follow-up sent, no reply yet" },
+  needs_action: { label: "待你处理", short: "待处理", color: HUE.amber, badge: "orange", icon: RiFlashlightFill as IconType, detail: "有回复、草稿或跟进到期" },
+  waiting: { label: "等对方回复", short: "等待中", color: HUE.purple, badge: "purple", icon: RiHourglass2Fill as IconType, detail: "已回复对方，或已排好跟进" },
+  exhausted: { label: "跟进已用尽", short: "已用尽", color: MUTED_STRONG, badge: "gray", icon: RiArchiveStackFill as IconType, detail: "全部跟进都已发出，仍无回复" },
 } as const;
 export type PipelineStage = keyof typeof STAGE_META;
 
