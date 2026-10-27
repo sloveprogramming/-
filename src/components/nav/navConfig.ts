@@ -3,6 +3,7 @@ import {
   RiGridLine,
   RiInboxLine,
   RiMailFill,
+  RiRadarLine,
   RiRouteLine,
   RiSendPlaneLine,
   RiSettings3Line,
@@ -70,6 +71,7 @@ export const NAV_SECTIONS: NavSection[] = [
     entries: [
       link("/analytics", "数据分析", RiBarChartBoxLine),
       link("/crm/actions", "待处理", RiTodoLine, { badge: "actionRequired" }),
+      link("/prospecting", "找客户", RiRadarLine),
       link("/leads", "客户线索", RiUserSearchLine, { match: ["/crm/records"] }),
     ],
   },
@@ -146,6 +148,7 @@ export function paletteItems(): PaletteItem[] {
   }
   items.push(
     { href: "/outreach/campaigns/new", label: "新建邮件营销活动", group: "新建", icon: RiMailFill },
+    { href: "/prospecting", label: "找客户（搜索企业）", group: "新建", icon: RiRadarLine },
     { href: "/leads", label: "导入客户线索", group: "新建", icon: RiUserSearchLine },
   );
   return items;
