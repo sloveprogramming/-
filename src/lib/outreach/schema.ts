@@ -75,6 +75,19 @@ export const mailboxes = pgTable("outreach_mailboxes", {
   smtpUser: text("smtp_user"),
   /** AES-256-GCM 加密后的密码，见 src/lib/integrations/credential-crypto.ts。 */
   smtpSecretEncrypted: text("smtp_secret_encrypted"),
+  /**
+   * 收信（IMAP）。留空时按发信主机推导：smtp.exmail.qq.com → imap.exmail.qq.com、
+   * smtp.qiye.aliyun.com → imap.qiye.aliyun.com、smtphz.qiye.163.com → imaphz.qiye.163.com，
+   * 端口 993 SSL，账号密码沿用发信的那一套。国内三家服务商都是这个规律，
+   * 所以默认不用单独填；自建网关可以在这里覆盖。
+   */
+  imapHost: text("imap_host"),
+  imapPort: integer("imap_port"),
+  imapSecure: boolean("imap_secure").notNull().default(true),
+  imapUser: text("imap_user"),
+  imapSecretEncrypted: text("imap_secret_encrypted"),
+  /** 已经处理到哪个 UID。IMAP 用递增 UID 做游标，比 Gmail 的 historyId 直白。 */
+  lastImapUid: integer("last_imap_uid"),
   dailySendLimit: integer("daily_send_limit").notNull().default(30),
   todayEmailsSent: integer("today_emails_sent").notNull().default(0),
   sendCounterResetAt: timestamp("send_counter_reset_at", { withTimezone: true }),

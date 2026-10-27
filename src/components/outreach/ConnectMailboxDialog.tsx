@@ -219,7 +219,7 @@ export default function ConnectMailboxDialog({ onClose }: { onClose: () => void 
                     label="密码"
                     htmlFor="mailbox-secret"
                     required
-                    description="国内企业邮箱多数要单独开启 SMTP 服务，并用「客户端专用密码」，不是登录密码。保存后加密入库，不会再显示。"
+                    description="国内企业邮箱多数要单独开启 SMTP 服务，并用「客户端专用密码」，不是登录密码。保存后加密入库，不会再显示。收信会自动用同一套账号走 IMAP（imap.xxx / 993），不用另填。"
                   >
                     <Input.Root size="medium">
                       <Input.Wrapper>

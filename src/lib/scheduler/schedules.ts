@@ -18,7 +18,7 @@
  */
 import { dailyAt, everyMinutes, type Schedule } from "./slots";
 
-export type PlatformJobName = "crm-auto-follow-ups" | "history-prune";
+export type PlatformJobName = "crm-auto-follow-ups" | "history-prune" | "email-inbox-sync";
 
 export type PlatformJob = {
   name: PlatformJobName;
@@ -47,6 +47,14 @@ export const PLATFORM_JOBS: readonly PlatformJob[] = [
     schedule: dailyAt("00:00", "UTC"),
     enabled: true,
     description: "清理历史任务记录与过期的调度占位",
+  },
+  {
+    // 企业邮箱没有推送，只能轮询。5 分钟一次，单个邮箱一轮最多处理 50 封。
+    // Gmail 邮箱不走这里（由 Pub/Sub 推送触发），所以混合部署不会重复同步。
+    name: "email-inbox-sync",
+    schedule: everyMinutes(5),
+    enabled: true,
+    description: "企业邮箱收信（IMAP 轮询）",
   },
 ];
 

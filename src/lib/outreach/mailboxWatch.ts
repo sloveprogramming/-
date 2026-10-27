@@ -23,7 +23,8 @@ export type MailboxWatchResult = {
  * organization, so one without it is skipped rather than failing the run.
  */
 export async function renewMailboxWatches(options: { organizationIds?: string[] } = {}): Promise<MailboxWatchResult> {
-  const connected = await db.select().from(mailboxes).where(eq(mailboxes.status, "connected"));
+  // 改造：只给 Gmail 邮箱续订 Pub/Sub；企业邮箱 SMTP 的收信走 IMAP 轮询（imapSync.ts）。
+  const connected = await db.select().from(mailboxes).where(and(eq(mailboxes.status, "connected"), eq(mailboxes.provider, "gmail")));
   const wanted = options.organizationIds ? new Set(options.organizationIds) : null;
   const byOrganization = new Map<string, (typeof connected)[number][]>();
   for (const mailbox of connected) {

@@ -106,9 +106,10 @@ describe("daily", () => {
 describe("registry", () => {
   test("in-process jobs and their schedules", () => {
     // 改造：LinkedIn 的三个任务已删除，只剩渠道无关的两个。
-    expect(PLATFORM_JOBS.filter((j) => j.enabled).map((j) => j.name)).toEqual(["crm-auto-follow-ups", "history-prune"]);
+    expect(PLATFORM_JOBS.filter((j) => j.enabled).map((j) => j.name)).toEqual(["crm-auto-follow-ups", "history-prune", "email-inbox-sync"]);
     expect(platformJob("crm-auto-follow-ups").schedule).toEqual({ kind: "interval", minutes: 5 });
     expect(platformJob("history-prune").schedule).toEqual({ kind: "daily", at: "00:00", timeZone: "UTC" });
+    expect(platformJob("email-inbox-sync").schedule).toEqual({ kind: "interval", minutes: 5 });
   });
 });
 
