@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listMailboxes, connectMailbox } from "@/lib/outreach/mailboxes";
+import { listMailboxes, connectMailbox, connectSmtpMailbox } from "@/lib/outreach/mailboxes";
 import { withOrgContext, authContextErrorResponse } from "@/lib/auth/context";
 
 // GET /api/outreach/mailboxes — list connected mailboxes.
@@ -17,12 +17,23 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/outreach/mailboxes — connect a mailbox: { emailAddress, displayName?, signatureHtml? }
-// No password/OAuth — just names the address; we test whether our service
-// account's domain-wide delegation is authorized to impersonate it.
+// 改造：一个接口接两种邮箱。
+//   - 不带 provider（或 "gmail"）：老路径，只报地址，验证服务账号能不能冒充它。
+//   - provider: "smtp"：企业邮箱，带 host/port/secure/user/secret，入库前先真登一次。
 export async function POST(req: NextRequest) {
   try {
     return await withOrgContext(req, async () => {
-      let body: { emailAddress?: string; displayName?: string; signatureHtml?: string };
+      let body: {
+        provider?: string;
+        emailAddress?: string;
+        displayName?: string;
+        signatureHtml?: string;
+        host?: string;
+        port?: number;
+        secure?: boolean;
+        user?: string;
+        secret?: string;
+      };
       try {
         body = await req.json();
       } catch {
@@ -33,11 +44,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "emailAddress is required" }, { status: 400 });
       }
 
-      const result = await connectMailbox({
-        emailAddress: body.emailAddress,
-        displayName: body.displayName,
-        signatureHtml: body.signatureHtml,
-      });
+      const result = body.provider === "smtp"
+        ? await connectSmtpMailbox({
+            emailAddress: body.emailAddress,
+            displayName: body.displayName,
+            signatureHtml: body.signatureHtml,
+            host: body.host ?? "",
+            port: Number(body.port ?? 465),
+            secure: body.secure ?? true,
+            user: body.user ?? body.emailAddress,
+            secret: body.secret ?? "",
+          })
+        : await connectMailbox({
+            emailAddress: body.emailAddress,
+            displayName: body.displayName,
+            signatureHtml: body.signatureHtml,
+          });
       if (!result.ok) {
         return NextResponse.json({ ok: false, error: result.error }, { status: 422 });
       }

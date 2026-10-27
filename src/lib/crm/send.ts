@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { inboxContacts, inboxMessages } from "@/lib/inbox/schema";
 import { people } from "@/lib/leads/schema";
 import { isPlatformConnected, isPlatformNotConnectedError } from "@/lib/platform/credentials";
-import { sendEmail } from "@/lib/outreach/gmail";
+import { sendEmail } from "@/lib/outreach/sender";
+import { smtpConfigForAddress } from "@/lib/outreach/smtp";
 import { crmChannelSendProvider } from "./channels";
 import { insertConversationMessageInTransaction } from "./conversations";
 import { appendCrmEvent } from "./events";
@@ -148,9 +149,14 @@ function providerErrorIsDefinite(error: unknown): boolean {
  */
 export const sendThroughCrmProvider: CrmSendAdapter = async (input) => {
   if (input.channel === "email") {
-    if (!(await isPlatformConnected("google"))) throw new DefiniteCrmSendError("Google Workspace is not connected — connect it in Settings → Email → Connection");
-    if (!input.recipientEmail) throw new DefiniteCrmSendError("The Person has no Email address");
-    if (!input.subject) throw new DefiniteCrmSendError("Email subject is required");
+    // 改造：邮箱可能是企业邮箱 SMTP（自带账号密码），也可能是 Google Workspace。
+    // 只有后者才要求 Google 集成连上；否则国内部署会被这条检查挡住。
+    const smtpMailbox = await smtpConfigForAddress(input.accountRef);
+    if (!smtpMailbox && !(await isPlatformConnected("google"))) {
+      throw new DefiniteCrmSendError("这个发信邮箱没有配置 SMTP，Google Workspace 也没有连上。去「设置 → 邮件 → 发信邮箱」补一个企业邮箱。");
+    }
+    if (!input.recipientEmail) throw new DefiniteCrmSendError("这个人没有邮箱地址");
+    if (!input.subject) throw new DefiniteCrmSendError("邮件主题不能为空");
     const result = await sendEmail({
       from: input.accountRef,
       to: [input.recipientEmail],

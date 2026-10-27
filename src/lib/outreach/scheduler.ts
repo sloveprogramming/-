@@ -16,7 +16,7 @@ import { companies, people } from "@/lib/leads/schema";
 import { personVariables } from "@/lib/leads/variables";
 import { mailboxes, outreachLeads, outreachEmails, outreachCampaigns, outreachMailboxQueue } from "./schema";
 import type { SequenceStep } from "./schema";
-import { sendEmail } from "./gmail";
+import { sendEmail } from "./sender";
 import { isPlatformConnected } from "@/lib/platform/credentials";
 import { isSuppressed } from "./suppression";
 import { isWithinWorkingHours } from "./workingHours";
@@ -94,11 +94,18 @@ export async function runSchedulerTick(options: { send?: SendFunction; now?: Dat
 }
 
 async function tickOrganization(result: TickResult, now: Date, send: SendFunction, injectedSender: boolean) {
-  // An injected sender (tests) bypasses Gmail entirely, so only the real one needs credentials.
-  // Google is connected per organization: one without it is skipped, not the whole tick.
-  if (!injectedSender && !(await isPlatformConnected("google"))) {
-    console.log(`[outreach/scheduler] Google Workspace is not connected for organization ${currentOrganizationId()}; skipped`);
-    return;
+  // 改造：只有靠 Google Workspace 发信的邮箱才需要那个集成。国内部署用企业邮箱
+  // SMTP（自带账号密码），所以只要组织里有一个 SMTP 邮箱就不该被这道检查挡住。
+  if (!injectedSender) {
+    const [smtpMailbox] = await db
+      .select({ id: mailboxes.id })
+      .from(mailboxes)
+      .where(and(inOrg(mailboxes), eq(mailboxes.provider, "smtp")))
+      .limit(1);
+    if (!smtpMailbox && !(await isPlatformConnected("google"))) {
+      console.log(`[outreach/scheduler] 组织 ${currentOrganizationId()} 没有 SMTP 邮箱、Google Workspace 也没连；跳过`);
+      return;
+    }
   }
 
   const queuedMailboxIds = await db

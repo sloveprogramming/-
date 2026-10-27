@@ -54,8 +54,8 @@ export default function MailboxesPageClient({ mailboxes }: { mailboxes: Mailbox[
         <FramePanel>
           <EmptyState
             icon={RiMailLine}
-            title="No mailboxes yet"
-            description="Add a Google Workspace address authorised for sending, and campaigns can start sending from it."
+            title="还没有发信邮箱"
+            description="添加一个企业邮箱（腾讯企业邮 / 阿里云 / 网易企业邮），外发活动就能从这个邮箱发信了。"
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <AddMailboxButton />
@@ -71,7 +71,7 @@ export default function MailboxesPageClient({ mailboxes }: { mailboxes: Mailbox[
   return (
     <div>
       <KpiStrip columns={4}>
-        <KpiCell icon={RiMailCheckLine} label="Connected" value={String(connected)} context={`of ${mailboxes.length} ${mailboxes.length === 1 ? "mailbox" : "mailboxes"}`} />
+        <KpiCell icon={RiMailCheckLine} label="已连接" value={String(connected)} context={`of ${mailboxes.length} ${mailboxes.length === 1 ? "mailbox" : "mailboxes"}`} />
         <KpiCell
           icon={RiErrorWarningLine}
           label="Needs attention"

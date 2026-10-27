@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   integer,
+  boolean,
   jsonb,
   timestamp,
   uniqueIndex,
@@ -43,9 +44,15 @@ export const DEFAULT_WORKING_HOURS: WorkingHours = {
 };
 
 /**
- * A sending inbox connected via our Google service account's domain-wide
- * delegation — connecting a mailbox is just naming an email address the
- * service account is authorized to impersonate (no per-mailbox OAuth/password).
+ * A sending inbox.
+ *
+ * 改造：原来只有一种接法——Google 服务账号的域委派，连邮箱就是"报一个地址"，
+ * 没有密码。国内用不了 Google，所以加了第二种：企业邮箱 SMTP（腾讯企业邮 /
+ * 阿里云邮箱 / 网易企业邮），主机、端口、账号、密码都按邮箱存，密码用
+ * INTEGRATION_CREDENTIALS_KEY 加密后存在 smtp_secret_encrypted 里。
+ *
+ * provider = "gmail" 走 Gmail API；"smtp" 走 nodemailer。两个分支在
+ * src/lib/outreach/sender.ts 里分派。
  */
 export const mailboxes = pgTable("outreach_mailboxes", {
   organizationId: uuid("organization_id")
@@ -59,18 +66,29 @@ export const mailboxes = pgTable("outreach_mailboxes", {
   lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
   /** Gmail History API cursor — set once the first successful sync/watch runs. */
   lastHistoryId: text("last_history_id"),
+  /** 发信通道：gmail（Google Workspace 域委派）或 smtp（企业邮箱）。 */
+  provider: text("provider").notNull().default("gmail").$type<MailboxProvider>(),
+  smtpHost: text("smtp_host"),
+  smtpPort: integer("smtp_port"),
+  /** true = 465 端口直连 TLS（国内企业邮箱常见）；false = 587 STARTTLS。 */
+  smtpSecure: boolean("smtp_secure").notNull().default(true),
+  smtpUser: text("smtp_user"),
+  /** AES-256-GCM 加密后的密码，见 src/lib/integrations/credential-crypto.ts。 */
+  smtpSecretEncrypted: text("smtp_secret_encrypted"),
   dailySendLimit: integer("daily_send_limit").notNull().default(30),
   todayEmailsSent: integer("today_emails_sent").notNull().default(0),
   sendCounterResetAt: timestamp("send_counter_reset_at", { withTimezone: true }),
   nextEmailTime: timestamp("next_email_time", { withTimezone: true }),
   signatureHtml: text("signature_html"),
-  /** Per-day send window + timezone — the scheduler won't send outside this window. Defaults to Mon-Fri 9-6 ET. */
+  /** Per-day send window + timezone — the scheduler won't send outside this window. */
   workingHours: jsonb("working_hours").$type<WorkingHours>().notNull().default(DEFAULT_WORKING_HOURS),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 },
   (t) => [index("outreach_mailboxes_organization_idx").on(t.organizationId)],
 );
+
+export type MailboxProvider = "gmail" | "smtp";
 
 export type SuppressionReason = "unsubscribed" | "bounced" | "manual" | "complaint";
 
