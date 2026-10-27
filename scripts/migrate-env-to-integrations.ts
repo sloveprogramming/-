@@ -30,7 +30,8 @@ const apply = process.argv.includes("--apply");
 const overwrite = process.argv.includes("--overwrite");
 
 /** Platform field → the env var that used to hold it (GoLogin never lived in env). */
-const FROM_ENV: Record<Exclude<PlatformKey, "gologin">, Record<string, string>> = {
+// 改造：wecom 是新加的集成，从来没有 env 变量，所以从迁移表里排除。
+const FROM_ENV: Record<Exclude<PlatformKey, "gologin" | "wecom">, Record<string, string>> = {
   unipile: {
     baseUrl: "UNIPILE_BASE_URL",
     apiKey: "UNIPILE_API_KEY",

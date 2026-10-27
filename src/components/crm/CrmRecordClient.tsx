@@ -50,6 +50,7 @@ import {
 import { RecordBody } from "./CrmSkeletons";
 import { asList, asObject, crmFetch, displayName, errorMessage, formatDate, relativeDate } from "./crm-utils";
 import { ClassificationPicker, MoveStageDialog, moveStageSuccessMessage, RegenerateDraftDialog, humanize } from "./ActionRowTools";
+import { ScheduleVisitButton } from "./ScheduleVisitButton";
 import { ContactAvatar } from "./ContactAvatar";
 import { takeRecordWorkspace } from "./recordPrefetch";
 import { announceRecordChanged } from "./recordEvents";
@@ -356,7 +357,8 @@ function RecordHeader({ back, data, person, name, avatarUrl, currentStep, active
           size="xsmall"
           title={`Mark "${String(currentStep.name)}" as done without sending it; the next step waits its usual delay`}
           onClick={() => void onAction(`/records/${id}/skip`, {}, "POST", "Step skipped — the next one is scheduled")}
-        aria-label="Skip step"><Button.Icon as={RiSkipForwardLine} /><span className="hidden sm:inline">Skip step</span></Button.Root>}
+        aria-label="Skip step"><Button.Icon as={RiSkipForwardLine} /><span className="hidden sm:inline">跳过这一步</span></Button.Root>}
+        <ScheduleVisitButton recordId={id} companyName={company || null} />
         {moveStage}
         <Dropdown.Root>
           <Dropdown.Trigger asChild>

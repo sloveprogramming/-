@@ -252,6 +252,7 @@ const PLACEHOLDER_CREDENTIALS: Record<PlatformKey, Record<string, string>> = {
     gmailWatchTopic: "projects/northwind-demo/topics/gmail-replies",
   },
   r2: { accountId: "demo0000000000000000000000000000", bucket: "northwind-call-recordings", accessKeyId: "demo-access-key", secretAccessKey: "demo-secret-key" },
+  wecom: { corpId: "demo-corp-id", agentId: "1000002", secret: "demo-wecom-secret", callbackToken: "demo-callback-token", callbackAesKey: "demo-aes-key" },
   gologin: { apiToken: "demo-gologin-token" },
 };
 

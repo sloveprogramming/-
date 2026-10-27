@@ -28,6 +28,9 @@ const PUBLIC = [
   "/api/outreach/mailboxes/watch",
   "/unsubscribe",
   "/api/outreach/unsubscribe",
+  // 企业微信消息回调：企微服务器直连，带不了登录态。它自己用回调 Token 校验
+  // 签名（src/lib/wecom/client.ts 的 wecomSignatureMatches），未通过直接 401。
+  "/api/webhooks/wecom",
 ];
 
 /**

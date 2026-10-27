@@ -2,9 +2,10 @@ import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inboxContacts, inboxMessages } from "@/lib/inbox/schema";
 import { people } from "@/lib/leads/schema";
-import { isPlatformConnected, isPlatformNotConnectedError } from "@/lib/platform/credentials";
+import { getPlatformCredentials, isPlatformConnected, isPlatformNotConnectedError } from "@/lib/platform/credentials";
 import { sendEmail } from "@/lib/outreach/sender";
 import { smtpConfigForAddress } from "@/lib/outreach/smtp";
+import { sendTextToExternalContact } from "@/lib/wecom/client";
 import { crmChannelSendProvider } from "./channels";
 import { insertConversationMessageInTransaction } from "./conversations";
 import { appendCrmEvent } from "./events";
@@ -143,9 +144,11 @@ function providerErrorIsDefinite(error: unknown): boolean {
 }
 
 /**
- * 改造：LinkedIn 与 WhatsApp 两条投递分支随频道删除。企业微信、短信、外呼还没有
- * 接入发送服务，到这里是**确定没发出去**（DefiniteCrmSendError），草稿直接失败，
- * 不会进入"投递不确定"需要人工核对的灰区。接入时在这三行上面各加一个分支。
+ * 改造：LinkedIn 与 WhatsApp 两条投递分支随频道删除，换成国内的四个渠道。
+ *
+ * 企业微信已接入（sendWecomThroughCrm）。短信与外呼还没有服务商账号，到这里是
+ * **确定没发出去**（DefiniteCrmSendError），草稿直接失败，不会进入"投递不确定"
+ * 需要人工核对的灰区——那比失败更让人焦虑。
  */
 export const sendThroughCrmProvider: CrmSendAdapter = async (input) => {
   if (input.channel === "email") {
@@ -177,8 +180,34 @@ export const sendThroughCrmProvider: CrmSendAdapter = async (input) => {
       response: result,
     };
   }
+
+  if (input.channel === "wecom") {
+    if (!(await isPlatformConnected("wecom"))) {
+      throw new DefiniteCrmSendError("企业微信还没连上。去「设置 → 企业微信 → 连接配置」填企业 ID、AgentId 和 Secret。");
+    }
+    // providerThreadId 存的是对方的外部联系人 ID（external_userid）。
+    const externalUserId = input.providerThreadId?.trim();
+    if (!externalUserId) {
+      throw new DefiniteCrmSendError("这条企微会话没有对方的外部联系人 ID，发不出去。通常是对方还没加为企业微信好友。");
+    }
+    const credentials = await getPlatformCredentials("wecom");
+    if (!credentials) throw new DefiniteCrmSendError("企业微信凭据读不出来，请重新连接。");
+    const result = await sendTextToExternalContact(
+      { corpId: credentials.corpId, agentId: credentials.agentId, secret: credentials.secret },
+      { externalUserId, text: input.bodyText },
+    );
+    return {
+      provider: "wecom",
+      providerMessageId: result.msgId,
+      // 会话 id 不变：对方还是那个外部联系人。
+      providerThreadId: externalUserId,
+      rfcMessageId: null,
+      response: { msgId: result.msgId, externalUserId },
+    };
+  }
+
   throw new DefiniteCrmSendError(
-    `「${input.channel}」这个渠道还没有接入发送服务，暂时发不出去。接入后这里会换成对应的 SDK 调用。`,
+    `「${input.channel === "sms" ? "短信" : "电话"}」这个渠道还没有接入服务商，暂时发不出去。话术与规则已经就绪，接好服务商账号后这里会换成对应的调用。`,
   );
 };
 

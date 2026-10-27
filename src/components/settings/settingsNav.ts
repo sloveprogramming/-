@@ -10,6 +10,7 @@ import {
   RiPlugLine,
   RiPaletteLine,
   RiPriceTag3Line,
+  RiWechatLine,
   RiQuillPenLine,
   type RemixiconComponentType,
 } from "@remixicon/react";
@@ -54,6 +55,16 @@ export const SETTINGS_NAV: { label: string; items: SettingsNavItem[] }[] = [
           { href: "/settings/email-accounts", label: "发信邮箱", icon: RiMailLine },
           { href: "/settings/email-connection", label: "连接配置", icon: RiPlugLine },
           { href: "/settings/email-rules", label: "发送规则", icon: RiEqualizerLine },
+        ],
+      },
+      {
+        // 改造新增：企业微信，国内 B2B 的主渠道。
+        href: "/settings/wecom-connection",
+        label: "企业微信",
+        icon: RiWechatLine,
+        tabs: [
+          { href: "/settings/wecom-connection", label: "连接配置", icon: RiPlugLine },
+          { href: "/settings/wecom-rules", label: "发送规则", icon: RiEqualizerLine },
         ],
       },
     ],

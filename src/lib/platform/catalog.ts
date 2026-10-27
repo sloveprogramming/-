@@ -16,7 +16,7 @@
 
 import { docsPageUrl } from "@/lib/support";
 
-export type PlatformKey = "unipile" | "google" | "r2" | "gologin";
+export type PlatformKey = "unipile" | "google" | "r2" | "gologin" | "wecom";
 
 /** The decrypted credential object stored for each platform. */
 export type PlatformCredentials = {
@@ -47,6 +47,25 @@ export type PlatformCredentials = {
   gologin: {
     /** A GoLogin API token (Settings → API). */
     apiToken: string;
+  };
+  /**
+   * 企业微信自建应用。改造新增：国内 B2B 的主渠道，替代原来的 LinkedIn。
+   *
+   * 用自建应用而不是第三方服务商：新农哥是单一企业，自建应用（corpId + agentId
+   * + secret）权限够用、不依赖服务商、也没有套餐费。
+   */
+  wecom: {
+    /** 企业 ID，在企微管理后台「我的企业」页面底部。 */
+    corpId: string;
+    /** 自建应用的 AgentId 与 Secret，在「应用管理 → 自建 → 应用详情」。 */
+    agentId: string;
+    secret: string;
+    /**
+     * 接收消息回调用的 Token 与 EncodingAESKey。
+     * 在应用详情页「接收消息」处设置；留空则只发不收。
+     */
+    callbackToken: string;
+    callbackAesKey: string;
   };
 };
 
@@ -285,6 +304,64 @@ export const PLATFORM_INTEGRATIONS: readonly PlatformIntegration[] = [
       },
     ],
   },
+  {
+    // 改造新增：国内 B2B 的主渠道，替代原来的 LinkedIn。
+    key: "wecom",
+    name: "企业微信",
+    description: "企业微信自建应用：加客户为外部联系人、发消息、接收回复。国内拓客的首选渠道。",
+    enables: ["企微加好友与消息", "客户回复进 CRM"],
+    websiteUrl: "https://work.weixin.qq.com/",
+    iconUrl: "/Integrations - Icon/wecom.svg",
+    docsUrl: "https://developer.work.weixin.qq.com/document/path/90664",
+    setupSteps: [
+      "企业微信管理后台「我的企业 → 企业信息」页面底部，复制「企业 ID」（corpId）。",
+      "「应用管理 → 自建 → 创建应用」，填名称和 logo，创建后拿到 AgentId 和 Secret。",
+      "进入刚建的应用，在「接收消息」里设置 API 接收 URL、Token、EncodingAESKey——URL 填本系统的 /api/webhooks/wecom。",
+      "把企业 ID、AgentId、Secret、Token、EncodingAESKey 填到下面。",
+    ],
+    fields: [
+      {
+        key: "corpId",
+        label: "企业 ID（corpId）",
+        help: "企微管理后台 → 我的企业 → 企业信息，页面最下方的「企业 ID」。",
+        inputType: "text",
+        required: true,
+        secret: false,
+      },
+      {
+        key: "agentId",
+        label: "AgentId",
+        help: "应用管理 → 自建 → 你的应用 → 应用详情里的 AgentId（一串数字）。",
+        inputType: "text",
+        required: true,
+        secret: false,
+      },
+      {
+        key: "secret",
+        label: "Secret",
+        help: "应用详情页的 Secret，点「查看」获取。只显示一次，丢了要重置。",
+        inputType: "password",
+        required: true,
+        secret: true,
+      },
+      {
+        key: "callbackToken",
+        label: "回调 Token",
+        help: "应用详情 → 接收消息 → 设置 API 接收，自己定的 Token。留空则只发不收。",
+        inputType: "text",
+        required: false,
+        secret: false,
+      },
+      {
+        key: "callbackAesKey",
+        label: "EncodingAESKey",
+        help: "同一个设置页里的 EncodingAESKey（43 位）。留空则只发不收。",
+        inputType: "password",
+        required: false,
+        secret: true,
+      },
+    ],
+  },
 ];
 
 /** OpenRouter is connected on the AI provider page; the Integrations page only shows its card. */
@@ -300,14 +377,16 @@ export const PLATFORM_SETTINGS_HREF: Record<PlatformKey, string> = {
   unipile: "/settings/linkedin-connection",
   r2: "/settings/whatsapp-connection",
   gologin: "/settings/whatsapp-connection",
+  wecom: "/settings/wecom-connection",
 };
 
 /** Where that page sits in the Settings sidebar, for messages. */
 export const PLATFORM_SETTINGS_LABEL: Record<PlatformKey, string> = {
-  google: "Settings → Email → Connection",
-  unipile: "Settings → LinkedIn → Connection",
-  r2: "Settings → WhatsApp → Integrations",
-  gologin: "Settings → WhatsApp → Integrations",
+  google: "设置 → 邮件 → 连接配置",
+  unipile: "设置 → 领英 → 连接配置",
+  r2: "设置 → WhatsApp → 集成",
+  gologin: "设置 → WhatsApp → 集成",
+  wecom: "设置 → 企业微信 → 连接配置",
 };
 
 export function getPlatformIntegration(key: string): PlatformIntegration | null {

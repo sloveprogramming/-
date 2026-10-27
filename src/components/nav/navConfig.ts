@@ -3,6 +3,7 @@ import {
   RiGridLine,
   RiInboxLine,
   RiMailFill,
+  RiCalendarCheckLine,
   RiRadarLine,
   RiRouteLine,
   RiSendPlaneLine,
@@ -96,6 +97,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "商机",
     entries: [
       link("/crm/pipeline", "商机看板", RiRouteLine),
+      link("/visits", "拜访", RiCalendarCheckLine),
       link("/crm/sequences", "跟进序列", RiTimeLine),
     ],
   },
