@@ -57,13 +57,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-stroke-soft-200 bg-bg-white-0 px-4 md:hidden">
-        <Link href="/analytics" aria-label="AgentSDR home">
+        <Link href="/analytics" aria-label="新农哥拓客首页">
           <Logo className="text-text-strong-950" iconClassName="size-6" textClassName="text-[17px]" />
         </Link>
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          aria-label="Open menu"
+          aria-label="打开菜单"
           className="flex size-9 items-center justify-center rounded-lg text-text-sub-600 outline-none ring-1 ring-inset ring-stroke-soft-200 transition hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base"
         >
           <RiMenuLine className="size-5" />
@@ -77,7 +77,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             aria-describedby={undefined}
             className="fixed inset-y-0 left-0 z-50 w-[288px] max-w-[85vw] shadow-regular-md outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-left md:hidden"
           >
-            <Dialog.Title className="sr-only">Navigation</Dialog.Title>
+            <Dialog.Title className="sr-only">导航</Dialog.Title>
             <Sidebar mobile onClose={() => setDrawerOpen(false)} />
           </Dialog.Content>
         </Dialog.Portal>

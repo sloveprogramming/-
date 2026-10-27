@@ -29,14 +29,14 @@ export type AiInstructionsPurpose = "draft" | "classification";
 
 const PREAMBLES: Record<AiInstructionsPurpose, string> = {
   draft: [
-    "Operator instructions follow, written by the team that runs this CRM.",
-    "Follow them for tone, style, length, wording, positioning and what to offer or avoid.",
-    "They do not override the rules above: never send anything, never claim facts absent from the supplied context, and keep to the channel constraints and the structured output.",
+    "以下是运营这套 CRM 的团队写下的运营指令。",
+    "在语气、风格、长度、措辞、定位，以及要推什么、要回避什么上，按这些指令来写。",
+    "它们不覆盖上面那些固定规则：绝不发送任何内容，绝不声称所提供的上下文里没有的事实，并继续遵守渠道限制与结构化输出要求。",
   ].join(" "),
   classification: [
-    "Operator instructions follow, written by the team that runs this CRM.",
-    "Use them when judging which category and subcategory a reply belongs to.",
-    "They do not override the rules above: use only the supplied taxonomy keys and answer only through the structured result function.",
+    "以下是运营这套 CRM 的团队写下的运营指令。",
+    "在判断一条回复属于哪个分类与子分类时，参考这些指令。",
+    "它们不覆盖上面那些固定规则：只能使用所提供的分类法 key，并且只能通过结构化结果函数作答。",
   ].join(" "),
 };
 

@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { currentOrganizationId, inOrg } from "@/lib/tenancy/scope";
-import { slugifySubcategoryKey } from "./categories";
 import { crmPipelines, crmSettings, crmSubcategories, type CrmCategoryKey } from "./schema";
 
 /**
@@ -16,10 +15,28 @@ import { crmPipelines, crmSettings, crmSubcategories, type CrmCategoryKey } from
  * and the pipeline, settings and taxonomy commit together, so a caller that
  * loses the race sees the finished set. Subcategories are seeded only by the
  * call that creates the pipeline, so ones an operator later deletes stay gone.
+ *
+ * 改造：中文化 + 垂类聚焦新农哥。
+ *
+ * Two things changed from upstream:
+ *
+ * 1. The text is Chinese and worded for a food-distribution sales motion
+ *    (样品 / 报价 / 试销) instead of a SaaS one (demo / trial / onboarding).
+ *    Sales staff work in Chinese, and `classificationGuidance` is fed to the
+ *    classifier verbatim, so it has to describe the reply in the words the
+ *    customer actually uses.
+ * 2. Each entry carries an explicit `key`. It used to be derived from
+ *    `slugifySubcategoryKey(name)`, which strips non-ASCII: a Chinese name
+ *    slugs to "" and falls back to a random key. Keys are identities — the
+ *    state machine special-cases `do_not_contact`, sequences hang off them,
+ *    and operators rename labels freely — so they are now written down, in
+ *    English and stable, and only the human-readable fields are Chinese.
  */
-export const DEFAULT_PIPELINE_NAME = "Default";
+export const DEFAULT_PIPELINE_NAME = "销售流程";
 
 type DefaultSubcategory = {
+  /** Stable identity. Never derive this from `name`; see the note above. */
+  key: string;
   categoryKey: CrmCategoryKey;
   name: string;
   description: string;
@@ -30,138 +47,164 @@ type DefaultSubcategory = {
 
 const DEFAULT_SUBCATEGORIES: readonly DefaultSubcategory[] = [
   {
+    key: "do_not_contact",
     categoryKey: "not_interested",
-    name: "Do Not Contact",
-    description: "The person explicitly asked not to be contacted again or requested removal from outreach.",
-    classificationGuidance: "Use only for an explicit unsubscribe, stop-contact, removal, or do-not-contact request. This must suppress outreach; no reply sequence is assigned and no message of any kind is sent.",
+    name: "勿扰名单",
+    description: "对方明确要求不要再联系，或要求从触达名单中移除。",
+    classificationGuidance: "仅用于对方明确表示退订、不要再联系、请移除或勿扰的情况。命中后必须停止一切触达：不分配回复序列，也不发送任何消息。",
     sortOrder: 10,
     stageRank: null,
   },
   {
+    key: "not_required_right_now",
     categoryKey: "not_interested",
-    name: "Not Required Right Now",
-    description: "The person does not need the offering at present but may be open to a future conversation.",
-    classificationGuidance: "Use when the person says the offering is not needed now, timing is not right, priorities are elsewhere, or asks to reconnect later without rejecting future contact.",
+    name: "暂时不需要",
+    description: "对方目前不需要，但不排除以后再谈。",
+    classificationGuidance: "用于对方说现在不需要、时机不对、另有优先级，或让以后再来联系，但没有明确拒绝后续沟通的情况。",
     sortOrder: 20,
     stageRank: null,
   },
   {
+    key: "already_using_a_tool_not_required",
     categoryKey: "not_interested",
-    name: "Already Using a Tool — Not Required",
-    description: "The person already uses another tool or process and does not currently see a need to change.",
-    classificationGuidance: "Use when the person says an existing vendor, product, agency, or internal process already covers the need and our tool is therefore not required.",
+    name: "已有供应商",
+    description: "对方已有稳定的供货渠道或合作方，目前没有更换的打算。",
+    classificationGuidance: "用于对方表示已有供应商、已和别的厂家合作、或内部渠道已经覆盖需求，因此暂时不需要我们的产品。",
     sortOrder: 30,
     stageRank: null,
   },
   {
+    key: "information_requested",
     categoryKey: "interested",
-    name: "Information Requested",
-    description: "The person asked for product, pricing, feature, implementation, or company information.",
-    classificationGuidance: "Use when the primary request is for more information or answers, and the person has not specifically requested a case study, meeting, demo, or trial.",
+    name: "索取资料",
+    description: "对方索要产品资料、报价、规格、包装或公司信息。",
+    classificationGuidance: "用于对方主要想要更多信息或答案，但没有明确要求样品、报价单、见面或试销的情况。",
     sortOrder: 10,
     stageRank: 1,
   },
   {
+    key: "quote_requested",
     categoryKey: "interested",
-    name: "Case Study",
-    description: "The person asked for a case study, customer example, proof point, or relevant results.",
-    classificationGuidance: "Use when the person explicitly requests a case study, reference, customer story, proof of results, or an example from a similar company or use case.",
+    name: "索取报价",
+    description: "对方要价格、要报价单、问批发价或代理价。",
+    classificationGuidance: "用于对方明确询问价格、要报价单、问批发价/代理价/一件代发价，或要求给出不同规格的价盘。",
     sortOrder: 20,
-    stageRank: 1,
-  },
-  {
-    categoryKey: "interested",
-    name: "Meeting Requested",
-    description: "The person wants to schedule a call or meeting and needs a calendar link or available times.",
-    classificationGuidance: "Use when the person asks to book, schedule, or arrange a call or meeting, including requests for availability or a calendar link.",
-    sortOrder: 30,
-    stageRank: 2,
-  },
-  {
-    categoryKey: "interested",
-    name: "Meeting No Show",
-    description: "A scheduled meeting did not happen because the prospect did not attend.",
-    classificationGuidance: "Use after a confirmed meeting time passes and the external participant did not attend or explicitly says they missed the meeting.",
-    sortOrder: 40,
-    stageRank: 2,
-  },
-  {
-    categoryKey: "interested",
-    name: "Meeting Done",
-    description: "The meeting was completed and the person should receive a recap and agreed next steps.",
-    classificationGuidance: "Use when the meeting has taken place and the next response should recap discussion, decisions, responsibilities, or follow-up actions.",
-    sortOrder: 50,
     stageRank: 3,
   },
   {
+    key: "case_study",
     categoryKey: "interested",
-    name: "Demo Request",
-    description: "The person asked to see a product demonstration or receive demo material.",
-    classificationGuidance: "Use when the person explicitly asks for a demo, walkthrough, product tour, recording, or demonstration call.",
-    sortOrder: 60,
+    name: "要看案例",
+    description: "对方想看合作案例、客户见证或同类渠道的销售情况。",
+    classificationGuidance: "用于对方明确索要案例、参考客户、合作门店、同类渠道的销售数据或效果证明。",
+    sortOrder: 30,
     stageRank: 1,
   },
   {
+    key: "meeting_requested",
     categoryKey: "interested",
-    name: "Trial Requested",
-    description: "The person wants to begin a trial or asks how to get trial access.",
-    classificationGuidance: "Use when the person asks to start, activate, access, or learn the next steps for a product trial.",
-    sortOrder: 70,
+    name: "想约见",
+    description: "对方希望安排见面、电话沟通或来访考察。",
+    classificationGuidance: "用于对方提出要见面、打电话详谈、到厂考察或安排时间沟通，包括询问什么时候方便。",
+    sortOrder: 40,
     stageRank: 4,
   },
   {
+    key: "meeting_no_show",
     categoryKey: "interested",
-    name: "Trial User",
-    description: "The person is actively using the trial and needs help progressing through setup or integration.",
-    classificationGuidance: "Use for an active trial user discussing setup, activation, usage, onboarding, or integration rather than requesting initial trial access.",
-    sortOrder: 80,
+    name: "约见未到",
+    description: "约好的见面或电话没有进行，对方未到场。",
+    classificationGuidance: "用于约定时间已过、对方未出席，或对方主动说明错过了这次沟通的情况。",
+    sortOrder: 50,
+    stageRank: 4,
+  },
+  {
+    key: "meeting_done",
+    categoryKey: "interested",
+    name: "已见面",
+    description: "见面或电话已完成，接下来应发纪要和下一步动作。",
+    classificationGuidance: "用于沟通已经发生，下一步回复应当回顾谈了什么、定了什么、谁负责什么、接下来做什么。",
+    sortOrder: 60,
     stageRank: 5,
   },
   {
-    categoryKey: "customer",
-    name: "Customer",
-    description: "The person represents an active customer relationship and is requesting billing or account follow-up.",
-    classificationGuidance: "Use when the person is an existing customer and the conversation concerns an active account, especially invoices, billing, renewal, or ongoing service.",
-    sortOrder: 10,
+    key: "demo_request",
+    categoryKey: "interested",
+    name: "索要样品",
+    description: "对方要求寄样品、试吃或看实物。",
+    classificationGuidance: "用于对方明确要求寄样、试吃、看实物、要产品手册或安排品鉴。",
+    sortOrder: 70,
+    stageRank: 2,
+  },
+  {
+    key: "trial_requested",
+    categoryKey: "interested",
+    name: "想试销",
+    description: "对方想先进一小批试销，或询问试销政策。",
+    classificationGuidance: "用于对方提出先进小批量试销、试卖、代销，或询问试销/铺货政策与门槛。",
+    sortOrder: 80,
     stageRank: 6,
   },
   {
+    key: "trial_user",
+    categoryKey: "interested",
+    name: "试销中",
+    description: "对方已经在试销，需要跟进动销、补货或陈列。",
+    classificationGuidance: "用于对方已经在试销或铺货，话题是动销、补货、陈列、促销支持，而不是最初的政策咨询。",
+    sortOrder: 90,
+    stageRank: 7,
+  },
+  {
+    key: "customer",
+    categoryKey: "customer",
+    name: "已成交客户",
+    description: "对方是已成交客户，在谈对账、返点、续单或售后。",
+    classificationGuidance: "用于对方已经是成交客户，对话涉及订单、对账、返点、补货、售后或长期合作。",
+    sortOrder: 10,
+    stageRank: 8,
+  },
+  {
+    key: "did_not_connect_to_different_poc",
     categoryKey: "other",
-    name: "Did Not Connect to Different POC",
-    description: "The person is not the right contact and has not yet provided or connected us with the appropriate point of contact.",
-    classificationGuidance: "Use when the recipient says they are not the correct person, but no alternate contact or introduction has been provided.",
+    name: "找错人（未给对接人）",
+    description: "对方不是负责采购的人，也没有提供或引荐合适的人。",
+    classificationGuidance: "用于对方说自己不是负责人，但没有给出其他联系人、也没有转介绍的情况。",
     sortOrder: 10,
     stageRank: null,
   },
   {
+    key: "connected_to_different_poc",
     categoryKey: "other",
-    name: "Connected to Different POC",
-    description: "A contact has referred us to or shared details for a different person who is the appropriate point of contact.",
-    classificationGuidance: "Use when the recipient provides another person's contact information, copies them into the conversation, or makes a direct introduction to the correct point of contact.",
+    name: "已转介对接人",
+    description: "对方把合适的对接人介绍给了我们，或提供了其联系方式。",
+    classificationGuidance: "用于对方提供了另一个人的联系方式、把对方拉进对话，或直接做了转介绍。",
     sortOrder: 20,
     stageRank: null,
   },
   {
+    key: "left_company",
     categoryKey: "other",
-    name: "Left Company",
-    description: "The person is no longer employed by the target company.",
-    classificationGuidance: "Use when an auto-response, colleague, or other reliable message states that the person has left the company.",
+    name: "已离职",
+    description: "对方已经不在该公司任职。",
+    classificationGuidance: "用于自动回复、同事或其他可靠消息说明该人已离职的情况。",
     sortOrder: 30,
     stageRank: null,
   },
   {
+    key: "out_of_office",
     categoryKey: "other",
-    name: "Out of Office",
-    description: "The person is temporarily unavailable and an out-of-office or leave message was received.",
-    classificationGuidance: "Use for temporary out-of-office, vacation, leave, or unavailable notices. Do not use when the message says the person permanently left the company.",
+    name: "休假中",
+    description: "对方暂时不在岗，收到了休假或外出的自动回复。",
+    classificationGuidance: "用于短期的休假、出差、不在岗自动回复。如果消息说明对方已永久离职，不要用这一项。",
     sortOrder: 40,
     stageRank: null,
   },
   {
+    key: "other",
     categoryKey: "other",
-    name: "Other",
-    description: "The reply does not fit any other subcategory and needs a context-specific response.",
-    classificationGuidance: "Use only when no other subcategory fits the latest message. Prefer a specific subcategory whenever the intent is reasonably clear.",
+    name: "其他",
+    description: "不属于以上任何分类，需要结合上下文单独回复。",
+    classificationGuidance: "仅在没有其他分类匹配时使用。只要意图能判断清楚，优先选具体分类。",
     sortOrder: 50,
     stageRank: null,
   },
@@ -194,7 +237,7 @@ export async function ensureCrmDefaults(): Promise<{ pipelineId: string; created
       .values(DEFAULT_SUBCATEGORIES.map((entry) => ({
         pipelineId: pipeline.id,
         categoryKey: entry.categoryKey,
-        key: slugifySubcategoryKey(entry.name),
+        key: entry.key,
         name: entry.name,
         description: entry.description,
         classificationGuidance: entry.classificationGuidance,

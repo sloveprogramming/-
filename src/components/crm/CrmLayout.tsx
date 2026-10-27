@@ -50,11 +50,11 @@ export function EmptyState({ title, detail }: { title: string; detail?: string }
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
-  return <div role="alert" className="rounded-xl bg-error-lighter px-4 py-3 text-paragraph-sm text-error-dark ring-1 ring-inset ring-error-light"><p>{message}</p>{onRetry && <button type="button" className="mt-2 text-label-sm underline underline-offset-2" onClick={onRetry}>Try again</button>}</div>;
+  return <div role="alert" className="rounded-xl bg-error-lighter px-4 py-3 text-paragraph-sm text-error-dark ring-1 ring-inset ring-error-light"><p>{message}</p>{onRetry && <button type="button" className="mt-2 text-label-sm underline underline-offset-2" onClick={onRetry}>重试</button>}</div>;
 }
 
 export function LoadingRows({ count = 4 }: { count?: number }) {
-  return <div className="space-y-2 p-4" role="status" aria-label="Loading">{Array.from({ length: count }, (_, index) => <div key={index} className="h-12 animate-pulse rounded-lg bg-bg-weak-50" />)}<span className="sr-only">Loading content</span></div>;
+  return <div className="space-y-2 p-4" role="status" aria-label="Loading">{Array.from({ length: count }, (_, index) => <div key={index} className="h-12 animate-pulse rounded-lg bg-bg-weak-50" />)}<span className="sr-only">正在加载</span></div>;
 }
 
 export function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "success" | "info" | "danger" | "warning" }) {

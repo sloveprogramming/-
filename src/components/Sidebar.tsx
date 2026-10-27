@@ -6,20 +6,13 @@ import { useCallback, useEffect, useState } from "react";
 import {
   RiAddLine,
   RiArrowDownSLine,
-  RiBookOpenLine,
-  RiBugLine,
   RiCheckLine,
   RiCloseLine,
-  RiExternalLinkLine,
-  RiLightbulbLine,
   RiLogoutBoxRLine,
   RiMore2Line,
-  RiQuestionLine,
   RiSearchLine,
   RiSettings3Line,
-  RiShieldCheckLine,
   RiSideBarLine,
-  RiChat3Line,
 } from "@remixicon/react";
 
 import { AppIcon, Logo } from "@/components/brand/Logo";
@@ -30,7 +23,6 @@ import { SETTINGS_HOME } from "@/components/settings/settingsNav";
 import { CommandPalette } from "@/components/nav/CommandPalette";
 import { ThemeToggleButton } from "@/components/theme/ThemeSwitch";
 import { activeHref, NAV_FOOTER, NAV_SECTIONS, type NavBadges, type NavEntry, type NavGroup, type NavLink } from "@/components/nav/navConfig";
-import { APP_VERSION, bugReportUrl, SUPPORT_LINKS } from "@/lib/support";
 import { useDemoMode } from "@/components/demo/DemoProvider";
 import { cn } from "@/utils/cn";
 
@@ -132,50 +124,6 @@ function LinkRow({ link, active, badges, collapsed, compact }: { link: NavLink; 
   );
 }
 
-const HELP_LINKS = [
-  { label: "Documentation", href: SUPPORT_LINKS.docs, icon: RiBookOpenLine },
-  { label: "Report a bug", href: bugReportUrl(APP_VERSION), icon: RiBugLine },
-  { label: "Request a feature", href: SUPPORT_LINKS.featureRequest, icon: RiLightbulbLine },
-  { label: "Ask the community", href: SUPPORT_LINKS.community, icon: RiChat3Line },
-  { label: "Report a security issue", href: SUPPORT_LINKS.security, icon: RiShieldCheckLine },
-];
-
-/** Help: a menu of external links (docs, bug, feature, community, security), each in a new tab. */
-function HelpRow({ collapsed, compact }: { collapsed: boolean; compact?: boolean }) {
-  return (
-    <Dropdown.Root>
-      {collapsed ? (
-        <RailTip label="Help">
-          <Dropdown.Trigger asChild>
-            <button type="button" aria-label="Help" className={cn(rowBase, rowState(false), "h-9 justify-center")}>
-              <RiQuestionLine className="size-[18px] shrink-0 text-text-soft-400" />
-            </button>
-          </Dropdown.Trigger>
-        </RailTip>
-      ) : (
-        <Dropdown.Trigger asChild>
-          <button type="button" className={cn(rowBase, rowState(false), compact ? "h-8 px-2 text-paragraph-sm" : "h-9 px-2")}>
-            <RiQuestionLine className={cn("shrink-0 text-text-soft-400", compact ? "size-4" : "size-[18px]")} />
-            <span className="min-w-0 flex-1 truncate text-left">Help</span>
-          </button>
-        </Dropdown.Trigger>
-      )}
-      <Dropdown.Content side={collapsed ? "right" : "top"} align={collapsed ? "end" : "start"} sideOffset={collapsed ? 10 : undefined} className="w-56">
-        <p className="px-2 pb-1 pt-1.5 text-paragraph-xs text-text-soft-400">Help</p>
-        {HELP_LINKS.map((l) => (
-          <Dropdown.Item key={l.href} asChild>
-            <a href={l.href} target="_blank" rel="noopener noreferrer">
-              <Dropdown.ItemIcon as={l.icon} />
-              <span className="flex-1">{l.label}</span>
-              <RiExternalLinkLine className="size-3.5 shrink-0 text-text-soft-400" aria-hidden="true" />
-            </a>
-          </Dropdown.Item>
-        ))}
-      </Dropdown.Content>
-    </Dropdown.Root>
-  );
-}
-
 function GroupIcon({ group, className }: { group: NavGroup; className?: string }) {
   const Icon = group.icon;
   return (
@@ -221,7 +169,7 @@ function GroupRow({ group, current, open, onToggle, badges, collapsed, compact }
       <button type="button" onClick={onToggle} aria-expanded={open} className={cn(rowBase, rowState(false), compact ? "h-8 px-2 text-paragraph-sm" : "h-9 px-2", holdsActive && !open && "text-text-strong-950")}>
         <GroupIcon group={group} className={compact ? "size-4" : "size-[18px]"} />
         <span className="min-w-0 flex-1 truncate text-left">{group.label}</span>
-        {!open && childBadge > 0 && <span className="size-2 shrink-0 rounded-full bg-warning-base" aria-label="Needs attention" />}
+        {!open && childBadge > 0 && <span className="size-2 shrink-0 rounded-full bg-warning-base" aria-label="需要关注" />}
         <RiArrowDownSLine className={cn("size-4 shrink-0 text-text-soft-400 transition-transform duration-200", !open && "-rotate-90")} aria-hidden="true" />
       </button>
       {open && (
@@ -300,14 +248,14 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
   const demo = useDemoMode();
   const [switchError, setSwitchError] = useState("");
   const wsLoading = sessionPending || orgPending;
-  const wsName = activeOrg?.name ?? "No organization";
+  const wsName = activeOrg?.name ?? "未加入组织";
   const wsUser = session?.user.name || session?.user.email || "";
 
   async function switchOrg(organizationId: string) {
     if (organizationId === activeOrg?.id) return;
     setSwitchError("");
     const { error } = await authClient.organization.setActive({ organizationId });
-    if (error) return setSwitchError(error.message || "Could not switch organization.");
+    if (error) return setSwitchError(error.message || "切换组织失败。");
     // A full load, so nothing cached from the previous organization survives.
     window.location.assign("/analytics");
   }
@@ -331,21 +279,21 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
         {/* Brand + collapse */}
         <div className={cn("flex h-14 shrink-0 items-center", collapsed ? "justify-center" : "justify-between pl-4 pr-2.5")}>
           {!collapsed && (
-            <Link href="/analytics" aria-label="AgentSDR home" className="group rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary-base">
+            <Link href="/analytics" aria-label="新农哥拓客首页" className="group rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary-base">
               <Logo className="text-text-strong-950" walk="step" walkOn="hover" />
             </Link>
           )}
           <div className={cn("flex items-center", collapsed && "hidden")}>
-          <RailTip label="Light or dark">
+          <RailTip label="浅色 / 深色">
             <span><ThemeToggleButton /></span>
           </RailTip>
           {mobile ? (
-            <button type="button" onClick={onClose} aria-label="Close menu" className="flex size-8 items-center justify-center rounded-lg text-text-soft-400 outline-none transition hover:bg-bg-weak-50 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base">
+            <button type="button" onClick={onClose} aria-label="关闭菜单" className="flex size-8 items-center justify-center rounded-lg text-text-soft-400 outline-none transition hover:bg-bg-weak-50 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base">
               <RiCloseLine className="size-5" />
             </button>
           ) : (
-          <RailTip label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
-            <button type="button" onClick={toggleCollapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} className="flex size-8 items-center justify-center rounded-lg text-text-soft-400 outline-none transition hover:bg-bg-weak-50 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base">
+          <RailTip label={collapsed ? "展开侧边栏" : "收起侧边栏"}>
+            <button type="button" onClick={toggleCollapsed} aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"} aria-expanded={!collapsed} className="flex size-8 items-center justify-center rounded-lg text-text-soft-400 outline-none transition hover:bg-bg-weak-50 hover:text-text-strong-950 focus-visible:ring-2 focus-visible:ring-primary-base">
               <RiSideBarLine className="size-[18px]" />
             </button>
           </RailTip>
@@ -353,7 +301,7 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
           </div>
           {/* Collapsed, the brand stays as Shade's icon, linking home. */}
           {collapsed && (
-            <Link href="/analytics" aria-label="AgentSDR home" className="group rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary-base">
+            <Link href="/analytics" aria-label="新农哥拓客首页" className="group rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary-base">
               <AppIcon small className="size-7" walk="step" walkOn="hover" />
             </Link>
           )}
@@ -362,8 +310,8 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
         {/* Collapsed: the expand control, always visible under the brand. */}
         {collapsed && (
           <div className="shrink-0 px-3 pb-2">
-            <RailTip label="Expand sidebar">
-              <button type="button" onClick={toggleCollapsed} aria-label="Expand sidebar" aria-expanded={false} className={cn(rowBase, rowState(false), "h-9 justify-center")}>
+            <RailTip label="展开侧边栏">
+              <button type="button" onClick={toggleCollapsed} aria-label="展开侧边栏" aria-expanded={false} className={cn(rowBase, rowState(false), "h-9 justify-center")}>
                 <RiSideBarLine className="size-[18px] text-text-soft-400" />
               </button>
             </RailTip>
@@ -373,22 +321,22 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
         {/* Jump to */}
         <div className={cn("shrink-0 pb-2", collapsed ? "px-3" : "px-3")}>
           {collapsed ? (
-            <RailTip label="Search (⌘K)">
-              <button type="button" onClick={() => setPaletteOpen(true)} aria-label="Search or jump to" className={cn(rowBase, rowState(false), "h-9 justify-center")}>
+            <RailTip label="搜索（⌘K）">
+              <button type="button" onClick={() => setPaletteOpen(true)} aria-label="搜索或跳转" className={cn(rowBase, rowState(false), "h-9 justify-center")}>
                 <RiSearchLine className="size-[18px] text-text-soft-400" />
               </button>
             </RailTip>
           ) : (
             <button type="button" onClick={() => setPaletteOpen(true)} className="flex h-9 w-full items-center gap-2 rounded-lg bg-bg-white-0 px-2.5 text-paragraph-sm text-text-soft-400 shadow-regular-xs outline-none ring-1 ring-inset ring-stroke-soft-200 transition hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base">
               <RiSearchLine className="size-4 shrink-0" />
-              <span className="flex-1 text-left">Search or jump to…</span>
+              <span className="flex-1 text-left">搜索或跳转…</span>
               <kbd className="rounded bg-bg-weak-50 px-1.5 text-label-xs text-text-soft-400 ring-1 ring-inset ring-stroke-soft-200">⌘K</kbd>
             </button>
           )}
         </div>
 
         {/* Sections */}
-        <nav aria-label="Main" className={cn("flex-1 overflow-y-auto pb-3", collapsed ? "px-3" : "px-3")}>
+        <nav aria-label="主导航" className={cn("flex-1 overflow-y-auto pb-3", collapsed ? "px-3" : "px-3")}>
           {NAV_SECTIONS.map((section, i) => (
             <div key={section.label ?? i} className={cn(i > 0 && "mt-4")}>
               {section.label && (collapsed ? <div className="mx-2 mb-2 border-t border-stroke-soft-200" /> : <p className="mb-1 px-2 text-paragraph-xs text-text-soft-400">{section.label}</p>)}
@@ -397,15 +345,16 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
           ))}
         </nav>
 
-        {/* Pinned: developer links, settings, workspace */}
+        {/* Pinned: settings and workspace. The upstream Help menu (docs, GitHub
+            issues, community) was removed with the 中文化 pass: it pointed sales
+            staff at the vendor's English docs. */}
         <div className={cn("shrink-0 space-y-0.5 border-t border-stroke-soft-200 pt-2", collapsed ? "px-3" : "px-3")}>
           {NAV_FOOTER.map((e) => renderEntry(e, true))}
-          <HelpRow collapsed={collapsed} compact />
         </div>
         <div className={cn("shrink-0 p-3", collapsed && "flex justify-center")}>
           <Dropdown.Root>
             <Dropdown.Trigger asChild>
-              <button type="button" aria-label="Workspace menu" className={cn("flex items-center gap-2.5 rounded-xl text-left outline-none transition hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base", collapsed ? "size-9 justify-center" : "w-full p-2 ring-1 ring-inset ring-stroke-soft-200")}>
+              <button type="button" aria-label="工作区菜单" className={cn("flex items-center gap-2.5 rounded-xl text-left outline-none transition hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base", collapsed ? "size-9 justify-center" : "w-full p-2 ring-1 ring-inset ring-stroke-soft-200")}>
                 <AppIcon small className="size-8" />
                 {!collapsed && (
                   <>
@@ -429,15 +378,15 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
             </Dropdown.Trigger>
             <Dropdown.Content side={collapsed ? "right" : "top"} align={collapsed ? "end" : "start"} className="w-64">
               <div className="px-2 pb-1.5 pt-1.5">
-                <p className="truncate text-label-sm text-text-strong-950">{wsUser || "Account"}</p>
+                <p className="truncate text-label-sm text-text-strong-950">{wsUser || "账号"}</p>
                 {session?.user.email && session.user.name && <p className="truncate text-paragraph-xs text-text-sub-600">{session.user.email}</p>}
               </div>
               <Dropdown.Separator />
-              <p className="px-2 pb-1 pt-1.5 text-paragraph-xs text-text-soft-400">Organizations</p>
+              <p className="px-2 pb-1 pt-1.5 text-paragraph-xs text-text-soft-400">组织</p>
               {(orgs ?? []).map((o) => (
                 <Dropdown.Item key={o.id} onSelect={() => void switchOrg(o.id)}>
                   <span className="min-w-0 flex-1 truncate">{o.name}</span>
-                  {o.id === activeOrg?.id && <RiCheckLine className="size-4 shrink-0 text-text-strong-950" aria-label="Active" />}
+                  {o.id === activeOrg?.id && <RiCheckLine className="size-4 shrink-0 text-text-strong-950" aria-label="当前" />}
                 </Dropdown.Item>
               ))}
               {switchError && <p role="alert" className="px-2 py-1 text-paragraph-xs text-error-base">{switchError}</p>}
@@ -445,7 +394,7 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
                 <Dropdown.Item asChild>
                   <Link href="/onboarding?new=1">
                     <Dropdown.ItemIcon as={RiAddLine} />
-                    Create organization
+                    创建组织
                   </Link>
                 </Dropdown.Item>
               )}
@@ -453,12 +402,12 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
               <Dropdown.Item asChild>
                 <Link href={SETTINGS_HOME}>
                   <Dropdown.ItemIcon as={RiSettings3Line} />
-                  Settings
+                  设置
                 </Link>
               </Dropdown.Item>
               <Dropdown.Item onSelect={() => setPaletteOpen(true)}>
                 <Dropdown.ItemIcon as={RiSearchLine} />
-                Search or jump to
+                搜索或跳转
                 <span className="ml-auto text-paragraph-xs text-text-soft-400">⌘K</span>
               </Dropdown.Item>
               {/* The demo signs every visitor in as the demo user; there is nothing to sign out of. */}
@@ -467,7 +416,7 @@ export default function Sidebar({ mobile = false, onClose }: { mobile?: boolean;
                   <Dropdown.Separator />
                   <Dropdown.Item onSelect={() => void signOut()}>
                     <Dropdown.ItemIcon as={RiLogoutBoxRLine} />
-                    Sign out
+                    退出登录
                   </Dropdown.Item>
                 </>
               )}

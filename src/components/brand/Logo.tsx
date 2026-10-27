@@ -65,7 +65,7 @@ export function Logo({
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <AppIcon small className={iconClassName} walk={walk} walkOn={walkOn} />
-      <span className={cn(brandDisplayClass, "leading-none tracking-[-0.025em]", textClassName)}>AgentSDR</span>
+      <span className={cn(brandDisplayClass, "leading-none tracking-[-0.01em]", textClassName)}>新农哥</span>
     </span>
   );
 }

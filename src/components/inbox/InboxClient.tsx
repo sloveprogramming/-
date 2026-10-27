@@ -15,7 +15,7 @@ import {
 import * as Button from "@/components/alignui/button";
 import * as Dropdown from "@/components/alignui/dropdown";
 import { CallButton } from "@/components/calls/CallButton";
-import { humanize } from "@/components/crm/ActionRowTools";
+import { crmCategoryLabel as categoryName } from "@/lib/crm/labels";
 import { EmptyState } from "@/components/page/EmptyState";
 import { PageHeader } from "@/components/page/PageHeader";
 import { cn } from "@/utils/cn";
@@ -383,7 +383,7 @@ export default function InboxClient() {
               ? {
                   recordId,
                   categoryKey: crmContext?.categoryKey ?? record?.categoryKey ?? null,
-                  categoryLabel: crmContext ? crmCategoryLabel(crmContext) : (record?.subcategory ?? (record?.categoryKey ? humanize(record.categoryKey) : "Unclassified")),
+                  categoryLabel: crmContext ? crmCategoryLabel(crmContext) : (record?.subcategory ?? (record?.categoryKey ? categoryName(record.categoryKey) : "未分类")),
                   stage: workflowLabel(crmContext?.workflowState ?? record?.workflowState),
                   sequence: crmContext?.sequenceName ?? record?.sequence,
                   step: crmContext ? inboxCrmStepLabel(crmContext) : null,

@@ -35,7 +35,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: var(--font-sans-inter), Inter, Arial, Helvetica, sans-serif;
+  /* Chinese-first type stack (改造：中文化).
+   *
+   * The UI is Chinese, so the glyphs have to come from a CJK face. This is a
+   * system stack on purpose: a webfont (Inter, Geist, Noto SC from Google
+   * Fonts) is the wrong face for Chinese and cannot be fetched from mainland
+   * China at build time. The Latin faces stay first so digits, emails and
+   * Latin words keep their intended shapes, then the CJK faces take over. */
+  --font-sans-cjk: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif;
+  /* Kept as separate names because existing stylesheets and one inline style
+     (components/grid/GridClient.tsx) refer to them. */
+  --font-sans-inter: var(--font-sans-cjk);
+  --font-landing-display: var(--font-sans-cjk);
+  --font-instrument-serif-next: "Songti SC", "STSong", "SimSun", Georgia, serif;
+  --font-sans: var(--font-sans-cjk);
   --font-instrument-serif: var(--font-instrument-serif-next), Georgia, "Times New Roman", serif;
 
   /* AlignUI Raw Colors */

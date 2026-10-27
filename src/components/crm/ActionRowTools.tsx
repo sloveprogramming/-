@@ -21,6 +21,7 @@ import * as Select from "@/components/alignui/select";
 import { cn } from "@/utils/cn";
 import { dangerButtonClass, fieldClass, primaryButtonClass, secondaryButtonClass, subtleButtonClass } from "./CrmLayout";
 import { asList, asObject, CATEGORY_COLOR, categoryColor, formatDate } from "./crm-utils";
+import { crmCategoryLabel } from "@/lib/crm/labels";
 
 type Data = Record<string, unknown>;
 
@@ -92,7 +93,7 @@ export function ClassificationPicker({ categories, categoryKey, subcategoryId, s
     key: String(category.key),
     subcategories: asList<Data>(category.subcategories).filter((item) => item.active !== false),
   }));
-  const categoryLabel = categoryKey ? humanize(categoryKey) : "Unclassified";
+  const categoryLabel = crmCategoryLabel(categoryKey);
 
   if (!compact) {
     return (
@@ -102,15 +103,15 @@ export function ClassificationPicker({ categories, categoryKey, subcategoryId, s
         disabled={disabled}
         onValueChange={(next) => save(next)}
       >
-        <Select.Trigger aria-label="Classification" className={cn("max-w-56", className)}>
-          <Select.Value placeholder="Unclassified" />
+        <Select.Trigger aria-label="分类" className={cn("max-w-56", className)}>
+          <Select.Value placeholder="未分类" />
         </Select.Trigger>
         <Select.Content>
           {groups.length === 0 && categoryKey && <Select.Item value={value}>{categoryLabel}{subcategoryName ? ` · ${subcategoryName}` : ""}</Select.Item>}
           {groups.map((group) => (
             <Select.Group key={group.key}>
-              <Select.GroupLabel>{humanize(group.key)}</Select.GroupLabel>
-              <Select.Item value={`category:${group.key}`}>{humanize(group.key)} · no subcategory</Select.Item>
+              <Select.GroupLabel>{crmCategoryLabel(group.key)}</Select.GroupLabel>
+              <Select.Item value={`category:${group.key}`}>{crmCategoryLabel(group.key)} · 不分子类</Select.Item>
               {group.subcategories.map((item) => <Select.Item key={String(item.id)} value={String(item.id)}>{String(item.name)}</Select.Item>)}
             </Select.Group>
           ))}
@@ -129,7 +130,7 @@ export function ClassificationPicker({ categories, categoryKey, subcategoryId, s
         <button
           type="button"
           disabled={disabled || groups.length === 0}
-          aria-label={`Classification: ${label}. Change`}
+          aria-label={`分类：${label}，点击修改`}
           title={title ?? (subcategoryName ? `${categoryLabel} · ${subcategoryName}` : categoryLabel)}
           className={cn("inline-flex h-6 max-w-full items-center gap-1 rounded-md pl-2 pr-1.5 text-label-xs ring-1 ring-inset transition", categoryKey && "hover:brightness-95", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stroke-strong-950 disabled:opacity-60 data-[state=open]:ring-2 data-[state=open]:ring-stroke-strong-950", tone, className)}
         >
@@ -168,7 +169,7 @@ function ClassificationMenu({ groups, value, onPick }: {
           <Dropdown.Group key={group.key}>
             {index > 0 && <Dropdown.Separator />}
             <Dropdown.Item ref={value === categoryValue ? selectedRef : undefined} onSelect={() => onPick(categoryValue)} className={itemClass(value === categoryValue)}>
-              <span className={cn("inline-flex h-6 items-center rounded-md px-2 text-label-xs ring-1 ring-inset", categoryToneClass[group.key] ?? "bg-bg-weak-50 text-text-sub-600 ring-stroke-soft-200")}>{humanize(group.key)}</span>
+              <span className={cn("inline-flex h-6 items-center rounded-md px-2 text-label-xs ring-1 ring-inset", categoryToneClass[group.key] ?? "bg-bg-weak-50 text-text-sub-600 ring-stroke-soft-200")}>{crmCategoryLabel(group.key)}</span>
               <span className="flex-1" />
               {value === categoryValue && check}
             </Dropdown.Item>

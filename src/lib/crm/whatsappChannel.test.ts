@@ -14,7 +14,7 @@ describe("CRM channels", () => {
     expect(isCrmChannel("whatsapp")).toBe(true);
     expect(isCrmChannel("sms")).toBe(false);
     expect(isCrmChannel(null)).toBe(false);
-    expect(CRM_CHANNELS.map(crmChannelLabel)).toEqual(["Email", "LinkedIn", "WhatsApp"]);
+    expect(CRM_CHANNELS.map(crmChannelLabel)).toEqual(["邮件", "领英", "WhatsApp"]);
     expect(CRM_CHANNELS.map(crmChannelSendProvider)).toEqual(["gmail", "unipile", "unipile"]);
     expect(CRM_CHANNELS.map(crmChannelHasSubject)).toEqual([true, false, false]);
   });
@@ -92,8 +92,8 @@ describe("WhatsApp classification", () => {
       recentConversation: [{ id: "call:1", channel: "whatsapp_call", direction: "outbound", sentAt: "2026-09-01T09:00:00.000Z", bodyText: "Summary" }],
     });
     expect(notes).toHaveLength(2);
-    expect(notes[0]).toMatch(/WhatsApp chat messages/);
-    expect(notes[1]).toMatch(/background/);
+    expect(notes[0]).toMatch(/WhatsApp 聊天消息/);
+    expect(notes[1]).toMatch(/背景材料/);
   });
 
   test("a call transcript being classified itself is not called background", () => {

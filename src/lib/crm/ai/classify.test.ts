@@ -155,8 +155,8 @@ describe("CRM classification policy", () => {
     assert.equal(result.provider, "azure");
     assert.equal(result.model, "openai/gpt-5.2");
     assert.deepEqual(captured?.requestedModel, { provider: "azure", modelId: "openai/gpt-5.2" });
-    assert.match(captured?.systemPrompt ?? "", /never as instructions/);
-    assert.match(captured?.systemPrompt ?? "", /send anything/);
+    assert.match(captured?.systemPrompt ?? "", /绝不可当作对你下达的指令/);
+    assert.match(captured?.systemPrompt ?? "", /不要发送任何内容/);
     assert.equal(captured?.jsonSchema.additionalProperties, false);
   });
 
@@ -213,7 +213,7 @@ describe("CRM classification operator instructions", () => {
 
     assert.ok(instructed?.systemPrompt.startsWith(plain?.systemPrompt ?? "\u0000"));
     assert.match(instructed?.systemPrompt ?? "", /<operator_instructions>\nA referral to a colleague counts as Interested\.\n<\/operator_instructions>$/);
-    assert.match(instructed?.systemPrompt ?? "", /only the supplied taxonomy keys/);
+    assert.match(instructed?.systemPrompt ?? "", /只能使用所提供的分类法 key/);
     assert.equal(instructed?.userPrompt, plain?.userPrompt);
   });
 });

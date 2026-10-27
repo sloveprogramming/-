@@ -100,8 +100,8 @@ describe("CRM draft prompt", () => {
     } }));
 
     assert.equal(first.userPrompt, second.userPrompt);
-    assert.match(first.systemPrompt, /human-send-only/i);
-    assert.match(first.systemPrompt, /Never send/i);
+    assert.match(first.systemPrompt, /只由人发送/);
+    assert.match(first.systemPrompt, /绝不发送/);
     assert.match(first.userPrompt, /Answer the question and offer a demo time/);
     assert.match(first.userPrompt, /knowledge-version-2/);
     assert.match(first.userPrompt, /Priya Rao/);
@@ -118,8 +118,8 @@ describe("CRM draft prompt", () => {
     } }));
 
     assert.doesNotMatch(plain.userPrompt, /revisionRequest/);
-    assert.match(revised.userPrompt, /rejected the previous draft/);
-    assert.match(revised.userPrompt, /do not return the previous draft again/);
+    assert.match(revised.userPrompt, /人工审核驳回了这一步的草稿/);
+    assert.match(revised.userPrompt, /不要原样返回旧草稿/);
     assert.match(revised.userPrompt, /here is a 60 minute slot/);
     assert.match(revised.userPrompt, /Offer a 30 minute slot/);
     assert.deepEqual((revised.snapshot.revisionRequest as { previousDraft: { subject: string } }).previousDraft.subject, "Re: Demo");
@@ -250,7 +250,7 @@ describe("CRM draft operator instructions", () => {
     const prompt = buildDraftPrompt(fixture({ instructions: "  Sign off as Priya. Keep it under 120 words.  " }));
     assert.ok(prompt.systemPrompt.startsWith(base.systemPrompt));
     assert.match(prompt.systemPrompt, /<operator_instructions>\nSign off as Priya\. Keep it under 120 words\.\n<\/operator_instructions>$/);
-    assert.match(prompt.systemPrompt, /do not override the rules above/);
+    assert.match(prompt.systemPrompt, /不覆盖上面那些固定规则/);
     assert.equal(prompt.userPrompt, base.userPrompt);
   });
 

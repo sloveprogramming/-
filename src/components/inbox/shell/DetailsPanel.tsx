@@ -17,6 +17,7 @@ import * as Button from "@/components/alignui/button";
 import { CompanyFavicon } from "@/components/calling/callingShared";
 import { asObject, categoryColor, crmFetch } from "@/components/crm/crm-utils";
 import { Skeleton } from "@/components/page/Skeletons";
+import { crmWorkflowStateLabel } from "@/lib/crm/labels";
 import { cn } from "@/utils/cn";
 import { ChannelTag, InboxAvatar, fullTime, type InboxChannel } from "./InboxShell";
 
@@ -333,20 +334,10 @@ function linkedinHandle(href: string): string {
   return href.replace(/^https?:\/\/(www\.)?linkedin\.com\//i, "").replace(/\/+$/, "") || href;
 }
 
-const WORKFLOW_LABEL: Record<string, string> = {
-  unclassified: "Unclassified",
-  classifying: "Classifying",
-  action_required: "Action required",
-  waiting: "Waiting",
-  idle: "Idle",
-  paused: "Paused",
-  closed: "Closed",
-  error: "Needs attention",
-};
-
+/** 中文化：状态词表统一在 src/lib/crm/labels.ts，这里只保留空值语义。 */
 export function workflowLabel(state: string | null | undefined): string | null {
   if (!state) return null;
-  return WORKFLOW_LABEL[state] ?? state.replace(/_/g, " ");
+  return crmWorkflowStateLabel(state);
 }
 
 // ---------------------------------------------------------------- CRM record

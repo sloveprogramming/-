@@ -6,14 +6,11 @@ import {
   RiGroupLine,
   RiTeamLine,
   RiLayoutColumnLine,
-  RiLinkedinBoxLine,
   RiMailLine,
-  RiPhoneLine,
   RiPlugLine,
   RiPaletteLine,
   RiPriceTag3Line,
   RiQuillPenLine,
-  RiWhatsappLine,
   type RemixiconComponentType,
 } from "@remixicon/react";
 
@@ -30,51 +27,33 @@ export function itemPages(item: SettingsNavItem): SettingsTab[] {
 /**
  * Every settings screen in the app. Each is its own route under /settings;
  * the pages they replaced redirect here (next.config.ts).
+ *
+ * 改造（国内化）：LinkedIn / WhatsApp 两行随渠道删除一起移除；企业微信、短信、
+ * 外呼在模块接入时加回。标签全部中文化。
  */
 export const SETTINGS_NAV: { label: string; items: SettingsNavItem[] }[] = [
   {
-    label: "Organization",
+    label: "组织",
     items: [
-      { href: "/settings/organization", label: "General", icon: RiBuilding2Line },
-      { href: "/settings/members", label: "Members", icon: RiGroupLine },
-      { href: "/settings/teams", label: "Teams", icon: RiTeamLine },
+      { href: "/settings/organization", label: "基本设置", icon: RiBuilding2Line },
+      { href: "/settings/members", label: "成员", icon: RiGroupLine },
+      { href: "/settings/teams", label: "团队", icon: RiTeamLine },
     ],
   },
   // Each channel is one row here; its pages — the connected accounts, the
   // integration it runs on, its sending rules (src/lib/channels/rules.ts) —
   // are tabs across the top of the section (SettingsShell).
   {
-    label: "Channels",
+    label: "渠道",
     items: [
       {
         href: "/settings/email-accounts",
-        label: "Email",
+        label: "邮件",
         icon: RiMailLine,
         tabs: [
-          { href: "/settings/email-accounts", label: "Mailboxes", icon: RiMailLine },
-          { href: "/settings/email-connection", label: "Connection", icon: RiPlugLine },
-          { href: "/settings/email-rules", label: "Sending rules", icon: RiEqualizerLine },
-        ],
-      },
-      {
-        href: "/settings/linkedin-accounts",
-        label: "LinkedIn",
-        icon: RiLinkedinBoxLine,
-        tabs: [
-          { href: "/settings/linkedin-accounts", label: "Accounts", icon: RiLinkedinBoxLine },
-          { href: "/settings/linkedin-connection", label: "Connection", icon: RiPlugLine },
-          { href: "/settings/linkedin-rules", label: "Sending rules", icon: RiEqualizerLine },
-        ],
-      },
-      {
-        href: "/settings/whatsapp-accounts",
-        label: "WhatsApp",
-        icon: RiWhatsappLine,
-        tabs: [
-          { href: "/settings/whatsapp-accounts", label: "Numbers", icon: RiWhatsappLine },
-          { href: "/settings/whatsapp-stations", label: "Calling numbers", icon: RiPhoneLine },
-          { href: "/settings/whatsapp-connection", label: "Integrations", icon: RiPlugLine },
-          { href: "/settings/whatsapp-rules", label: "Sending rules", icon: RiEqualizerLine },
+          { href: "/settings/email-accounts", label: "发信邮箱", icon: RiMailLine },
+          { href: "/settings/email-connection", label: "连接配置", icon: RiPlugLine },
+          { href: "/settings/email-rules", label: "发送规则", icon: RiEqualizerLine },
         ],
       },
     ],
@@ -82,24 +61,23 @@ export const SETTINGS_NAV: { label: string; items: SettingsNavItem[] }[] = [
   {
     label: "AI",
     items: [
-      { href: "/settings/instructions", label: "Instructions", icon: RiQuillPenLine },
-      { href: "/settings/knowledge", label: "Knowledge", icon: RiBookOpenLine },
-      { href: "/settings/ai", label: "AI provider", icon: RiCpuLine },
+      { href: "/settings/instructions", label: "运营指令", icon: RiQuillPenLine },
+      { href: "/settings/knowledge", label: "知识库", icon: RiBookOpenLine },
+      { href: "/settings/ai", label: "AI 模型", icon: RiCpuLine },
     ],
   },
   {
-    label: "CRM & leads",
+    label: "CRM 与线索",
     items: [
-      { href: "/settings/lead-categories", label: "Lead categories", icon: RiPriceTag3Line },
-      { href: "/settings/columns", label: "Lead columns", icon: RiLayoutColumnLine },
+      { href: "/settings/lead-categories", label: "线索分类", icon: RiPriceTag3Line },
+      { href: "/settings/columns", label: "线索字段", icon: RiLayoutColumnLine },
     ],
   },
   {
-    label: "Preferences",
-    items: [{ href: "/settings/appearance", label: "Appearance", icon: RiPaletteLine }],
+    label: "偏好",
+    items: [{ href: "/settings/appearance", label: "外观", icon: RiPaletteLine }],
   },
 ];
 
 /** Where "Settings" opens. */
 export const SETTINGS_HOME = SETTINGS_NAV[0].items[0].href;
-

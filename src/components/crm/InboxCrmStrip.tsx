@@ -4,7 +4,8 @@ import { useState } from "react";
 import { RiErrorWarningLine, RiLoader4Line, RiRouteLine, RiSparkling2Fill } from "@remixicon/react";
 import * as Button from "@/components/alignui/button";
 import { useDialogs } from "@/components/DialogProvider";
-import { ClassificationPicker, humanize, type ClassificationChoice } from "@/components/crm/ActionRowTools";
+import { ClassificationPicker, type ClassificationChoice } from "@/components/crm/ActionRowTools";
+import { crmCategoryLabel as categoryLabel } from "@/lib/crm/labels";
 import { crmFetch, errorMessage } from "@/components/crm/crm-utils";
 import type { InboxCrmContext, InboxCrmDraft, InboxCrmSummary } from "@/lib/linkedin/messages/crmContext";
 import { inboxCrmStepLabel } from "@/lib/linkedin/messages/crmContext";
@@ -32,19 +33,19 @@ export type CrmCategoryOption = {
   subcategories: { id: string; name: string; categoryKey: string; active?: boolean }[];
 };
 
-/** The (sub)category a row or header names: the subcategory, else the category, else "Unclassified". */
+/** The (sub)category a row or header names: the subcategory, else the category, else "未分类". */
 export function crmCategoryLabel(summary: Pick<InboxCrmSummary, "categoryKey" | "subcategoryName"> | null | undefined): string {
-  if (!summary) return "Unclassified";
-  return summary.subcategoryName ?? (summary.categoryKey ? humanize(summary.categoryKey) : "Unclassified");
+  if (!summary) return "未分类";
+  return summary.subcategoryName ?? categoryLabel(summary.categoryKey);
 }
 
 /** "Sequence · Reply drafted · next 30 Sep, 13:39". */
 export function crmSequenceLine(context: InboxCrmSummary): string {
   const nextAt = context.nextActionAt ? new Date(context.nextActionAt) : null;
   const nextAtLabel = nextAt && !Number.isNaN(nextAt.getTime())
-    ? nextAt.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    ? nextAt.toLocaleString("zh-CN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
     : null;
-  return `${context.sequenceName ? `${context.sequenceName} · ` : ""}${inboxCrmStepLabel(context)}${nextAtLabel ? ` · next ${nextAtLabel}` : ""}`;
+  return `${context.sequenceName ? `${context.sequenceName} · ` : ""}${inboxCrmStepLabel(context)}${nextAtLabel ? ` · 下次 ${nextAtLabel}` : ""}`;
 }
 
 /**

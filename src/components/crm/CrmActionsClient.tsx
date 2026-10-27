@@ -234,40 +234,39 @@ export function CrmActionsClient() {
 
   return <>
     <PageHeader
-      title="Action required"
+      title="待处理"
       description="Replies, drafts and follow-ups that need a person's decision before the CRM moves on."
       actions={<Button.Root variant="neutral" mode="stroke" size="small" onClick={refresh} disabled={loading}>
-        <Button.Icon as={RiRefreshLine} className={cn(loading && loaded && "animate-spin")} />Refresh
-      </Button.Root>}
+        <Button.Icon as={RiRefreshLine} className={cn(loading && loaded && "animate-spin")} />刷新</Button.Root>}
     />
 
     <KpiStrip className="mt-6" columns={4}>
-      <KpiCell icon={RiInboxLine} label="In the queue" value={summary ? summary.queue.toLocaleString() : "—"} context={summary ? `${summary.needsDecision.toLocaleString()} awaiting a decision` : undefined} hint="Every record waiting on a person: new replies, drafts to approve, AI changes to confirm, follow-ups past due and processing errors." selected={activeFilterCount === 0} onSelect={clearFilters} />
-      <KpiCell icon={RiDraftLine} label="Drafts to review" value={summary?.drafts != null ? summary.drafts.toLocaleString() : "—"} context="AI-written replies waiting for approval" hint="Drafts the AI has written that nobody has sent, edited or discarded yet. Hover a row's draft to read it, then Edit or Send." />
-      <KpiCell icon={RiTimerLine} label="Follow-ups due" value={summary ? summary.followUpsDue.toLocaleString() : "—"} context="Drafted or past their scheduled time" hint="Follow-ups waiting on a person: drafts to approve, and scheduled steps past their time with nothing drafted yet. Select to show only these." selected={filters.actionGroup === "follow_up"} onSelect={() => setFilter("actionGroup", filters.actionGroup === "follow_up" ? "" : "follow_up")} />
-      <KpiCell icon={RiErrorWarningLine} label="Errors" value={summary ? summary.errors.toLocaleString() : "—"} context={summary?.errors ? "Processing failed — open the record to retry" : "Nothing failed"} hint="Records whose classification, drafting or sending failed. Select to show only these." selected={Boolean(filters.error)} onSelect={() => setFilter("error", filters.error ? "" : "true")} />
+      <KpiCell icon={RiInboxLine} label="待处理中" value={summary ? summary.queue.toLocaleString() : "—"} context={summary ? `${summary.needsDecision.toLocaleString()} 条等待决策` : undefined} hint="每一个在等人处理的记录：新回复、待确认的草稿、待确认的 AI 分类变更、逾期跟进和处理出错的记录。" selected={activeFilterCount === 0} onSelect={clearFilters} />
+      <KpiCell icon={RiDraftLine} label="待审草稿" value={summary?.drafts != null ? summary.drafts.toLocaleString() : "—"} context="AI 已经写好、等待人工确认的回复" hint="AI 已经写好、但还没有被发送、修改或丢弃的草稿。把鼠标移到某一行的草稿上可以读全文，然后编辑或发送。" />
+      <KpiCell icon={RiTimerLine} label="待跟进" value={summary ? summary.followUpsDue.toLocaleString() : "—"} context="已起草或已过预定时间" hint="在等人处理的跟进：待确认的草稿，以及已过预定时间但还没起草的步骤。点一下只看这些。" selected={filters.actionGroup === "follow_up"} onSelect={() => setFilter("actionGroup", filters.actionGroup === "follow_up" ? "" : "follow_up")} />
+      <KpiCell icon={RiErrorWarningLine} label="错误" value={summary ? summary.errors.toLocaleString() : "—"} context={summary?.errors ? "处理失败——打开记录重试" : "无错误"} hint="分类、起草或发送失败的记录。点一下只看这些。" selected={Boolean(filters.error)} onSelect={() => setFilter("error", filters.error ? "" : "true")} />
     </KpiStrip>
 
     <Frame className="mt-5">
-      <FrameHeader title="Queue" description={detail} actions={<>
-          <CompactSelect label="Category" placeholder="All categories" value={filters.category} onChange={(value) => setFilter("category", value)}><Select.Item value="">All categories</Select.Item>{categoryItems()}</CompactSelect>
-          <CompactSelect label="Channel" placeholder="All channels" value={filters.channel} onChange={(value) => setFilter("channel", value)}><Select.Item value="">All channels</Select.Item>{channelItems()}</CompactSelect>
-          <CompactSelect label="Action type" placeholder="All action types" value={filters.actionGroup} onChange={(value) => setFilter("actionGroup", value)}><Select.Item value="">All action types</Select.Item>{CRM_ACTION_GROUPS.map((group) => <Select.Item key={group} value={group}>{CRM_ACTION_GROUP_LABELS[group]}</Select.Item>)}</CompactSelect>
-          <CompactSelect label="Due time" placeholder="Any due time" value={filters.due} onChange={(value) => setFilter("due", value)}><Select.Item value="">Any due time</Select.Item><Select.Item value="overdue">Overdue</Select.Item><Select.Item value="today">Due today</Select.Item><Select.Item value="upcoming">Upcoming</Select.Item></CompactSelect>
+      <FrameHeader title="队列" description={detail} actions={<>
+          <CompactSelect label="分类" placeholder="全部分类" value={filters.category} onChange={(value) => setFilter("category", value)}><Select.Item value="">全部分类</Select.Item>{categoryItems()}</CompactSelect>
+          <CompactSelect label="渠道" placeholder="全部渠道" value={filters.channel} onChange={(value) => setFilter("channel", value)}><Select.Item value="">全部渠道</Select.Item>{channelItems()}</CompactSelect>
+          <CompactSelect label="动作类型" placeholder="全部动作" value={filters.actionGroup} onChange={(value) => setFilter("actionGroup", value)}><Select.Item value="">全部动作</Select.Item>{CRM_ACTION_GROUPS.map((group) => <Select.Item key={group} value={group}>{CRM_ACTION_GROUP_LABELS[group]}</Select.Item>)}</CompactSelect>
+          <CompactSelect label="时间" placeholder="不限时间" value={filters.due} onChange={(value) => setFilter("due", value)}><Select.Item value="">不限时间</Select.Item><Select.Item value="overdue">已逾期</Select.Item><Select.Item value="today">今天到期</Select.Item><Select.Item value="upcoming">即将到期</Select.Item></CompactSelect>
           <Popover.Root>
             <Popover.Trigger asChild>
               <Button.Root variant="neutral" mode="stroke" size="xsmall" className={cn(secondaryFilterCount > 0 && "text-text-strong-950")}>
-                <Button.Icon as={RiEqualizer2Line} />More filters
+                <Button.Icon as={RiEqualizer2Line} />更多筛选
                 {secondaryFilterCount > 0 && <span className="flex size-4 items-center justify-center rounded-full bg-primary-base text-label-xs text-static-white">{secondaryFilterCount}</span>}
               </Button.Root>
             </Popover.Trigger>
             <Popover.Content align="start" showArrow={false} sideOffset={8} className="w-80 max-w-[calc(100vw-2rem)] p-4">
-              <p className="text-label-sm text-text-strong-950">More filters</p>
+              <p className="text-label-sm text-text-strong-950">更多筛选</p>
               <div className="mt-3 grid gap-3">
-                <FilterField label="Subcategory"><CompactSelect label="Subcategory" placeholder="All subcategories" className="w-full" value={filters.subcategoryId} onChange={(value) => setFilter("subcategoryId", value)}><Select.Item value="">All subcategories</Select.Item>{subcategories.map((value) => <Select.Item key={String(value.id)} value={String(value.id)}><ItemLabel><CategoryDot categoryKey={String(value.categoryKey ?? "")} className="size-2" />{String(value.name)}</ItemLabel></Select.Item>)}</CompactSelect></FilterField>
-                <FilterField label="AI classification"><CompactSelect label="Classification review" placeholder="Any classification" className="w-full" value={filters.classificationReview} onChange={(value) => setFilter("classificationReview", value)}><Select.Item value="">Any classification</Select.Item><Select.Item value="true">Needs review</Select.Item><Select.Item value="false">Reviewed</Select.Item></CompactSelect></FilterField>
-                <FilterField label="Sequence"><CompactSelect label="Sequence" placeholder="All sequences" className="w-full" value={filters.sequenceId} onChange={(value) => setFilter("sequenceId", value)}><Select.Item value="">All sequences</Select.Item>{sequences.map((value) => <Select.Item key={String(value.id)} value={String(value.id)}>{String(value.name)}</Select.Item>)}</CompactSelect></FilterField>
-                <FilterField label="Errors"><CompactSelect label="Error state" placeholder="All states" className="w-full" value={filters.error} onChange={(value) => setFilter("error", value)}><Select.Item value="">All states</Select.Item><Select.Item value="true">Errors only</Select.Item></CompactSelect></FilterField>
+                <FilterField label="Subcategory"><CompactSelect label="Subcategory" placeholder="All subcategories" className="w-full" value={filters.subcategoryId} onChange={(value) => setFilter("subcategoryId", value)}><Select.Item value="">全部子类</Select.Item>{subcategories.map((value) => <Select.Item key={String(value.id)} value={String(value.id)}><ItemLabel><CategoryDot categoryKey={String(value.categoryKey ?? "")} className="size-2" />{String(value.name)}</ItemLabel></Select.Item>)}</CompactSelect></FilterField>
+                <FilterField label="AI classification"><CompactSelect label="Classification review" placeholder="Any classification" className="w-full" value={filters.classificationReview} onChange={(value) => setFilter("classificationReview", value)}><Select.Item value="">不限分类</Select.Item><Select.Item value="true">待复核</Select.Item><Select.Item value="false">已复核</Select.Item></CompactSelect></FilterField>
+                <FilterField label="Sequence"><CompactSelect label="Sequence" placeholder="All sequences" className="w-full" value={filters.sequenceId} onChange={(value) => setFilter("sequenceId", value)}><Select.Item value="">全部序列</Select.Item>{sequences.map((value) => <Select.Item key={String(value.id)} value={String(value.id)}>{String(value.name)}</Select.Item>)}</CompactSelect></FilterField>
+                <FilterField label="Errors"><CompactSelect label="Error state" placeholder="All states" className="w-full" value={filters.error} onChange={(value) => setFilter("error", value)}><Select.Item value="">全部状态</Select.Item><Select.Item value="true">仅看错误</Select.Item></CompactSelect></FilterField>
               </div>
             </Popover.Content>
           </Popover.Root>
@@ -287,7 +286,7 @@ export function CrmActionsClient() {
               hasMore={hasMore && !loadingMore}
               onLoadMore={loadMore}
               empty={activeFilterCount
-                ? { icon: RiFilterOffLine, title: "Nothing matches these filters", detail: "The queue has items, just none that fit every filter you picked.", action: <Button.Root variant="neutral" mode="stroke" size="small" onClick={clearFilters}>Clear filters</Button.Root> }
+                ? { icon: RiFilterOffLine, title: "Nothing matches these filters", detail: "The queue has items, just none that fit every filter you picked.", action: <Button.Root variant="neutral" mode="stroke" size="small" onClick={clearFilters}>清空筛选</Button.Root> }
                 : { icon: RiCheckDoubleLine, title: "You're all caught up", detail: "New replies, drafts to approve and due follow-ups will show up here." }}
             />
             {hasMore && <LoadMoreOnScroll onLoadMore={loadMore} busy={loadingMore} />}
@@ -444,7 +443,7 @@ export function NoticeBar({ notice, onDismiss, className }: { notice: Notice | n
   return <div role="status" className={cn("flex items-center gap-2 px-4 py-2 text-paragraph-sm", notice.tone === "error" ? "bg-error-lighter text-error-dark" : "bg-success-lighter text-success-dark", className)}>
     {notice.tone === "error" ? <RiCloseLine className="size-4 shrink-0" aria-hidden="true" /> : <RiCheckLine className="size-4 shrink-0" aria-hidden="true" />}
     <span className="min-w-0 flex-1 truncate">{notice.text}</span>
-    <button type="button" onClick={onDismiss} className="text-label-xs opacity-70 hover:opacity-100">Dismiss</button>
+    <button type="button" onClick={onDismiss} className="text-label-xs opacity-70 hover:opacity-100">忽略</button>
   </div>;
 }
 
@@ -497,15 +496,15 @@ export function ActionRows({ actions, categories, onActionsChange, pipeline, ref
     </div>
     <div aria-busy={refreshing || undefined} className={cn("hidden overflow-x-auto p-2 transition-opacity md:block", refreshing && "pointer-events-none opacity-60")}>
       <Table.Root className="min-w-[1000px]" style={{ tableLayout: "fixed" }}>
-        <caption className="sr-only">People and CRM actions requiring review</caption>
+        <caption className="sr-only">需要人工处理的联系人和动作</caption>
         <Table.Header>
           <Table.Row>
-            <Table.Head scope="col" className="w-[19%] px-4">Contact</Table.Head>
-            <Table.Head scope="col" className="w-[18%] px-4">Classification</Table.Head>
-            <Table.Head scope="col" className="w-[20%] px-4">Latest reply</Table.Head>
-            <Table.Head scope="col" className="w-[23%] px-4">Draft reply</Table.Head>
+            <Table.Head scope="col" className="w-[19%] px-4">联系人</Table.Head>
+            <Table.Head scope="col" className="w-[18%] px-4">分类</Table.Head>
+            <Table.Head scope="col" className="w-[20%] px-4">最新回复</Table.Head>
+            <Table.Head scope="col" className="w-[23%] px-4">回复草稿</Table.Head>
             <Table.Head scope="col" className="w-[17%] px-3 text-right">{pipeline ? "Status" : "Due"}</Table.Head>
-            <Table.Head scope="col" className="w-12 px-2"><span className="sr-only">More actions</span></Table.Head>
+            <Table.Head scope="col" className="w-12 px-2"><span className="sr-only">更多操作</span></Table.Head>
           </Table.Row>
         </Table.Header>
         <Table.Body spacing={4}>{actions.map((action, index) => {
@@ -744,7 +743,7 @@ export function ProposalInline({ label, busy, onAccept, onKeep, className }: { l
   return <div className={cn("inline-flex h-6 max-w-full items-stretch overflow-hidden rounded-md bg-warning-lighter text-warning-dark ring-1 ring-inset ring-warning-light", className)}>
     <span className="flex min-w-0 items-center gap-1 pl-1.5 pr-1.5 text-label-xs" title={`AI suggests: ${label}`}>
       <RiSparklingFill className="size-3 shrink-0" aria-hidden="true" />
-      <span className="truncate"><span className="sr-only">AI suggests </span>{label}</span>
+      <span className="truncate"><span className="sr-only">AI 建议</span>{label}</span>
     </span>
     <button type="button" disabled={busy} onClick={onAccept} aria-label={`Accept AI suggestion: ${label}`} title={`Accept: move to ${label}`} className={cn(button, "border-l border-warning-light")}>
       <RiCheckLine className="size-3.5" aria-hidden="true" />
@@ -920,14 +919,14 @@ function ActionRow({ action, categories, busy, editing, pipeline, now, onOpen, o
           onActivate={editable ? onToggleEdit : undefined}
           actions={editable && <>
             <button type="button" className={cn(secondaryButtonClass, "h-8")} onClick={onToggleEdit}><RiPencilLine className="size-4" aria-hidden="true" />{editing ? "Close editor" : "Edit"}</button>
-            <button type="button" className={cn(primaryButtonClass, "h-8")} disabled={!sendable} onClick={() => sendDraft(row, onMutate)} title={sendTitle}><RiSendPlaneLine className="size-4" aria-hidden="true" />Send</button>
+            <button type="button" className={cn(primaryButtonClass, "h-8")} disabled={!sendable} onClick={() => sendDraft(row, onMutate)} title={sendTitle}><RiSendPlaneLine className="size-4" aria-hidden="true" />发送</button>
           </>}
         >
           <DraftSummary row={row} />
         </HoverPreview>
         {editable && !editing && <div data-row-tools className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-lg bg-bg-white-0 p-1 opacity-0 shadow-regular-md ring-1 ring-inset ring-stroke-soft-200 transition-opacity group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100">
           <Button.Root variant="neutral" mode="ghost" size="xxsmall" onClick={onToggleEdit} aria-label={`Edit the draft to ${row.name}`} title="Edit the draft here"><Button.Icon as={RiPencilLine} /></Button.Root>
-          <Button.Root variant="primary" mode="filled" size="xxsmall" disabled={!sendable} onClick={() => sendDraft(row, onMutate)} aria-label={`Send the draft to ${row.name}`} title={sendTitle}><Button.Icon as={RiSendPlaneFill} />Send</Button.Root>
+          <Button.Root variant="primary" mode="filled" size="xxsmall" disabled={!sendable} onClick={() => sendDraft(row, onMutate)} aria-label={`Send the draft to ${row.name}`} title={sendTitle}><Button.Icon as={RiSendPlaneFill} />发送</Button.Root>
         </div>}
       </Table.Cell>
       <Table.Cell className="px-3 py-3 text-right">
@@ -982,13 +981,13 @@ export function RowMenu({ href, draft, hasRun, recordId, categories, categoryKey
         <Button.Root variant="neutral" mode="ghost" size="xsmall" aria-label={label} className={className}><Button.Icon as={RiMoreLine} /></Button.Root>
       </Dropdown.Trigger>
       <Dropdown.Content align="end">
-        <Dropdown.Item asChild><Link href={href}><Dropdown.ItemIcon as={RiExternalLinkLine} />Open record</Link></Dropdown.Item>
+        <Dropdown.Item asChild><Link href={href}><Dropdown.ItemIcon as={RiExternalLinkLine} />打开记录</Link></Dropdown.Item>
         <Dropdown.Item onSelect={() => setMoveStageOpen(true)}><Dropdown.ItemIcon as={RiArrowRightLine} />Move stage…</Dropdown.Item>
-        {hasRun && <Dropdown.Item onSelect={() => void onMutate(`/records/${recordId}/snooze`, { until: tomorrow() }, "POST", "Snoozed for a day")}><Dropdown.ItemIcon as={RiTimerLine} />Snooze a day</Dropdown.Item>}
+        {hasRun && <Dropdown.Item onSelect={() => void onMutate(`/records/${recordId}/snooze`, { until: tomorrow() }, "POST", "Snoozed for a day")}><Dropdown.ItemIcon as={RiTimerLine} />推迟一天</Dropdown.Item>}
         {draft && <>
           <Dropdown.Separator />
           <Dropdown.Item onSelect={() => setRegenerateOpen(true)}><Dropdown.ItemIcon as={RiRefreshLine} />Regenerate draft…</Dropdown.Item>
-          <Dropdown.Item destructive onSelect={() => void onMutate(`/drafts/${String(draft.id)}/discard`, {}, "POST", "Draft discarded")}><Dropdown.ItemIcon as={RiDeleteBinLine} />Discard draft</Dropdown.Item>
+          <Dropdown.Item destructive onSelect={() => void onMutate(`/drafts/${String(draft.id)}/discard`, {}, "POST", "Draft discarded")}><Dropdown.ItemIcon as={RiDeleteBinLine} />丢弃草稿</Dropdown.Item>
         </>}
       </Dropdown.Content>
     </Dropdown.Root>
@@ -1101,8 +1100,8 @@ export function ActionCard({ action, categories, now, busy, onOpen, onMutate, on
         body={row.draftFull}
         onActivate={onOpen}
         actions={editable && <>
-          <Link href={href} className={cn(secondaryButtonClass, "h-8")}>Open to edit</Link>
-          <button type="button" className={cn(primaryButtonClass, "h-8")} disabled={!sendable} onClick={() => sendDraft(row, onMutate)} title={sendTitle}><RiSendPlaneLine className="size-4" aria-hidden="true" />Send</button>
+          <Link href={href} className={cn(secondaryButtonClass, "h-8")}>打开编辑</Link>
+          <button type="button" className={cn(primaryButtonClass, "h-8")} disabled={!sendable} onClick={() => sendDraft(row, onMutate)} title={sendTitle}><RiSendPlaneLine className="size-4" aria-hidden="true" />发送</button>
         </>}
       >
         <p className="line-clamp-2 text-paragraph-xs text-text-sub-600">{row.draftReply}</p>
@@ -1110,8 +1109,8 @@ export function ActionCard({ action, categories, now, busy, onOpen, onMutate, on
       <div className="mt-2 flex items-center justify-between gap-2">
         <DraftStateLabel state={row.draftState} className="min-w-0 truncate" />
         {editable && <div data-row-tools className="flex shrink-0 items-center gap-1">
-          <Button.Root variant="neutral" mode="stroke" size="xxsmall" asChild><Link href={href} aria-label={`Open ${row.name} to edit the draft`}><Button.Icon as={RiPencilLine} />Edit</Link></Button.Root>
-          <Button.Root variant="primary" mode="filled" size="xxsmall" disabled={!sendable} onClick={() => sendDraft(row, onMutate)} aria-label={`Send the draft to ${row.name}`} title={sendTitle}><Button.Icon as={RiSendPlaneFill} />Send</Button.Root>
+          <Button.Root variant="neutral" mode="stroke" size="xxsmall" asChild><Link href={href} aria-label={`Open ${row.name} to edit the draft`}><Button.Icon as={RiPencilLine} />编辑</Link></Button.Root>
+          <Button.Root variant="primary" mode="filled" size="xxsmall" disabled={!sendable} onClick={() => sendDraft(row, onMutate)} aria-label={`Send the draft to ${row.name}`} title={sendTitle}><Button.Icon as={RiSendPlaneFill} />发送</Button.Root>
         </div>}
       </div>
     </div>

@@ -1,36 +1,17 @@
 import {
   RiBarChartBoxLine,
-  RiBookOpenLine,
-  RiBugLine,
-  RiLightbulbLine,
-  RiShieldCheckLine,
-  RiChat3Line,
-  RiFilter3Line,
-  RiGlobalLine,
-  RiHistoryLine,
-  RiInboxLine,
-  RiLinkM,
-  RiMegaphoneLine,
-  RiChatSmile2Line,
-  RiPhoneLine,
-  RiSearchLine,
-  RiSendPlaneLine,
-  RiWebhookLine,
-  RiCodeSSlashLine,
-  RiDatabase2Line,
   RiGridLine,
-  RiLinkedinBoxFill,
+  RiInboxLine,
   RiMailFill,
   RiRouteLine,
+  RiSendPlaneLine,
   RiSettings3Line,
   RiTimeLine,
   RiTodoLine,
   RiUserSearchLine,
-  RiWhatsappFill,
   type RemixiconComponentType,
 } from "@remixicon/react";
 import { HUE } from "@/components/analytics/theme";
-import { APP_VERSION, bugReportUrl, SUPPORT_LINKS } from "@/lib/support";
 import { SETTINGS_HOME, SETTINGS_NAV } from "@/components/settings/settingsNav";
 
 /**
@@ -40,6 +21,10 @@ import { SETTINGS_HOME, SETTINGS_NAV } from "@/components/settings/settingsNav";
  * per outreach channel), plus footer entries pinned to the bottom. A link's
  * `match` lists extra path prefixes that should light it up (a record page
  * belongs to Leads).
+ *
+ * 改造（国内化）：LinkedIn / WhatsApp / Calling 三组入口连同"开发者"分组一起移除。
+ * 企业微信、短信、外呼、找客户（企业库 / 线索池）在对应模块接入时再加回来，
+ * 不提前放一个点进去 404 的入口。
  */
 
 /** Live counts from GET /api/nav/badges. */
@@ -83,89 +68,43 @@ const link = (href: string, label: string, icon: RemixiconComponentType, extra: 
 export const NAV_SECTIONS: NavSection[] = [
   {
     entries: [
-      link("/analytics", "Analytics", RiBarChartBoxLine),
-      link("/crm/actions", "Action required", RiTodoLine, { badge: "actionRequired" }),
-      link("/leads", "Leads", RiUserSearchLine, { match: ["/crm/records"] }),
+      link("/analytics", "数据分析", RiBarChartBoxLine),
+      link("/crm/actions", "待处理", RiTodoLine, { badge: "actionRequired" }),
+      link("/leads", "客户线索", RiUserSearchLine, { match: ["/crm/records"] }),
     ],
   },
   {
-    label: "Outreach",
+    label: "触达",
     entries: [
       {
         kind: "group",
         id: "email",
-        label: "Email",
+        label: "邮件",
         icon: RiMailFill,
         color: HUE.orange,
+        defaultOpen: true,
         children: [
-          link("/outreach/campaigns", "Campaigns", RiSendPlaneLine),
-          link("/outreach/inbox", "Inbox", RiInboxLine),
-        ],
-      },
-      {
-        kind: "group",
-        id: "linkedin",
-        label: "LinkedIn",
-        icon: RiLinkedinBoxFill,
-        color: HUE.blue,
-        children: [
-          link("/linkedin/campaigns", "Campaigns", RiMegaphoneLine),
-          link("/linkedin/messages", "Messages", RiChat3Line),
-          link("/linkedin/search", "Search", RiSearchLine),
-        ],
-      },
-      {
-        kind: "group",
-        id: "whatsapp",
-        label: "WhatsApp",
-        icon: RiWhatsappFill,
-        color: HUE.green,
-        children: [
-          link("/whatsapp/campaigns", "Message campaigns", RiChatSmile2Line, { match: ["/whatsapp/"] }),
-          link("/calling/campaigns", "Call campaigns", RiPhoneLine, { match: ["/calling/"] }),
-          link("/calling/messages", "Messages", RiChat3Line, { badge: "whatsappUnread" }),
+          link("/outreach/campaigns", "营销活动", RiSendPlaneLine),
+          link("/outreach/inbox", "收件箱", RiInboxLine),
         ],
       },
     ],
   },
   {
-    label: "CRM",
+    label: "商机",
     entries: [
-      link("/crm/pipeline", "Pipeline", RiRouteLine),
-      link("/crm/sequences", "Sequences", RiTimeLine),
+      link("/crm/pipeline", "商机看板", RiRouteLine),
+      link("/crm/sequences", "跟进序列", RiTimeLine),
     ],
   },
   {
-    label: "Data",
-    entries: [
-      link("/tables", "Tables", RiGridLine),
-      {
-        kind: "group",
-        id: "prospecting",
-        label: "Prospecting",
-        icon: RiDatabase2Line,
-        children: [
-          link("/domains", "All domains", RiGlobalLine),
-          link("/campaigns", "Qualification campaigns", RiFilter3Line),
-        ],
-      },
-    ],
+    label: "数据",
+    entries: [link("/tables", "数据表", RiGridLine)],
   },
 ];
 
 export const NAV_FOOTER: NavEntry[] = [
-  {
-    kind: "group",
-    id: "developers",
-    label: "Developers",
-    icon: RiCodeSSlashLine,
-    children: [
-      link("/linkedin/connections", "Connections", RiLinkM),
-      link("/linkedin/jobs", "Job history", RiHistoryLine),
-      link("/linkedin/webhooks", "LinkedIn webhooks", RiWebhookLine),
-    ],
-  },
-  link(SETTINGS_HOME, "Settings", RiSettings3Line, { match: ["/settings"], badge: "accountsNeedingAttention", badgeStyle: "dot" }),
+  link(SETTINGS_HOME, "设置", RiSettings3Line, { match: ["/settings"], badge: "accountsNeedingAttention", badgeStyle: "dot" }),
 ];
 
 export function allLinks(): NavLink[] {
@@ -192,8 +131,8 @@ export function paletteItems(): PaletteItem[] {
   const items: PaletteItem[] = [];
   for (const section of NAV_SECTIONS) {
     for (const e of section.entries) {
-      if (e.kind === "link") items.push({ href: e.href, label: e.label, group: section.label ?? "Pages", icon: e.icon });
-      else for (const c of e.children) items.push({ href: c.href, label: `${e.label} · ${c.label}`, group: section.label ?? "Pages", icon: c.icon });
+      if (e.kind === "link") items.push({ href: e.href, label: e.label, group: section.label ?? "页面", icon: e.icon });
+      else for (const c of e.children) items.push({ href: c.href, label: `${e.label} · ${c.label}`, group: section.label ?? "页面", icon: c.icon });
     }
   }
   for (const e of NAV_FOOTER) {
@@ -201,20 +140,13 @@ export function paletteItems(): PaletteItem[] {
   }
   for (const g of SETTINGS_NAV) {
     for (const s of g.items) {
-      if (!s.tabs) items.push({ href: s.href, label: s.label, group: "Settings", icon: s.icon, keywords: g.label });
-      else for (const t of s.tabs) items.push({ href: t.href, label: `${s.label} · ${t.label}`, group: "Settings", icon: t.icon, keywords: g.label });
+      if (!s.tabs) items.push({ href: s.href, label: s.label, group: "设置", icon: s.icon, keywords: g.label });
+      else for (const t of s.tabs) items.push({ href: t.href, label: `${s.label} · ${t.label}`, group: "设置", icon: t.icon, keywords: g.label });
     }
   }
   items.push(
-    { href: "/outreach/campaigns/new", label: "New email campaign", group: "Create", icon: RiMailFill },
-    { href: "/linkedin/campaigns/new", label: "New LinkedIn campaign", group: "Create", icon: RiLinkedinBoxFill },
-  );
-  items.push(
-    { href: SUPPORT_LINKS.docs, label: "Documentation", group: "Help", icon: RiBookOpenLine, external: true },
-    { href: bugReportUrl(APP_VERSION), label: "Report a bug", group: "Help", icon: RiBugLine, external: true },
-    { href: SUPPORT_LINKS.featureRequest, label: "Request a feature", group: "Help", icon: RiLightbulbLine, external: true },
-    { href: SUPPORT_LINKS.community, label: "Ask the community", group: "Help", icon: RiChat3Line, external: true },
-    { href: SUPPORT_LINKS.security, label: "Report a security issue", group: "Help", icon: RiShieldCheckLine, external: true },
+    { href: "/outreach/campaigns/new", label: "新建邮件营销活动", group: "新建", icon: RiMailFill },
+    { href: "/leads", label: "导入客户线索", group: "新建", icon: RiUserSearchLine },
   );
   return items;
 }

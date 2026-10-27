@@ -16,12 +16,17 @@ export function isCrmChannel(value: unknown): value is CrmChannel {
   return typeof value === "string" && (CRM_CHANNELS as readonly string[]).includes(value);
 }
 
+/**
+ * The channel's Chinese name, for every surface that shows it (record pages,
+ * queues, settings). 改造：中文化。The stored values stay English; only the
+ * display label changes, so no data migration is needed.
+ */
 export function crmChannelLabel(channel: CrmChannel): string {
   switch (channel) {
     case "email":
-      return "Email";
+      return "邮件";
     case "linkedin":
-      return "LinkedIn";
+      return "领英";
     case "whatsapp":
       return "WhatsApp";
   }

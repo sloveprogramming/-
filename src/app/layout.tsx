@@ -1,30 +1,21 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { Instrument_Serif, Inter as FontSans } from "next/font/google";
 import AppShell from "@/components/AppShell";
 import DialogProvider from "@/components/DialogProvider";
 import { DemoProvider } from "@/components/demo/DemoProvider";
-import { brandDisplay } from "@/components/brand/font";
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/components/theme/ThemeProvider";
 import { isDemoMode } from "@/lib/demo/mode";
 import "./globals.css";
 
-const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans-inter",
-});
-
-const fontSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-instrument-serif-next",
-});
+// 中文化：字体不再从 next/font/google 拉取（Google Fonts 在国内构建时会超时，
+// 而且 Inter/Geist 没有中文字形）。字体栈定义在 globals.css 的 @theme 里，
+// 用系统中文字体，零下载。
 
 export const metadata: Metadata = {
-  title: "AgentSDR",
+  title: "新农哥拓客",
   // A private workspace behind sign-in: keep every page out of search.
   robots: { index: false, follow: false },
-  description: "Outreach, qualification and CRM for GTM teams",
+  description: "新农哥的智能拓客与客户管理系统",
   // The favicon is src/app/icon.svg and apple-icon.png (Next's file convention):
   // the brand tile, which reads on light and dark tabs alike.
 };
@@ -54,10 +45,10 @@ export default async function RootLayout({
   // It covers this element's own attributes only, not its children.
   return (
     <html
-      lang="en"
+      lang="zh-CN"
       data-theme="light"
       suppressHydrationWarning
-      className={`${fontSans.variable} ${fontSerif.variable} ${brandDisplay.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
