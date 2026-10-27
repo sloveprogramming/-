@@ -5,7 +5,7 @@ import { ACCENT, STATUS } from "../theme";
 /**
  * Segmented meter for used / limit (daily send caps, warm-up limits). The fill
  * shifts accent -> warning at 80% -> critical at 100%; the state is also
- * written out with an icon ("Near limit", "At limit"), never colour alone. The
+ * written out with an icon ("接近上限", "已达上限"), never colour alone. The
  * unfilled track is a lighter tint of the same colour so the state reads
  * across the whole bar.
  *
@@ -43,7 +43,7 @@ export function CapacityMeter({ label, used, limit, segments = 20, detail }: { l
         {state === "ok" && <RiCheckLine className="size-3.5" aria-hidden="true" />}
         {state === "warning" && <RiAlertLine className="size-3.5" aria-hidden="true" style={{ color: tone.fill }} />}
         {state === "critical" && <RiErrorWarningLine className="size-3.5" aria-hidden="true" style={{ color: tone.fill }} />}
-        {state === "ok" ? "Within limit" : state === "warning" ? "Near limit" : "At limit"}
+        {state === "ok" ? "在上限内" : state === "warning" ? "接近上限" : "已达上限"}
       </p>
     </div>
   );

@@ -19,7 +19,7 @@ import { views, type ViewProps } from "./views";
 
 /** Channel tabs carry their channel's icon and colour; Overview a neutral one. */
 const VIEW_TABS: Array<{ view: AnalyticsView; label: string; icon: ComponentType<{ className?: string }>; color?: string }> = [
-  { view: "overview", label: "Overview", icon: RiDashboard3Line },
+  { view: "overview", label: "总览", icon: RiDashboard3Line },
   ...ANALYTICS_CHANNELS.map((channel) => ({ view: channel, label: CHANNEL_META[channel].label, icon: CHANNEL_META[channel].icon, color: CHANNEL_META[channel].color })),
 ];
 
@@ -104,19 +104,19 @@ export default function AnalyticsClient({ initialView, initialRange }: { initial
     <div>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-title-h5 text-text-strong-950">Analytics</h1>
-          <p className="mt-1 max-w-2xl text-paragraph-sm text-text-sub-600">How conversations turn into meetings and customers, and which channels bring them in.</p>
+          <h1 className="text-title-h5 text-text-strong-950">数据分析</h1>
+          <p className="mt-1 max-w-2xl text-paragraph-sm text-text-sub-600">对话怎么变成约见和成交，以及它们是从哪个渠道来的。</p>
         </div>
         <div className="flex shrink-0 items-center gap-2 self-start">
           <DateRangeControl selection={selection} resolved={resolved} today={today} onChange={changeRange} />
-          <button type="button" onClick={() => setReloadTick((n) => n + 1)} disabled={loading} aria-label="Refresh" title="Refresh" className="flex size-9 items-center justify-center rounded-lg bg-bg-white-0 text-text-sub-600 shadow-regular-xs outline-none ring-1 ring-inset ring-stroke-soft-200 hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base disabled:opacity-50">
+          <button type="button" onClick={() => setReloadTick((n) => n + 1)} disabled={loading} aria-label="刷新" title="刷新" className="flex size-9 items-center justify-center rounded-lg bg-bg-white-0 text-text-sub-600 shadow-regular-xs outline-none ring-1 ring-inset ring-stroke-soft-200 hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base disabled:opacity-50">
             <RiRefreshLine className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
           </button>
         </div>
       </header>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-stroke-soft-200">
-        <div role="tablist" aria-label="Analytics views" className="-mb-px flex gap-5 overflow-x-auto">
+        <div role="tablist" aria-label="分析视图" className="-mb-px flex gap-5 overflow-x-auto">
           {VIEW_TABS.map(({ view: tabView, label, icon: Icon, color }) => {
             const active = tabView === view;
             return (
@@ -136,7 +136,7 @@ export default function AnalyticsClient({ initialView, initialRange }: { initial
       </div>
 
       <div role="tabpanel" className="mt-6">
-        {error && entry && <p role="alert" className="mb-4 rounded-lg bg-error-lighter px-3 py-2 text-paragraph-sm text-error-dark">Couldn&apos;t refresh: {error}. Showing the last loaded data.</p>}
+        {error && entry && <p role="alert" className="mb-4 rounded-lg bg-error-lighter px-3 py-2 text-paragraph-sm text-error-dark">刷新失败：{error}。下面显示的是上一次加载的数据。</p>}
         {showData ? (
           createElement(View, { data: entry.data, loading, onSelectView: changeView })
         ) : error ? (
@@ -151,15 +151,15 @@ export default function AnalyticsClient({ initialView, initialRange }: { initial
 
 function updatedLabel(updatedAt: number, now: number): string {
   const minutes = Math.floor((now - updatedAt) / 60_000);
-  if (minutes < 1) return "Updated just now";
-  if (minutes < 60) return `Updated ${minutes}m ago`;
-  return `Updated ${Math.floor(minutes / 60)}h ago`;
+  if (minutes < 1) return "刚刚更新";
+  if (minutes < 60) return `${minutes} 分钟前更新`;
+  return `${Math.floor(minutes / 60)} 小时前更新`;
 }
 
 /** First load of a view only; refetches keep the previous render instead. */
 function LoadingBlock() {
   return (
-    <div aria-busy="true" aria-label="Loading analytics" className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+    <div aria-busy="true" aria-label="正在加载分析数据" className="grid grid-cols-1 gap-4 lg:grid-cols-12">
       <div className="h-32 animate-pulse rounded-2xl bg-bg-weak-50 lg:col-span-12" />
       <div className="h-80 animate-pulse rounded-2xl bg-bg-weak-50 lg:col-span-8" />
       <div className="h-80 animate-pulse rounded-2xl bg-bg-weak-50 lg:col-span-4" />
@@ -172,9 +172,9 @@ function DateRangeControl({ selection, resolved, today, onChange }: { selection:
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const wasOpen = useRef(false);
-  const label = selection.kind === "preset" ? RANGE_PRESETS.find((p) => p.key === selection.key)?.label : "Custom range";
+  const label = selection.kind === "preset" ? RANGE_PRESETS.find((p) => p.key === selection.key)?.label : "自定义区间";
   const span = resolved ? `${formatDay(resolved.from)} – ${formatDay(resolved.to)}` : "";
-  const customError = from && to ? (from > to ? "Start must be before the end." : dayCount(from, to) > MAX_ANALYTICS_RANGE_DAYS ? `Pick at most ${MAX_ANALYTICS_RANGE_DAYS} days.` : null) : null;
+  const customError = from && to ? (from > to ? "开始日期要早于结束日期。" : dayCount(from, to) > MAX_ANALYTICS_RANGE_DAYS ? `最多选 ${MAX_ANALYTICS_RANGE_DAYS} 天。` : null) : null;
 
   useEffect(() => {
     if (open && !wasOpen.current && resolved) {
@@ -210,16 +210,16 @@ function DateRangeControl({ selection, resolved, today, onChange }: { selection:
         </ul>
         <div className="mt-1.5 border-t border-stroke-soft-200 p-2 pt-3">
           <p className={cn("mb-2 flex items-center justify-between text-label-xs", selection.kind === "custom" ? "text-text-strong-950" : "text-text-soft-400")}>
-            Custom range {selection.kind === "custom" && <RiCheckLine className="size-4" aria-hidden="true" />}
+            自定义区间 {selection.kind === "custom" && <RiCheckLine className="size-4" aria-hidden="true" />}
           </p>
           <div className="flex items-center gap-2">
-            <input type="date" aria-label="Start date" value={from} max={today ?? undefined} onChange={(e) => setFrom(e.target.value)} className="h-8 min-w-0 flex-1 rounded-lg bg-bg-white-0 px-2 text-paragraph-xs text-text-strong-950 outline-none ring-1 ring-inset ring-stroke-soft-200 focus:ring-primary-base" />
+            <input type="date" aria-label="开始日期" value={from} max={today ?? undefined} onChange={(e) => setFrom(e.target.value)} className="h-8 min-w-0 flex-1 rounded-lg bg-bg-white-0 px-2 text-paragraph-xs text-text-strong-950 outline-none ring-1 ring-inset ring-stroke-soft-200 focus:ring-primary-base" />
             <span className="text-text-soft-400" aria-hidden="true">–</span>
-            <input type="date" aria-label="End date" value={to} max={today ?? undefined} onChange={(e) => setTo(e.target.value)} className="h-8 min-w-0 flex-1 rounded-lg bg-bg-white-0 px-2 text-paragraph-xs text-text-strong-950 outline-none ring-1 ring-inset ring-stroke-soft-200 focus:ring-primary-base" />
+            <input type="date" aria-label="结束日期" value={to} max={today ?? undefined} onChange={(e) => setTo(e.target.value)} className="h-8 min-w-0 flex-1 rounded-lg bg-bg-white-0 px-2 text-paragraph-xs text-text-strong-950 outline-none ring-1 ring-inset ring-stroke-soft-200 focus:ring-primary-base" />
           </div>
           {customError && <p role="alert" className="mt-2 text-paragraph-xs text-error-base">{customError}</p>}
           <button type="button" disabled={!from || !to || Boolean(customError)} onClick={() => { onChange({ kind: "custom", from, to }); setOpen(false); }} className="mt-3 h-8 w-full rounded-lg bg-bg-strong-950 text-label-xs text-text-white-0 outline-none transition hover:bg-bg-surface-800 focus-visible:ring-2 focus-visible:ring-primary-base disabled:cursor-not-allowed disabled:bg-bg-weak-50 disabled:text-text-disabled-300">
-            Apply range
+            应用
           </button>
         </div>
       </Popover.Content>

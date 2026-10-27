@@ -48,8 +48,8 @@ export function ChartCard({
       type="button"
       onClick={() => setShowTable((v) => !v)}
       aria-pressed={showTable}
-      aria-label={showTable ? "Show chart" : "Show as table"}
-      title={showTable ? "Show chart" : "Show as table"}
+      aria-label={showTable ? "图表" : "表格"}
+      title={showTable ? "图表" : "表格"}
       className={cn("flex size-8 items-center justify-center rounded-lg bg-bg-white-0 text-text-sub-600 shadow-regular-xs outline-none ring-1 ring-inset ring-stroke-soft-200 transition hover:bg-bg-weak-50 focus-visible:ring-2 focus-visible:ring-primary-base", showTable && "text-text-strong-950")}
     >
       {showTable ? <RiBarChartBoxLine className="size-4" aria-hidden="true" /> : <RiTable2 className="size-4" aria-hidden="true" />}

@@ -154,24 +154,24 @@ export default function LeadsClient({ initialTab, initialRows, initialTotal }: P
     : <CompaniesTable rows={error ? [] : companiesData?.rows ?? null} sort={state.sort} direction={state.direction} onSort={onSort} loading={loading} onOpen={openCompany} />;
 
   const tabs = [
-    { value: "people" as const, label: "People", icon: RiUserLine },
-    { value: "companies" as const, label: "Companies", icon: RiBuilding2Line },
+    { value: "people" as const, label: "联系人", icon: RiUserLine },
+    { value: "companies" as const, label: "公司", icon: RiBuilding2Line },
   ];
 
   return (
     <main className="h-full w-full overflow-y-auto bg-bg-white-0">
       <PageContainer>
         <PageHeader
-          title="Leads"
+          title="客户线索"
           description="Every person and company you can reach, with their outreach and CRM state."
-          actions={isPeople && <Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowImport(true)}><Button.Icon as={RiUpload2Line} />Import people</Button.Root>}
+          actions={isPeople && <Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowImport(true)}><Button.Icon as={RiUpload2Line} />导入线索</Button.Root>}
         />
 
         <PageTabs className="mt-6" label="Lead type" tabs={tabs} value={tab} onChange={switchTab} />
 
         <Frame className="mt-5">
           <FrameHeader
-            title={isPeople ? "People" : "Companies"}
+            title={isPeople ? "联系人" : "公司"}
             description={<span aria-live="polite">{data ? `${total.toLocaleString("en-US")} ${total === 1 ? (isPeople ? "person" : "company") : noun}${filtersOn || searching ? " match" : ""}` : `Loading ${noun}…`}</span>}
             actions={
               <>
@@ -222,7 +222,7 @@ export default function LeadsClient({ initialTab, initialRows, initialTotal }: P
                 action={
                   filtersOn > 0 || searching
                     ? <Button.Root variant="neutral" mode="stroke" size="small" onClick={() => patch({ query: "", ...(isPeople ? { filters: EMPTY_FILTERS } : {}) })}>Clear {filtersOn ? "filters" : "search"}</Button.Root>
-                    : isPeople && <Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowImport(true)}><Button.Icon as={RiUpload2Line} />Import people</Button.Root>
+                    : isPeople && <Button.Root variant="primary" mode="filled" size="small" onClick={() => setShowImport(true)}><Button.Icon as={RiUpload2Line} />导入线索</Button.Root>
                 }
               />
             ) : table}

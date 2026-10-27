@@ -15,7 +15,7 @@ export function DeltaPill({ metric, upIsGood = true }: { metric: { value: number
   if (c === null) {
     const isNew = metric.previous === 0 && (metric.value ?? 0) > 0;
     return (
-      <Badge.Root variant="lighter" color="gray" size="medium" title={isNew ? "Nothing in the previous period" : "No previous-period data to compare"}>
+      <Badge.Root variant="lighter" color="gray" size="medium" title={isNew ? "上期没有数据" : "没有上期数据可对比"}>
         {isNew ? "New" : "—"}
       </Badge.Root>
     );

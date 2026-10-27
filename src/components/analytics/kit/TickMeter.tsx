@@ -26,7 +26,7 @@ export function TickMeter({ label, used, limit, caption, ticks = 48, delta }: { 
         {state !== "ok" && (
           <span className="flex items-center gap-1 text-label-xs text-text-sub-600">
             {state === "critical" ? <RiErrorWarningLine className="size-4" style={{ color }} aria-hidden="true" /> : <RiAlertLine className="size-4" style={{ color }} aria-hidden="true" />}
-            {state === "critical" ? "At limit" : "Near limit"}
+            {state === "critical" ? "已达上限" : "接近上限"}
           </span>
         )}
       </div>

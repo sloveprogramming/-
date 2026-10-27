@@ -27,25 +27,25 @@ import type { ViewProps } from "./types";
 const EMAIL = CHANNEL_META.email.color;
 
 const SEND_KEYS: SeriesKeys<"firstTouch" | "followUp"> = {
-  firstTouch: { label: "First touch", color: EMAIL },
-  followUp: { label: "Follow-ups", color: MUTED },
+  firstTouch: { label: "首触", color: EMAIL },
+  followUp: { label: "跟进", color: MUTED },
 };
-const REPLY_KEYS: SeriesKeys<"replies"> = { replies: { label: "Replies", color: EMAIL } };
+const REPLY_KEYS: SeriesKeys<"replies"> = { replies: { label: "回复", color: EMAIL } };
 
 const HINTS = {
-  sent: "Emails sent in this period, first touches and follow-ups both.",
-  contacted: "Distinct leads who were sent their first email in this period.",
-  replied: "Distinct people in an email campaign who sent an inbound email reply in this period.",
-  replyRate: "Replied divided by leads contacted, for the same period.",
-  bounced: "Addresses added to the suppression list as bounced in this period.",
-  unsubscribed: "Addresses added to the suppression list as unsubscribed in this period.",
+  sent: "本期发出的邮件，首触和跟进都算。",
+  contacted: "本期第一次收到我们邮件的客户数。",
+  replied: "本期回信的客户数（只算邮件活动里的）。",
+  replyRate: "回复数 ÷ 触达数，同一时间段。",
+  bounced: "本期因退信被加入黑名单的地址数。",
+  unsubscribed: "本期因退订被加入黑名单的地址数。",
 };
 
 const CAMPAIGN_STATUS: Record<string, { tone: "good" | "warning" | "neutral" | "info"; label: string }> = {
-  active: { tone: "good", label: "Active" },
-  paused: { tone: "warning", label: "Paused" },
-  draft: { tone: "neutral", label: "Draft" },
-  completed: { tone: "info", label: "Completed" },
+  active: { tone: "good", label: "进行中" },
+  paused: { tone: "warning", label: "已暂停" },
+  draft: { tone: "neutral", label: "草稿" },
+  completed: { tone: "info", label: "已结束" },
 };
 
 function totalsSpark(series: EmailAnalytics["sends"]): number[] {
@@ -61,17 +61,17 @@ export function EmailView({ data, loading }: ViewProps<"email">) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
       <KpiStrip className="lg:col-span-12" columns={6}>
-        <KpiCell icon={RiMailSendLine} label="Emails sent" value={formatCompact(kpis.sent.value)} metric={kpis.sent} hint={HINTS.sent} context={vsPrevious(kpis.sent)} spark={totalsSpark(data.sends)} />
-        <KpiCell icon={RiUserSharedLine} label="Leads contacted" value={formatCompact(kpis.contacted.value)} metric={kpis.contacted} hint={HINTS.contacted} context={vsPrevious(kpis.contacted)} />
-        <KpiCell icon={RiChat1Line} label="Replied" value={formatCompact(kpis.replied.value)} metric={kpis.replied} hint={HINTS.replied} context={`of ${formatCompact(kpis.contacted.value)} contacted`} spark={data.replies.points.map((p) => p.replies)} />
-        <KpiCell icon={RiPercentLine} label="Reply rate" value={formatPercent(kpis.replyRate.value)} metric={kpis.replyRate} hint={HINTS.replyRate} context={kpis.replyRate.previous === null ? undefined : `vs ${formatPercent(kpis.replyRate.previous)} previous period`} />
-        <KpiCell icon={RiMailForbidLine} label="Bounced" value={formatCompact(kpis.bounced.value)} metric={kpis.bounced} upIsGood={false} hint={HINTS.bounced} context={vsPrevious(kpis.bounced)} />
-        <KpiCell icon={RiUserUnfollowLine} label="Unsubscribed" value={formatCompact(kpis.unsubscribed.value)} metric={kpis.unsubscribed} upIsGood={false} hint={HINTS.unsubscribed} context={vsPrevious(kpis.unsubscribed)} />
+        <KpiCell icon={RiMailSendLine} label="已发邮件" value={formatCompact(kpis.sent.value)} metric={kpis.sent} hint={HINTS.sent} context={vsPrevious(kpis.sent)} spark={totalsSpark(data.sends)} />
+        <KpiCell icon={RiUserSharedLine} label="已触达客户" value={formatCompact(kpis.contacted.value)} metric={kpis.contacted} hint={HINTS.contacted} context={vsPrevious(kpis.contacted)} />
+        <KpiCell icon={RiChat1Line} label="已回复" value={formatCompact(kpis.replied.value)} metric={kpis.replied} hint={HINTS.replied} context={`of ${formatCompact(kpis.contacted.value)} contacted`} spark={data.replies.points.map((p) => p.replies)} />
+        <KpiCell icon={RiPercentLine} label="回复率" value={formatPercent(kpis.replyRate.value)} metric={kpis.replyRate} hint={HINTS.replyRate} context={kpis.replyRate.previous === null ? undefined : `vs ${formatPercent(kpis.replyRate.previous)} previous period`} />
+        <KpiCell icon={RiMailForbidLine} label="退信" value={formatCompact(kpis.bounced.value)} metric={kpis.bounced} upIsGood={false} hint={HINTS.bounced} context={vsPrevious(kpis.bounced)} />
+        <KpiCell icon={RiUserUnfollowLine} label="退订" value={formatCompact(kpis.unsubscribed.value)} metric={kpis.unsubscribed} upIsGood={false} hint={HINTS.unsubscribed} context={vsPrevious(kpis.unsubscribed)} />
       </KpiStrip>
 
       <ChartCard
         className="lg:col-span-8"
-        title="Sending activity"
+        title="发送节奏"
         description={`Emails sent each ${unit}: first touches and follow-ups.`}
         legend={
           <SeriesStats
@@ -82,7 +82,7 @@ export function EmailView({ data, loading }: ViewProps<"email">) {
           />
         }
         loading={loading}
-        table={<TimeSeriesTable series={data.sends} keys={SEND_KEYS} bucket={range.bucket} caption="Emails sent by type" />}
+        table={<TimeSeriesTable series={data.sends} keys={SEND_KEYS} bucket={range.bucket} caption="按类型统计的已发邮件" />}
         footer={
           data.failedSends > 0 ? (
             <span className="flex items-center gap-1.5">
@@ -99,17 +99,17 @@ export function EmailView({ data, loading }: ViewProps<"email">) {
 
       <ChartCard
         className="lg:col-span-8"
-        title="Replies"
-        description={`Inbound email replies each ${unit}.`}
-        legend={<SeriesStats items={[{ label: "Replies", color: EMAIL, value: formatCompact(repliesTotal), metric: kpis.replied }]} />}
+        title="回复"
+        description={`${unit === "week" ? "每周" : "每天"}收到的邮件回复。`}
+        legend={<SeriesStats items={[{ label: "回复", color: EMAIL, value: formatCompact(repliesTotal), metric: kpis.replied }]} />}
         loading={loading}
-        table={<TimeSeriesTable series={data.replies} keys={REPLY_KEYS} bucket={range.bucket} caption="Email replies" />}
+        table={<TimeSeriesTable series={data.replies} keys={REPLY_KEYS} bucket={range.bucket} caption="邮件回复" />}
       >
         <TimeSeriesChart series={data.replies} keys={REPLY_KEYS} type="bar" bucket={range.bucket} />
       </ChartCard>
 
       <Frame className="self-start lg:col-span-4">
-        <FrameHeader title="Not tracked" />
+        <FrameHeader title="未统计" />
         <FramePanel className="bg-information-lighter ring-information-light/40 sm:p-5">
           <div className="flex items-start gap-3">
             <RiInformationLine className="mt-0.5 size-5 shrink-0 text-information-base" aria-hidden="true" />
@@ -129,13 +129,13 @@ function MailboxCapacity({ mailboxes, loading }: { mailboxes: EmailAnalytics["ma
   const top = [...mailboxes.rows].sort((a, b) => b.sentToday - a.sentToday).slice(0, 5);
   return (
     <Frame className="lg:col-span-4">
-      <FrameHeader title="Mailbox capacity today" description="Right now, regardless of the date range." />
+      <FrameHeader title="今日邮箱容量" description="此刻的状态，与所选时间范围无关。" />
       <FramePanel className={cn("transition-opacity", loading && "opacity-60")}>
         {mailboxes.total === 0 ? (
-          <p className="py-6 text-center text-paragraph-sm text-text-sub-600">No mailboxes connected yet.</p>
+          <p className="py-6 text-center text-paragraph-sm text-text-sub-600">还没有连接发信邮箱。</p>
         ) : (
           <>
-            <TickMeter label="Sent today" used={mailboxes.sentToday} limit={mailboxes.capacityToday} caption={`${mailboxes.sentToday.toLocaleString("en-US")} of ${mailboxes.capacityToday.toLocaleString("en-US")} sent today`} />
+            <TickMeter label="今日已发" used={mailboxes.sentToday} limit={mailboxes.capacityToday} caption={`${mailboxes.sentToday.toLocaleString("en-US")} of ${mailboxes.capacityToday.toLocaleString("en-US")} sent today`} />
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <StatusDotBadge status="good">{mailboxes.connected} connected</StatusDotBadge>
               <StatusDotBadge status={mailboxes.failing > 0 ? "critical" : "neutral"}>{mailboxes.failing} failing</StatusDotBadge>
@@ -152,7 +152,7 @@ function MailboxCapacity({ mailboxes, loading }: { mailboxes: EmailAnalytics["ma
           </>
         )}
       </FramePanel>
-      <FrameFooterLink href="/settings/email-accounts">Manage mailboxes</FrameFooterLink>
+      <FrameFooterLink href="/settings/email-accounts">管理发信邮箱</FrameFooterLink>
     </Frame>
   );
 }
@@ -162,19 +162,19 @@ function CampaignsTable({ campaigns, loading }: { campaigns: EmailAnalytics["cam
   const num = "h-12 text-right text-paragraph-sm tabular-nums text-text-strong-950";
   return (
     <Frame className="lg:col-span-12">
-      <FrameHeader title="Campaigns" description="Sends are for this period; leads, replies and bounces are all time. Sorted by sends." />
+      <FrameHeader title="邮件活动" description="Sends are for this period; leads, replies and bounces are all time. Sorted by sends." />
       <FramePanel className={cn("overflow-x-auto p-2 transition-opacity sm:p-3", loading && "opacity-60")}>
         {campaigns.length === 0 ? (
-          <p className="py-10 text-center text-paragraph-sm text-text-sub-600">No email campaigns yet.</p>
+          <p className="py-10 text-center text-paragraph-sm text-text-sub-600">还没有邮件活动。</p>
         ) : (
           <Table.Root>
-            <Table.Caption className="sr-only">Email campaigns</Table.Caption>
+            <Table.Caption className="sr-only">邮件活动</Table.Caption>
             <Table.Header>
               <Table.Row>
-                <Table.Head scope="col">Campaign</Table.Head>
-                <Table.Head scope="col" className="text-right">Leads</Table.Head>
-                <Table.Head scope="col" className="text-right">Contacted</Table.Head>
-                <Table.Head scope="col">Sent</Table.Head>
+                <Table.Head scope="col">活动</Table.Head>
+                <Table.Head scope="col" className="text-right">线索</Table.Head>
+                <Table.Head scope="col" className="text-right">已触达</Table.Head>
+                <Table.Head scope="col">已发</Table.Head>
                 <Table.Head scope="col" className="text-right">Replied</Table.Head>
                 <Table.Head scope="col">Reply rate</Table.Head>
                 <Table.Head scope="col" className="text-right">Bounced</Table.Head>

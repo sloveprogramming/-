@@ -14,7 +14,7 @@ import { ACCENT, formatCompact } from "../theme";
  */
 export type BarListItem = { key: string; label: string; value: number; color?: string; href?: string };
 
-export function BarList({ items, valueFormat = formatCompact, max, emptyLabel = "Nothing to show." }: { items: BarListItem[]; valueFormat?: (value: number) => string; max?: number; emptyLabel?: string }) {
+export function BarList({ items, valueFormat = formatCompact, max, emptyLabel = "没有可显示的数据。" }: { items: BarListItem[]; valueFormat?: (value: number) => string; max?: number; emptyLabel?: string }) {
   if (items.length === 0) return <p className="rounded-xl bg-bg-weak-50 px-4 py-6 text-center text-paragraph-sm text-text-sub-600">{emptyLabel}</p>;
   const scale = max ?? Math.max(...items.map((i) => i.value), 1);
   return (

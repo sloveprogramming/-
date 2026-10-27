@@ -7,13 +7,11 @@ import {
   RiCheckboxCircleLine,
   RiDraftLine,
   RiInboxLine,
-  RiLinkedinBoxLine,
   RiMailForbidLine,
   RiReplyLine,
   RiThumbUpLine,
   RiTimerLine,
   RiTrophyLine,
-  RiWhatsappLine,
 } from "@remixicon/react";
 import * as Table from "@/components/alignui/table";
 import type { AnalyticsView, OverviewAnalytics } from "@/lib/analytics/contract";
@@ -29,41 +27,42 @@ import { AiAssistantCard, PipelineCard, SentimentCard, StageMovesCard, WorkflowC
 import type { ViewProps } from "./types";
 
 /**
- * Overview, CRM first: conversation KPIs, replies by sentiment, what needs
- * attention, the pipeline and stage moves, the AI assistant and workflow.
- * Then, smaller, the outreach that fed it: a channel table and the period
- * funnel from first touch to customer.
+ * 总览：先看 CRM——回复量、情绪、待处理、商机、阶段流转、AI 助手；
+ * 再看是什么在喂养它——渠道表现与本期漏斗。
+ *
+ * 改造：全部中文化，并去掉 LinkedIn / WhatsApp 两条「账号掉线」提醒——那两个频道
+ * 已经删除，指向的设置页也不存在了。
  */
 
 const HINTS = {
-  replies: "Inbound messages received in CRM conversations in this period, on any channel.",
-  positive: "Distinct CRM records moved into Interested or Customer in this period.",
-  meetings: "Distinct CRM records moved into a meeting or demo subcategory in this period. No-shows are not counted.",
-  customers: "Distinct CRM records moved into Customer in this period.",
-  response: "Median time from a lead's message to your next reply in that conversation.",
+  replies: "本期 CRM 会话里收到的入站消息，所有渠道合计。",
+  positive: "本期被推进到「有意向」或「已成交客户」的记录数。",
+  meetings: "本期被推进到约见、见面类阶段的记录数（含索样）。爽约不计。",
+  customers: "本期被推进到「已成交客户」的记录数。",
+  response: "从对方发来消息，到我们回过去，中间耗时的中位数。",
 };
 
 export function OverviewView({ data, loading, onSelectView }: ViewProps<"overview">) {
   const { kpis, range, crm } = data;
-  const vsPrevious = (m: { previous: number | null }) => (m.previous === null ? undefined : `vs ${formatCompact(m.previous)} previous period`);
+  const vsPrevious = (m: { previous: number | null }) => (m.previous === null ? undefined : `上期 ${formatCompact(m.previous)}`);
   const replySpark = crm.repliesByCategory.points.map((p) => crm.repliesByCategory.keys.reduce((sum, k) => sum + p[k], 0));
   const response = crm.kpis.medianFirstResponseMinutes;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
       <KpiStrip className="lg:col-span-12" columns={5}>
-        <KpiCell icon={RiReplyLine} label="Replies" value={formatCompact(crm.kpis.replies.value)} metric={crm.kpis.replies} hint={HINTS.replies} context={`from ${formatCompact(kpis.replied.value)} ${kpis.replied.value === 1 ? "person" : "people"}`} spark={replySpark} />
-        <KpiCell icon={RiThumbUpLine} label="Positive" value={formatCompact(kpis.positive.value)} metric={kpis.positive} hint={HINTS.positive} context={kpis.replied.value > 0 ? `${formatPercent(kpis.positive.value / kpis.replied.value)} of people who replied` : vsPrevious(kpis.positive)} />
-        <KpiCell icon={RiCalendarEventLine} label="Meetings" value={formatCompact(kpis.meetings.value)} metric={kpis.meetings} hint={HINTS.meetings} context={vsPrevious(kpis.meetings)} />
-        <KpiCell icon={RiTrophyLine} label="Customers" value={formatCompact(kpis.customers.value)} metric={kpis.customers} hint={HINTS.customers} context={vsPrevious(kpis.customers)} />
-        <KpiCell icon={RiTimerLine} label="Median first response" value={formatMinutes(response.value)} metric={response} upIsGood={false} hint={HINTS.response} context={response.previous === null ? undefined : `vs ${formatMinutes(response.previous)} previous period`} />
+        <KpiCell icon={RiReplyLine} label="回复数" value={formatCompact(crm.kpis.replies.value)} metric={crm.kpis.replies} hint={HINTS.replies} context={`来自 ${formatCompact(kpis.replied.value)} 位客户`} spark={replySpark} />
+        <KpiCell icon={RiThumbUpLine} label="有意向" value={formatCompact(kpis.positive.value)} metric={kpis.positive} hint={HINTS.positive} context={kpis.replied.value > 0 ? `占有回复客户的 ${formatPercent(kpis.positive.value / kpis.replied.value)}` : vsPrevious(kpis.positive)} />
+        <KpiCell icon={RiCalendarEventLine} label="约见 / 见面" value={formatCompact(kpis.meetings.value)} metric={kpis.meetings} hint={HINTS.meetings} context={vsPrevious(kpis.meetings)} />
+        <KpiCell icon={RiTrophyLine} label="成交客户" value={formatCompact(kpis.customers.value)} metric={kpis.customers} hint={HINTS.customers} context={vsPrevious(kpis.customers)} />
+        <KpiCell icon={RiTimerLine} label="首次响应中位数" value={formatMinutes(response.value)} metric={response} upIsGood={false} hint={HINTS.response} context={response.previous === null ? undefined : `上期 ${formatMinutes(response.previous)}`} />
       </KpiStrip>
 
       <SentimentCard className="lg:col-span-8" series={crm.repliesByCategory} bucket={range.bucket} loading={loading} />
       <AttentionCard attention={data.attention} loading={loading} />
 
       <PipelineCard className="lg:col-span-6 lg:self-start" value={crm.pipeline} loading={loading} />
-      {/* Pipeline runs long; the two shorter cards stack beside it. */}
+      {/* 商机环比较高，右边两张短卡叠放。 */}
       <div className="flex flex-col gap-4 lg:col-span-6 lg:gap-5">
         <StageMovesCard value={crm.stageEntries} loading={loading} />
         <WorkflowCard value={crm.workflow} loading={loading} />
@@ -71,9 +70,9 @@ export function OverviewView({ data, loading, onSelectView }: ViewProps<"overvie
 
       <AiAssistantCard className="lg:col-span-12" crm={crm} loading={loading} />
 
-      <SectionHeading className="mt-2 lg:col-span-12" title="Outreach" description="Where these conversations came from. Open a channel for its detail." />
+      <SectionHeading className="mt-2 lg:col-span-12" title="触达情况" description="上面这些对话是从哪来的。点一行进入该渠道的明细。" />
       <ChannelTable data={data} loading={loading} onSelectView={onSelectView} />
-      <ChartCard className="lg:col-span-4" title="Conversion funnel" description="From first touch to customer." loading={loading} footer="Counts for this period — not one cohort followed through.">
+      <ChartCard className="lg:col-span-4" title="转化漏斗" description="从第一次触达到成交。" loading={loading} footer="这是本期发生的次数，不是一批客户的完整旅程。">
         <FunnelChart stages={data.funnel} />
       </ChartCard>
     </div>
@@ -84,18 +83,18 @@ function ChannelTable({ data, loading, onSelectView }: { data: OverviewAnalytics
   const maxRate = Math.max(...data.channels.map((c) => c.replyRate ?? 0), 0.0001);
   return (
     <Frame className="lg:col-span-8">
-      <FrameHeader title="Channels" description="How each channel performed in this period. Select a row to open it." />
+      <FrameHeader title="渠道表现" description="本期各渠道的数据。点一行进入该渠道的明细。" />
       <FramePanel className={cn("p-2 transition-opacity sm:p-3", loading && "opacity-60")}>
       <Table.Root>
-        <Table.Caption className="sr-only">Channel comparison</Table.Caption>
+        <Table.Caption className="sr-only">渠道对比</Table.Caption>
         <Table.Header>
           <Table.Row>
-            <Table.Head scope="col">Channel</Table.Head>
-            <Table.Head scope="col" className="text-right">Reached</Table.Head>
-            <Table.Head scope="col" className="text-right">Replied</Table.Head>
-            <Table.Head scope="col">Reply rate</Table.Head>
-            <Table.Head scope="col" className="text-right">Positive</Table.Head>
-            <Table.Head scope="col" className="w-8"><span className="sr-only">Open</span></Table.Head>
+            <Table.Head scope="col">渠道</Table.Head>
+            <Table.Head scope="col" className="text-right">触达</Table.Head>
+            <Table.Head scope="col" className="text-right">回复</Table.Head>
+            <Table.Head scope="col">回复率</Table.Head>
+            <Table.Head scope="col" className="text-right">有意向</Table.Head>
+            <Table.Head scope="col" className="w-8"><span className="sr-only">打开</span></Table.Head>
           </Table.Row>
         </Table.Header>
         <Table.Body spacing={4}>
@@ -137,19 +136,17 @@ function ChannelTable({ data, loading, onSelectView }: { data: OverviewAnalytics
 type AttentionItem = { key: keyof OverviewAnalytics["attention"]; label: string; hint: string; href: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; tone: ProgressTone };
 
 const ATTENTION: AttentionItem[] = [
-  { key: "actionRequired", label: "Action required", hint: "Conversations waiting on you", href: "/crm/actions", icon: RiInboxLine, tone: "serious" },
-  { key: "overdue", label: "Follow-ups due", hint: "Follow-ups drafted or past their time", href: "/crm/actions", icon: RiAlarmWarningLine, tone: "critical" },
-  { key: "draftsAwaitingReview", label: "Drafts to review", hint: "AI replies waiting for approval", href: "/crm/actions", icon: RiDraftLine, tone: "warning" },
-  { key: "mailboxesFailing", label: "Failing mailboxes", hint: "Email accounts that can't send", href: "/settings/email-accounts", icon: RiMailForbidLine, tone: "critical" },
-  { key: "linkedinDisconnected", label: "LinkedIn disconnected", hint: "Accounts that need reconnecting", href: "/settings/linkedin-accounts", icon: RiLinkedinBoxLine, tone: "critical" },
-  { key: "whatsappDisconnected", label: "WhatsApp disconnected", hint: "Numbers that need relinking", href: "/settings/whatsapp-accounts", icon: RiWhatsappLine, tone: "critical" },
+  { key: "actionRequired", label: "待处理", hint: "在等我们回复的对话", href: "/crm/actions", icon: RiInboxLine, tone: "serious" },
+  { key: "overdue", label: "逾期跟进", hint: "已起草或已过预定时间的跟进", href: "/crm/actions", icon: RiAlarmWarningLine, tone: "critical" },
+  { key: "draftsAwaitingReview", label: "待复核草稿", hint: "AI 写好、等人确认的回复", href: "/crm/actions", icon: RiDraftLine, tone: "warning" },
+  { key: "mailboxesFailing", label: "发信邮箱异常", hint: "发不出信的邮箱", href: "/settings/email-accounts", icon: RiMailForbidLine, tone: "critical" },
 ];
 
 function AttentionCard({ attention, loading }: { attention: OverviewAnalytics["attention"]; loading: boolean }) {
   const anyOpen = ATTENTION.some((item) => attention[item.key] > 0);
   return (
     <Frame className="lg:col-span-4">
-      <FrameHeader title="Needs attention" description="Right now, regardless of the date range." />
+      <FrameHeader title="需要关注" description="此刻的状态，与所选时间范围无关。" />
       <FramePanel className={cn("transition-opacity", loading && "opacity-60")}>
         {anyOpen ? (
           <ProgressList
@@ -166,8 +163,8 @@ function AttentionCard({ attention, loading }: { attention: OverviewAnalytics["a
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
             <RiCheckboxCircleLine className="size-6 text-success-base" aria-hidden="true" />
-            <p className="mt-2 text-label-sm text-text-strong-950">All clear</p>
-            <p className="mt-0.5 text-paragraph-xs text-text-sub-600">No replies waiting, no failing accounts.</p>
+            <p className="mt-2 text-label-sm text-text-strong-950">都处理完了</p>
+            <p className="mt-0.5 text-paragraph-xs text-text-sub-600">没有待回复的对话，也没有异常的账号。</p>
           </div>
         )}
       </FramePanel>

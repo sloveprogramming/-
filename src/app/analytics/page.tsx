@@ -2,7 +2,7 @@ import AnalyticsClient from "@/components/analytics/AnalyticsClient";
 import { parseView } from "@/components/analytics/range";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Analytics" };
+export const metadata = { title: "数据分析" };
 
 type Search = Promise<{ view?: string | string[]; range?: string | string[] }>;
 

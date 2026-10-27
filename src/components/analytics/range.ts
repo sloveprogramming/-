@@ -3,11 +3,11 @@ import { addDays, ANALYTICS_VIEWS, type AnalyticsView } from "@/lib/analytics/co
 /** Date-range and view URL helpers. Pure (no "use client") so the server page can use them too. */
 
 export const RANGE_PRESETS = [
-  { key: "7d", label: "Last 7 days" },
-  { key: "30d", label: "Last 30 days" },
-  { key: "90d", label: "Last 90 days" },
-  { key: "this-month", label: "This month" },
-  { key: "last-month", label: "Last month" },
+  { key: "7d", label: "最近 7 天" },
+  { key: "30d", label: "最近 30 天" },
+  { key: "90d", label: "最近 90 天" },
+  { key: "this-month", label: "本月" },
+  { key: "last-month", label: "上个月" },
 ] as const;
 export type PresetKey = (typeof RANGE_PRESETS)[number]["key"];
 export type RangeSelection = { kind: "preset"; key: PresetKey } | { kind: "custom"; from: string; to: string };

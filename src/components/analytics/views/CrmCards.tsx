@@ -2,6 +2,7 @@
 
 import { RiCheckDoubleLine, RiDraftLine } from "@remixicon/react";
 import type { CrmCategory, CrmSummary } from "@/lib/analytics/contract";
+import { crmCategoryLabel, crmWorkflowStateLabel } from "@/lib/crm/labels";
 import { cn } from "@/utils/cn";
 import { BarList, type BarListItem } from "../kit/BarList";
 import { ChartCard } from "../kit/ChartCard";
@@ -15,16 +16,23 @@ import { seriesTotal, TimeSeriesChart, TimeSeriesTable, type SeriesKeys } from "
 import { formatCompact, formatPercent, MUTED, ORDINAL_BLUE, ordinalRamp } from "../theme";
 
 /**
- * The CRM cards of the Overview: replies by sentiment, the pipeline shape,
- * stage moves, the AI assistant and workflow states.
+ * 总览页里的 CRM 卡片：回复情绪、商机形状、阶段流转、AI 助手、处理状态。
  *
- * Colour: CRM categories carry one fixed identity colour everywhere — the
- * sentiment chart, the pipeline and stage-move donuts, the top-stage bars —
- * (categorical slots 6, 7, 8, 4 and gray), none of them a channel colour.
- * Funnel stages use the ordinal blue ramp by stage rank.
+ * 颜色：CRM 分类在全站共用一套身份色（情绪图、商机环、阶段环、头部阶段条都用
+ * 同一组），都不占用渠道色。漏斗阶段用蓝色阶梯，按阶段顺序由浅到深。
+ *
+ * 改造：全部中文化。分类与处理状态的文案直接取 lib/crm/labels，跟 CRM 页面
+ * 用同一份词表，避免"这里叫有意向、那里叫感兴趣"。
  */
 
-export const CATEGORY_LABEL: Record<CrmCategory, string> = { interested: "Interested", customer: "Customer", not_interested: "Not interested", other: "Other", unclassified: "Unclassified" };
+export const CATEGORY_LABEL: Record<CrmCategory, string> = {
+  interested: crmCategoryLabel("interested"),
+  customer: crmCategoryLabel("customer"),
+  not_interested: crmCategoryLabel("not_interested"),
+  other: crmCategoryLabel("other"),
+  unclassified: crmCategoryLabel(null),
+};
+
 const SENTIMENT_KEYS: SeriesKeys<CrmCategory> = {
   interested: { label: CATEGORY_LABEL.interested, color: "#1daf9c" },
   customer: { label: CATEGORY_LABEL.customer, color: "#7d52f4" },
@@ -37,14 +45,15 @@ type CardProps<K extends keyof CrmSummary> = { value: CrmSummary[K]; loading: bo
 
 export function SentimentCard({ series, bucket, loading, className }: { series: CrmSummary["repliesByCategory"]; bucket: "day" | "week"; loading: boolean; className?: string }) {
   const stats = (Object.keys(SENTIMENT_KEYS) as CrmCategory[]).map((k) => ({ label: SENTIMENT_KEYS[k].label, color: SENTIMENT_KEYS[k].color, value: formatCompact(seriesTotal(series, k)) }));
+  const unit = bucket === "week" ? "每周" : "每天";
   return (
     <ChartCard
       className={className}
-      title="Replies by sentiment"
-      description={`Inbound replies each ${bucket}, by the category they were classified into.`}
+      title="回复情绪"
+      description={`${unit}收到的入站回复，按 AI 分到的类别统计。`}
       legend={<SeriesStats items={stats} />}
       loading={loading}
-      table={<TimeSeriesTable series={series} keys={SENTIMENT_KEYS} bucket={bucket} caption="Replies by sentiment" />}
+      table={<TimeSeriesTable series={series} keys={SENTIMENT_KEYS} bucket={bucket} caption="按情绪统计的回复" />}
     >
       <TimeSeriesChart series={series} keys={SENTIMENT_KEYS} type="stackedBar" bucket={bucket} />
     </ChartCard>
@@ -60,9 +69,9 @@ function byCategory(rows: Array<{ categoryKey: CrmCategory; value: number }>): D
   return CATEGORY_ORDER.map((k) => ({ key: k, label: CATEGORY_LABEL[k], value: totals.get(k) ?? 0, color: SENTIMENT_KEYS[k].color }));
 }
 
-/** A small uppercase label between a card's donut and its list. */
+/** A small label between a card's donut and its list. */
 function SubHeading({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-3 mt-5 border-t border-stroke-soft-200 pt-4 text-subheading-2xs uppercase text-text-soft-400">{children}</h3>;
+  return <h3 className="mb-3 mt-5 border-t border-stroke-soft-200 pt-4 text-subheading-2xs text-text-soft-400">{children}</h3>;
 }
 
 export function PipelineCard({ value: pipeline, loading, className }: CardProps<"pipeline">) {
@@ -71,12 +80,12 @@ export function PipelineCard({ value: pipeline, loading, className }: CardProps<
   const stages: BarListItem[] = ranked.map((p, i) => ({ key: `r-${p.subcategoryId ?? i}`, label: `${p.name} · ${CATEGORY_LABEL[p.categoryKey]}`, value: p.count, color: ramp[i] }));
   return (
     <Frame className={className} aria-busy={loading || undefined}>
-      <FrameHeader title="Pipeline now" description="Open records by category, right now, and how far along the funnel they are." />
+      <FrameHeader title="当前商机" description="此刻处于各个阶段的在谈记录，以及它们在漏斗里走了多远。" />
       <FramePanel className={cn("transition-opacity", loading && "opacity-60")}>
-        <DonutChart items={byCategory(pipeline.map((p) => ({ categoryKey: p.categoryKey, value: p.count })))} centerLabel="open records" emptyLabel="No open records" emptyDescription="Nothing is open in the CRM right now." />
+        <DonutChart items={byCategory(pipeline.map((p) => ({ categoryKey: p.categoryKey, value: p.count })))} centerLabel="在谈记录" emptyLabel="还没有在谈记录" emptyDescription="客户回复之后，这里会出现记录。" />
         {stages.length > 0 && (
           <>
-            <SubHeading>Funnel stages · darker as they advance</SubHeading>
+            <SubHeading>漏斗阶段 · 越往后颜色越深</SubHeading>
             <BarList items={stages} />
           </>
         )}
@@ -93,12 +102,12 @@ export function StageMovesCard({ value: entries, loading, className }: CardProps
     .map((e) => ({ key: e.subcategoryId, label: `${e.name} · ${CATEGORY_LABEL[e.categoryKey]}`, value: e.entered, color: SENTIMENT_KEYS[e.categoryKey].color }));
   return (
     <Frame className={className} aria-busy={loading || undefined}>
-      <FrameHeader title="Stage moves this period" description="Records moved into a new stage, by the category they moved into." />
+      <FrameHeader title="本期阶段流转" description="这一段时间里被推进到新阶段的记录，按推进到的类别统计。" />
       <FramePanel className={cn("transition-opacity", loading && "opacity-60")}>
-        <DonutChart items={byCategory(moved.map((e) => ({ categoryKey: e.categoryKey, value: e.entered })))} centerLabel="moves" emptyLabel="No stage moves" />
+        <DonutChart items={byCategory(moved.map((e) => ({ categoryKey: e.categoryKey, value: e.entered })))} centerLabel="次流转" emptyLabel="本期没有阶段流转" />
         {top.length > 0 && (
           <>
-            <SubHeading>Top stages</SubHeading>
+            <SubHeading>流转最多的阶段</SubHeading>
             <BarList items={top} />
           </>
         )}
@@ -108,32 +117,30 @@ export function StageMovesCard({ value: entries, loading, className }: CardProps
 }
 
 /**
- * Workflow states in a fixed order with fixed colours: adjacent pairs pass the
- * CVD check (pink sits beside amber, never beside teal, which it can't be told
- * apart from with deuteranopia).
- * Idle and the not-yet-classified states are neutral grays.
+ * 处理状态的固定顺序与固定颜色：相邻两色已通过色盲可辨性校验。
+ * 「待处理」用琥珀、「出错」用红——这两个是销售最需要一眼看到的。
  */
-const WORKFLOW_META: Record<string, { label: string; color: string }> = {
-  paused: { label: "Paused", color: "#fb4ba3" },
-  action_required: { label: "Action required", color: "#e5930a" },
-  error: { label: "Error", color: "#fb3748" },
-  waiting: { label: "Waiting", color: "#7d52f4" },
-  closed: { label: "Closed", color: "#1daf9c" },
-  unclassified: { label: "Unclassified", color: "var(--chart-muted-strong)" },
-  classifying: { label: "Classifying", color: "var(--chart-muted-strong)" },
-  idle: { label: "Idle", color: MUTED },
+const WORKFLOW_COLOR: Record<string, string> = {
+  paused: "#fb4ba3",
+  action_required: "#e5930a",
+  error: "#fb3748",
+  waiting: "#7d52f4",
+  closed: "#1daf9c",
+  unclassified: "var(--chart-muted-strong)",
+  classifying: "var(--chart-muted-strong)",
+  idle: MUTED,
 };
 
 export function WorkflowCard({ value: workflow, loading, className }: CardProps<"workflow">) {
-  const order = Object.keys(WORKFLOW_META);
+  const order = Object.keys(WORKFLOW_COLOR);
   const items: DonutItem[] = [...workflow]
     .sort((a, b) => (order.indexOf(a.key) + 1 || 99) - (order.indexOf(b.key) + 1 || 99))
-    .map((w) => ({ key: w.key, label: WORKFLOW_META[w.key]?.label ?? w.label, value: w.value, color: WORKFLOW_META[w.key]?.color ?? MUTED }));
+    .map((w) => ({ key: w.key, label: crmWorkflowStateLabel(w.key) || w.label, value: w.value, color: WORKFLOW_COLOR[w.key] ?? MUTED }));
   return (
     <Frame className={className} aria-busy={loading || undefined}>
-      <FrameHeader title="Workflow" description="Every record by workflow state, right now." />
+      <FrameHeader title="处理状态" description="此刻每条记录停在哪个处理状态。" />
       <FramePanel className={cn("transition-opacity", loading && "opacity-60")}>
-        <DonutChart items={items} centerLabel="records" emptyLabel="No records yet" emptyDescription="Records appear once a lead replies." />
+        <DonutChart items={items} centerLabel="条记录" emptyLabel="还没有记录" emptyDescription="客户第一次回复后，记录才会出现。" />
       </FramePanel>
     </Frame>
   );
@@ -158,42 +165,42 @@ export function AiAssistantCard({ crm, loading, className }: { crm: CrmSummary; 
   const { drafts, kpis } = crm;
   const sent = drafts.sentAsIs + drafts.sentEdited;
   const items: SegmentItem[] = [
-    { key: "asIs", label: "Sent as-is", value: drafts.sentAsIs, color: ORDINAL_BLUE[5] },
-    { key: "edited", label: "Sent edited", value: drafts.sentEdited, color: ORDINAL_BLUE[0] },
-    { key: "discarded", label: "Discarded", value: drafts.discarded, color: MUTED },
+    { key: "asIs", label: "原样发出", value: drafts.sentAsIs, color: ORDINAL_BLUE[5] },
+    { key: "edited", label: "改过再发", value: drafts.sentEdited, color: ORDINAL_BLUE[0] },
+    { key: "discarded", label: "丢弃", value: drafts.discarded, color: MUTED },
   ];
   const empty = items.every((i) => i.value === 0);
   return (
     <Frame className={className} aria-busy={loading || undefined}>
       <FrameHeader
-        title="AI assistant"
-        description={`${drafts.generated.toLocaleString("en-US")} drafts generated in this period.`}
+        title="AI 助手"
+        description={`本期生成了 ${drafts.generated.toLocaleString("zh-CN")} 封草稿。`}
         actions={
           drafts.awaitingReview > 0 ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-bg-white-0 px-2 py-1 text-label-xs text-text-sub-600 ring-1 ring-inset ring-stroke-soft-200">
               <RiDraftLine className="size-3.5" aria-hidden="true" />
-              {drafts.awaitingReview.toLocaleString("en-US")} awaiting review
+              {drafts.awaitingReview.toLocaleString("zh-CN")} 封待复核
             </span>
           ) : undefined
         }
       />
       <FramePanel className={cn("grid gap-4 transition-opacity lg:grid-cols-2 lg:gap-8", loading && "opacity-60")}>
         <div className="grid grid-cols-3 gap-px self-start bg-stroke-soft-200">
-          <AiStat label="Drafts sent" value={formatCompact(kpis.draftsSent.value)} metric={kpis.draftsSent} note="AI drafts that went out" />
-          <AiStat label="Classified" value={formatCompact(kpis.classified.value)} metric={kpis.classified} note="Replies the AI labelled" />
-          <AiStat label="Override rate" value={formatPercent(kpis.overrideRate.value)} metric={kpis.overrideRate} upIsGood={false} note="Labels a person changed" />
+          <AiStat label="已发出草稿" value={formatCompact(kpis.draftsSent.value)} metric={kpis.draftsSent} note="AI 起草并已发出的" />
+          <AiStat label="已分类回复" value={formatCompact(kpis.classified.value)} metric={kpis.classified} note="AI 打过标签的回复" />
+          <AiStat label="改判率" value={formatPercent(kpis.overrideRate.value)} metric={kpis.overrideRate} upIsGood={false} note="人工改过标签的比例" />
         </div>
         <div className="border-t border-stroke-soft-200 pt-4 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
           {empty ? (
-            <EmptyChart height={120} title="No drafts resolved" description="Nothing was sent or discarded in this period." />
+            <EmptyChart height={120} title="还没有处理过的草稿" description="本期既没有发出的，也没有丢弃的草稿。" />
           ) : (
             <div>
               {sent > 0 && (
                 <p className="mb-4 flex items-center gap-2 text-paragraph-sm text-text-strong-950">
                   <RiCheckDoubleLine className="size-4 shrink-0 text-text-sub-600" aria-hidden="true" />
                   <span>
-                    <span className="text-label-sm">{formatPercent(drafts.sentAsIs / sent)}</span> of sent drafts went out unedited
-                    <span className="text-text-sub-600"> ({drafts.sentAsIs.toLocaleString("en-US")} of {sent.toLocaleString("en-US")})</span>
+                    发出的草稿里有 <span className="text-label-sm">{formatPercent(drafts.sentAsIs / sent)}</span> 是原样发出的
+                    <span className="text-text-sub-600">（{drafts.sentAsIs.toLocaleString("zh-CN")} / {sent.toLocaleString("zh-CN")}）</span>
                   </span>
                 </p>
               )}

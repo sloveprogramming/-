@@ -25,7 +25,7 @@ export type RankedItem = {
   href?: string;
 };
 
-export function RankedList({ items, emptyLabel = "Nothing to show." }: { items: RankedItem[]; emptyLabel?: string }) {
+export function RankedList({ items, emptyLabel = "没有可显示的数据。" }: { items: RankedItem[]; emptyLabel?: string }) {
   if (items.length === 0) return <p className="rounded-xl bg-bg-weak-50 px-4 py-6 text-center text-paragraph-sm text-text-sub-600">{emptyLabel}</p>;
   return (
     <ul className="divide-y divide-stroke-soft-200">

@@ -19,7 +19,7 @@ import { EmptyChart } from "./EmptyChart";
  * - keys: { [key]: { label, color } } — which series to draw, in stack order
  * - type: "line" | "area" | "stackedBar" | "bar"
  * - valueFormat: number -> string for tooltip and table (default formatCompact)
- * - bucket: "day" | "week" for x labels ("1 Sep" / tooltip "Week of 1 Sep")
+ * - bucket: "day" | "week" for x labels ("1 Sep" / tooltip "某周")
  * - height: plot height px including the x-axis band (default 260)
  * - showYAxis: compact y ticks on the left (default true); omit them when the
  *   header (SeriesStats) and tooltip already carry the values
@@ -51,7 +51,7 @@ function ChartTooltip<K extends string>({ active, payload, label, keys, order, b
       </ul>
       {showTotal && (
         <div className="mt-2 flex items-center justify-between gap-4 border-t border-stroke-soft-200 pt-2">
-          <span className="text-paragraph-xs text-text-sub-600">Total</span>
+          <span className="text-paragraph-xs text-text-sub-600">合计</span>
           <span className="text-label-sm tabular-nums text-text-strong-950">{valueFormat(order.reduce((sum, k) => sum + (byKey.get(k) ?? 0), 0))}</span>
         </div>
       )}
@@ -173,10 +173,10 @@ export function TimeSeriesChart<K extends string>({
 export function TimeSeriesTable<K extends string>({ series, keys, bucket, valueFormat = (n) => n.toLocaleString("en-US"), caption }: { series: TimeSeries<K>; keys: SeriesKeys<K>; bucket: AnalyticsRange["bucket"]; valueFormat?: (value: number) => string; caption: string }) {
   const order = (Object.keys(keys) as K[]).filter((k) => series.keys.includes(k));
   const columns: TableColumn[] = [
-    { key: "date", label: bucket === "week" ? "Week of" : "Date" },
+    { key: "date", label: bucket === "week" ? "周" : "日期" },
     ...order.map((k) => ({ key: k, label: keys[k].label, align: "right" as const, swatch: keys[k].color, format: (v: string | number | null) => valueFormat(Number(v ?? 0)) })),
   ];
-  if (order.length > 1) columns.push({ key: "total", label: "Total", align: "right", format: (v) => valueFormat(Number(v ?? 0)) });
+  if (order.length > 1) columns.push({ key: "total", label: "合计", align: "right", format: (v) => valueFormat(Number(v ?? 0)) });
   const rows = series.points.map((point) => ({
     date: formatBucket(point.date, bucket, true),
     ...Object.fromEntries(order.map((k) => [k, point[k]])),
