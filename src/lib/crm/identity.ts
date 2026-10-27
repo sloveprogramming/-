@@ -39,38 +39,9 @@ export function identityExceptionReplayInput(
   personId: string,
 ): IngestInboundReplyInput {
   const payload = exception.payload;
-  if (exception.channel === "linkedin") {
-    return {
-      personId,
-      channel: "linkedin",
-      accountRef: exception.accountRef,
-      providerThreadId: optionalText(payload.chatId),
-      providerContactId: optionalText(payload.providerId) ?? exception.identityValue,
-      idempotencyKey: exception.sourceEventKey,
-      providerMessageId: optionalText(payload.linkedinMessageId),
-      bodyText: requiredText(payload.messageText, "LinkedIn message text"),
-      raw: payload,
-      sentAt: replayDate(payload.sentAt, exception.createdAt),
-      actorRef: "identity-review",
-    };
-  }
-
-  if (exception.channel === "whatsapp") {
-    // The payload is the WhatsappCrmMessageInput crmBridge.ts quarantined.
-    return {
-      personId,
-      channel: "whatsapp",
-      accountRef: exception.accountRef,
-      providerThreadId: optionalText(payload.unipileChatId),
-      providerContactId: optionalText(payload.providerContactId) ?? exception.identityValue,
-      idempotencyKey: exception.sourceEventKey,
-      providerMessageId: optionalText(payload.unipileMessageId),
-      bodyText: requiredText(payload.body, "WhatsApp message text"),
-      raw: payload,
-      sentAt: replayDate(payload.sentAt, exception.createdAt),
-      actorRef: "identity-review",
-    };
-  }
+  // 改造：LinkedIn 与 WhatsApp 的身份异常重放随频道删除。这两类历史异常如果还留
+  // 在库里，重放会落到下面的邮件分支——它们本来就只可能是邮件异常，因为新的
+  // 入站只来自邮件。真要清理旧数据，用 scripts/cleanup-crm-identity-exceptions.ts。
 
   const gmailMessageId = optionalText(payload.gmailMessageId);
   if (gmailMessageId) {

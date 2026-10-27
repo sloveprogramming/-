@@ -1,5 +1,5 @@
 import LeadsClient from "@/components/leads/LeadsClient";
-import { PAGE_SIZE, type LeadsTab } from "@/components/leads/leadTypes";
+import { PAGE_SIZE, type CompanyRow, type LeadsTab, type PersonRow } from "@/components/leads/leadTypes";
 import { requirePageOrgContext } from "@/lib/auth/context";
 import { runInOrganization } from "@/lib/tenancy/scope";
 import { listCompanies, listPeoplePage } from "@/lib/leads/records";
@@ -14,5 +14,6 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   const result = await runInOrganization(ctx.organizationId, () =>
     initialTab === "companies" ? listCompanies({ limit: PAGE_SIZE }) : listPeoplePage({ limit: PAGE_SIZE }),
   );
-  return <LeadsClient initialTab={initialTab} initialRows={result.rows} initialTotal={result.total} />;
+  // 两个分支的行类型不同，这里显式收窄成联合类型再传下去。
+  return <LeadsClient initialTab={initialTab} initialRows={result.rows as PersonRow[] | CompanyRow[]} initialTotal={result.total} />;
 }

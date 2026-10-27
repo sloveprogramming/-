@@ -155,101 +155,6 @@ export type EmailAnalytics = {
   };
 };
 
-// ---------------------------------------------------------------- linkedin
-
-export type LinkedinAnalytics = {
-  view: "linkedin";
-  range: AnalyticsRange;
-  kpis: {
-    /** Message rows of type INVITATION. */
-    invites: Metric;
-    /** Connections accepted: Lead.acceptMessageSentAt in range (falls back to Connection.connectedAt). */
-    accepted: Metric;
-    /** accepted / invites. */
-    acceptanceRate: { value: number | null; previous: number | null };
-    /** ACCEPTANCE, FOLLOW_UP_1..3 and CUSTOM_SENT messages. */
-    messages: Metric;
-    /** Distinct leads with a RECEIVED message. */
-    replied: Metric;
-    /** replied / accepted. */
-    replyRate: { value: number | null; previous: number | null };
-  };
-  activity: TimeSeries<"invites" | "accepted" | "replied">;
-  funnel: Array<{ key: "invited" | "accepted" | "messaged" | "replied"; label: string; value: number }>;
-  /** Now. */
-  accounts: Array<{
-    id: string;
-    name: string;
-    status: string;
-    premium: boolean;
-    sentToday: number;
-    /** 30 premium, 5 free (src/functions/sendInvitations.ts). */
-    dailyLimit: number;
-    pending: number;
-  }>;
-  campaigns: Array<{
-    id: string;
-    name: string;
-    status: string;
-    leads: number;
-    invited: number;
-    accepted: number;
-    replied: number;
-    acceptanceRate: number | null;
-    replyRate: number | null;
-    trend: number[];
-  }>;
-};
-
-// ---------------------------------------------------------------- whatsapp
-
-export type WhatsappCallOutcome = "connected" | "didNotPickUp" | "notOnWhatsApp" | "failed" | "inProgress";
-
-export type WhatsappAnalytics = {
-  view: "whatsapp";
-  range: AnalyticsRange;
-  kpis: {
-    calls: Metric;
-    connected: Metric;
-    connectRate: { value: number | null; previous: number | null };
-    talkTimeMs: Metric;
-    avgCallMs: { value: number | null; previous: number | null };
-    /** Outbound whatsapp_messages (origin agentsdr or phone). */
-    messagesSent: Metric;
-    /** Inbound whatsapp_messages (origin lead). */
-    messagesReceived: Metric;
-    /** Chats with an outbound message in range that got a later inbound reply / chats with an outbound message in range. */
-    chatReplyRate: { value: number | null; previous: number | null };
-    /** Chats AgentSDR started (first message origin agentsdr) in range. */
-    newChats: Metric;
-  };
-  calls: TimeSeries<"connected" | "notConnected">;
-  outcomes: Array<BreakdownRow<WhatsappCallOutcome>>;
-  messages: TimeSeries<"sent" | "received">;
-  campaigns: Array<{
-    id: string;
-    name: string;
-    leads: number;
-    calls: number;
-    connected: number;
-    connectRate: number | null;
-    dueToday: number;
-    trend: number[];
-  }>;
-  /** Now. */
-  accounts: Array<{
-    id: string;
-    name: string;
-    phone: string | null;
-    status: string;
-    /** New chats in the rolling 24 h window the guardrail uses. */
-    newChats24h: number;
-    newChatLimit: number;
-    /** ISO; null once warm-up is over. */
-    warmingUpUntil: string | null;
-  }>;
-};
-
 // ---------------------------------------------------------------- crm (part of the overview)
 
 export type CrmCategory = "customer" | "interested" | "not_interested" | "other" | "unclassified";
@@ -294,7 +199,8 @@ export type CrmSummary = {
   attention: { actionRequired: number; overdue: number };
 };
 
-export type AnalyticsResponse = OverviewAnalytics | EmailAnalytics | LinkedinAnalytics | WhatsappAnalytics;
+// 改造：LinkedIn / WhatsApp 两个视图随频道删除。
+export type AnalyticsResponse = OverviewAnalytics | EmailAnalytics;
 
 export type AnalyticsResponseFor<V extends AnalyticsView> = Extract<AnalyticsResponse, { view: V }>;
 

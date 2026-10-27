@@ -10,7 +10,6 @@ import type {
   ClassificationSubcategory,
 } from "./ai/types";
 import { generateDraftForStep, generateFallbackDraft } from "./drafts";
-import { loadCallContextMessages } from "./callHistory";
 import { appendCrmEvent } from "./events";
 import { inboundAnsweredFromCrm, inboundAnsweredSince, settleAnsweredRecordInTransaction } from "./manualOutbound";
 import { setPersonDoNotContactInTransaction } from "./policies";
@@ -117,10 +116,8 @@ async function classificationContext(messageId: string): Promise<{
       ))
       .where(and(inOrg(crmKnowledgeDocuments), eq(crmKnowledgeDocuments.active, true), eq(crmKnowledgeDocuments.alwaysInclude, true)))
       .orderBy(asc(crmKnowledgeDocuments.title)),
-    // A WhatsApp reply often follows a call; the classifier gets its summary.
-    scope.conversation.channel === "whatsapp"
-      ? loadCallContextMessages(db, scope.record.personId)
-      : Promise.resolve([]),
+    // 改造：WhatsApp 通话摘要随频道删除；外呼（电话）接入后在这里取最近通话记录。
+    Promise.resolve([]),
   ]);
   if (!profile[0]) throw new PermanentCrmJobError(`Person ${scope.record.personId} was not found`);
   const person = profile[0].person;

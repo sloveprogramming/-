@@ -56,18 +56,22 @@ import {
   crmSequences,
   type CrmChannel,
 } from "./schema";
-import { sendDraft, sendThroughCrmProvider, sendWhatsappThroughCrm, type CrmSendAdapter } from "./send";
+import { sendDraft, sendThroughCrmProvider, type CrmSendAdapter } from "./send";
 
 const CHANNEL_PAUSE: Record<CrmChannel, MigrationControl> = {
   email: "emailOutbound",
-  linkedin: "linkedinOutbound",
-  whatsapp: "whatsappOutbound",
+  wecom: "wecomOutbound",
+  sms: "smsOutbound",
+  call: "callOutbound",
 };
 
-const PLATFORM: Record<CrmChannel, "google" | "unipile"> = {
+/**
+ * 改造：每个渠道背后绑定的平台集成。邮件走 Google Workspace；企业微信、短信、
+ * 外呼各自接入后在这里登记（键是 platform/catalog.ts 里的集成 key）。没有登记的
+ * 渠道视为"平台未连接"，自动跟进会直接跳过，不会发送。
+ */
+const PLATFORM: Partial<Record<CrmChannel, "google">> = {
   email: "google",
-  linkedin: "unipile",
-  whatsapp: "unipile",
 };
 
 export type AutoFollowUpRunSummary = {
@@ -225,7 +229,8 @@ type AccountSlot = { ok: false } | { ok: true; afterSend?: () => Promise<void> }
 /** Whether the account may send one follow-up now; for a mailbox it also takes the mailbox's turn. */
 async function takeAccountSlot(channel: CrmChannel, accountRef: string, now: Date): Promise<AccountSlot> {
   if (isMigrationControlPaused(CHANNEL_PAUSE[channel])) return { ok: false };
-  if (!(await isPlatformConnected(PLATFORM[channel]))) return { ok: false };
+  const platform = PLATFORM[channel];
+  if (!platform || !(await isPlatformConnected(platform))) return { ok: false };
   if (!(await gapPassed(channel, accountRef, now))) return { ok: false };
 
   if (channel === "email") {

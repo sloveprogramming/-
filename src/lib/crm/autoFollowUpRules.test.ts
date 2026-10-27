@@ -67,7 +67,7 @@ describe("oldestPerAccount", () => {
       candidate({ draftId: "a1", accountRef: "a@example.com" }),
       candidate({ draftId: "b1", accountRef: "b@example.com" }),
       candidate({ draftId: "a2", accountRef: "a@example.com" }),
-      candidate({ draftId: "w1", channel: "whatsapp", accountRef: "a@example.com" }),
+      candidate({ draftId: "w1", channel: "sms", accountRef: "a@example.com" }),
     ]);
     expect(picked.map((c) => c.draftId)).toEqual(["a1", "b1", "w1"]);
   });

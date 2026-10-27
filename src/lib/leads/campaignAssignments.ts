@@ -2,8 +2,6 @@ import "server-only";
 
 import { and, eq, inArray } from "drizzle-orm";
 import { outreachCampaigns, outreachLeads, suppressionList } from "@/lib/outreach/schema";
-import { campaigns as linkedinCampaigns, leads as linkedinLeads } from "@/lib/linkedin/schema";
-import { isInvitationMessageTooLong } from "@/lib/linkedin/invitationMessage";
 import { getPeopleByIds, withLeadTransaction } from "./records";
 import { inOrg } from "@/lib/tenancy/scope";
 

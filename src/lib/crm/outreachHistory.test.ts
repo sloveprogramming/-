@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   emailOutreachRowToMessageInput,
-  linkedinOutreachRowToMessageInput,
+
   type EmailOutreachRow,
-  type LinkedinOutreachRow,
+
 } from "./outreachHistory";
 
 function emailRow(overrides: Partial<EmailOutreachRow> = {}): EmailOutreachRow {
@@ -15,19 +15,6 @@ function emailRow(overrides: Partial<EmailOutreachRow> = {}): EmailOutreachRow {
     messageId: "<rfc-1@example.test>",
     sentAt: new Date("2026-09-01T09:00:00.000Z"),
     stepNumber: 1,
-    campaignId: "campaign-1",
-    ...overrides,
-  };
-}
-
-function linkedinRow(overrides: Partial<LinkedinOutreachRow> = {}): LinkedinOutreachRow {
-  return {
-    id: "message-1",
-    type: "INVITATION",
-    text: "Would love to connect.",
-    linkedinMessageId: "li-1",
-    createdAt: new Date("2026-09-01T09:00:00.000Z"),
-    duplicateOfMessageId: null,
     campaignId: "campaign-1",
     ...overrides,
   };
@@ -71,43 +58,3 @@ describe("emailOutreachRowToMessageInput", () => {
   });
 });
 
-describe("linkedinOutreachRowToMessageInput", () => {
-  it("maps an outbound Message row and always sets subject to null", () => {
-    const input = linkedinOutreachRowToMessageInput(linkedinRow());
-    assert.ok(input);
-    assert.equal(input.direction, "outbound");
-    assert.equal(input.idempotencyKey, "linkedin-outreach:message-1");
-    assert.equal(input.providerMessageId, "li-1");
-    assert.equal(input.subject, null);
-    assert.equal(input.bodyText, "Would love to connect.");
-    assert.deepEqual(input.raw, {
-      source: "Message",
-      id: "message-1",
-      type: "INVITATION",
-      campaignId: "campaign-1",
-    });
-    assert.equal(input.sentAt.toISOString(), "2026-09-01T09:00:00.000Z");
-  });
-
-  it("excludes RECEIVED rows (inbound; the CRM already gets those from the webhook)", () => {
-    assert.equal(linkedinOutreachRowToMessageInput(linkedinRow({ type: "RECEIVED" })), null);
-  });
-
-  it("excludes rows marked as a duplicate of another message", () => {
-    assert.equal(
-      linkedinOutreachRowToMessageInput(linkedinRow({ duplicateOfMessageId: "message-0" })),
-      null,
-    );
-  });
-
-  it("skips a row whose text is empty after trimming", () => {
-    assert.equal(linkedinOutreachRowToMessageInput(linkedinRow({ text: "   " })), null);
-    assert.equal(linkedinOutreachRowToMessageInput(linkedinRow({ text: null })), null);
-  });
-
-  it("accepts every non-RECEIVED type, including CUSTOM_SENT", () => {
-    for (const type of ["ACCEPTANCE", "FOLLOW_UP_1", "FOLLOW_UP_2", "FOLLOW_UP_3", "CUSTOM_SENT"] as const) {
-      assert.ok(linkedinOutreachRowToMessageInput(linkedinRow({ type })));
-    }
-  });
-});

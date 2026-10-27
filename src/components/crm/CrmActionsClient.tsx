@@ -50,6 +50,7 @@ import * as Table from "@/components/alignui/table";
 import { Frame, FrameHeader, FramePanel } from "@/components/analytics/kit/Frame";
 import { KpiCell, KpiStrip } from "@/components/analytics/kit/KpiStrip";
 import { CHANNEL_META, HUE, MUTED_STRONG } from "@/components/analytics/theme";
+import { CRM_CHANNELS } from "@/lib/crm/channels";
 import { EmptyState } from "@/components/page/EmptyState";
 import { PageHeader } from "@/components/page/PageHeader";
 import { cn } from "@/utils/cn";
@@ -86,7 +87,8 @@ export function actionId(action: Action) { return String(action.id ?? action.rec
 export const PAGE_SIZE = 30;
 
 const CATEGORY_KEYS = ["interested", "customer", "not_interested", "other"] as const;
-const CHANNELS = ["email", "linkedin", "whatsapp"] as const;
+// 改造：渠道筛选项跟着 CRM 的渠道枚举走，不再单独维护一份。
+const CHANNELS = CRM_CHANNELS;
 
 export function CompactSelect({ label, value, onChange, placeholder, children, className }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; children: React.ReactNode; className?: string }) {
   return <Select.Root size="xsmall" value={value} onValueChange={onChange}>

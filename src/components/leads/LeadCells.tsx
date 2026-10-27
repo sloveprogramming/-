@@ -92,9 +92,9 @@ function ReachIcon({ item }: { item: Reach }) {
 export function ReachIcons({ person }: { person: PersonRow["person"] }) {
   const items: Reach[] = [
     { key: "email", label: "Email", icon: RiMailFill, color: CHANNEL_META.email.color, value: person.email, copy: true },
-    { key: "linkedin", label: "LinkedIn", icon: RiLinkedinBoxFill, color: CHANNEL_META.linkedin.color, value: person.linkedinUrl, href: person.linkedinUrl ? linkedInPersonHref(person.linkedinUrl) : undefined },
+    { key: "linkedin", label: "LinkedIn", icon: RiLinkedinBoxFill, color: HUE.blue, value: person.linkedinUrl, href: person.linkedinUrl ? linkedInPersonHref(person.linkedinUrl) : undefined },
     // The number WhatsApp calls and messages go to, hence WhatsApp's colour.
-    { key: "phone", label: "Phone", icon: RiPhoneFill, color: CHANNEL_META.whatsapp.color, value: person.phone ?? null, copy: true },
+    { key: "phone", label: "Phone", icon: RiPhoneFill, color: HUE.green, value: person.phone ?? null, copy: true },
   ];
   return <div className="-ml-1.5 flex items-center gap-0.5">{items.map((item) => <ReachIcon key={item.key} item={item} />)}</div>;
 }

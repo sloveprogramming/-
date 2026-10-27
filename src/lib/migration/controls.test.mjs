@@ -5,6 +5,10 @@ import {
   migrationMutationBlockReason,
 } from "./controls.ts";
 
+/**
+ * 改造：LinkedIn / WhatsApp 的出口开关与受限路由随频道删除，用例换成国内四渠道
+ * 与仍然存在的接口。
+ */
 describe("People migration operational controls", () => {
   test("accepts only explicit truthy environment values", () => {
     expect(enabled("TRUE")).toBe(true);
@@ -17,9 +21,9 @@ describe("People migration operational controls", () => {
     const env = { PEOPLE_MIGRATION_MODE: "true" };
     for (const control of [
       "emailOutbound",
-      "linkedinOutbound",
-      "linkedinResolution",
-      "linkedinSearch",
+      "wecomOutbound",
+      "smsOutbound",
+      "callOutbound",
       "gridWorker",
     ]) {
       expect(isMigrationControlPaused(control, env)).toBe(true);
@@ -27,27 +31,26 @@ describe("People migration operational controls", () => {
   });
 
   test("narrow controls pause only their worker class", () => {
-    const env = { PAUSE_LINKEDIN_OUTBOUND: "1" };
-    expect(isMigrationControlPaused("linkedinOutbound", env)).toBe(true);
-    expect(isMigrationControlPaused("linkedinResolution", env)).toBe(false);
+    const env = { PAUSE_SMS_OUTBOUND: "1" };
+    expect(isMigrationControlPaused("smsOutbound", env)).toBe(true);
+    expect(isMigrationControlPaused("callOutbound", env)).toBe(false);
     expect(isMigrationControlPaused("emailOutbound", env)).toBe(false);
   });
 
   test("migration mode blocks campaign mutations but preserves webhooks", () => {
     const env = { PEOPLE_MIGRATION_MODE: "on" };
     expect(migrationMutationBlockReason("/api/outreach/campaigns/abc", "PATCH", env)).toBeString();
-    expect(migrationMutationBlockReason("/api/linkedin/messages/send", "POST", env)).toBeString();
     expect(migrationMutationBlockReason("/api/outreach/inbox/drafts/abc/approve", "POST", env)).toBeString();
-    expect(migrationMutationBlockReason("/api/webhooks/message-received", "POST", env)).toBeNull();
+    expect(migrationMutationBlockReason("/api/outreach/mailboxes/abc", "PATCH", env)).toBeString();
     expect(migrationMutationBlockReason("/api/outreach/webhooks/gmail-watch", "POST", env)).toBeNull();
     expect(migrationMutationBlockReason("/api/outreach/unsubscribe", "POST", env)).toBeNull();
-    expect(migrationMutationBlockReason("/api/linkedin/campaigns", "GET", env)).toBeNull();
+    expect(migrationMutationBlockReason("/api/outreach/campaigns/abc", "GET", env)).toBeNull();
   });
 
   test("mutation-only pause remains active during selective worker canaries", () => {
     const env = { PEOPLE_MIGRATION_MODE: "false", PAUSE_CAMPAIGN_MUTATIONS: "true" };
-    expect(migrationMutationBlockReason("/api/linkedin/campaigns", "POST", env)).toBeString();
-    expect(isMigrationControlPaused("linkedinOutbound", env)).toBe(false);
-    expect(migrationMutationBlockReason("/api/webhooks/connection-accepted", "POST", env)).toBeNull();
+    expect(migrationMutationBlockReason("/api/outreach/campaigns", "POST", env)).toBeString();
+    expect(isMigrationControlPaused("emailOutbound", env)).toBe(false);
+    expect(migrationMutationBlockReason("/api/outreach/unsubscribe", "POST", env)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
-import { RiLinkedinBoxFill, RiMailFill, RiWhatsappFill } from "@remixicon/react";
+import { RiPhoneFill, RiMailFill, RiMessage2Fill, RiWechatFill } from "@remixicon/react";
 import type { ComponentType } from "react";
-import type { AnalyticsChannel } from "@/lib/analytics/contract";
+import type { CrmChannel } from "@/lib/crm/channels";
 
 /**
  * Analytics design tokens: the chart palette, the fixed channel identity,
@@ -13,11 +13,15 @@ import type { AnalyticsChannel } from "@/lib/analytics/contract";
  * lightness band, adjacent slots distinguishable with colour-blindness.
  *
  * Colour rules the kit relies on:
- * - Channel colours are identity. LinkedIn blue, Email orange, WhatsApp
- *   green, everywhere, in that order of slots.
+ * - Channel colours are identity, everywhere, in that slot order:
+ *   邮件橙 / 企业微信绿 / 短信蓝 / 电话紫.
  * - Status colours mean good/bad only, and always travel with an icon + label.
  * - Text never wears a series colour: use AlignUI text tokens beside a swatch.
  * - The two grays are CSS variables (globals.css) so they re-tone in dark mode.
+ *
+ * 改造：渠道身份从「LinkedIn 蓝 / Email 橙 / WhatsApp 绿」换成国内四渠道。
+ * 类型挂在 CrmChannel 上（而不是 ANALYTICS_CHANNELS），这样分析页之外的地方
+ * （线索表、CRM 行）也能拿它取色取标签。
  */
 
 export const HUE = {
@@ -33,13 +37,30 @@ export const HUE = {
 } as const;
 
 export const CHANNEL_META: Record<
-  AnalyticsChannel,
+  CrmChannel,
   { label: string; color: string; icon: ComponentType<{ className?: string }> }
 > = {
-  linkedin: { label: "LinkedIn", color: HUE.blue, icon: RiLinkedinBoxFill },
-  email: { label: "Email", color: HUE.orange, icon: RiMailFill },
-  whatsapp: { label: "WhatsApp", color: HUE.green, icon: RiWhatsappFill },
+  email: { label: "邮件", color: HUE.orange, icon: RiMailFill },
+  wecom: { label: "企业微信", color: HUE.green, icon: RiWechatFill },
+  sms: { label: "短信", color: HUE.blue, icon: RiMessage2Fill },
+  call: { label: "电话", color: HUE.purple, icon: RiPhoneFill },
 };
+
+/** 已下线渠道的历史数据取色：灰一些，与在用渠道区分开。 */
+export const LEGACY_CHANNEL_COLOR = "#98a2b3";
+
+/**
+ * 按渠道取展示信息。历史数据里可能还有已下线渠道的 key（linkedin / whatsapp），
+ * 直接索引会拿到 undefined，所以统一走这个函数兜底：未知渠道给灰色和原样标签。
+ */
+export function channelMeta(channel: string | null | undefined): {
+  label: string;
+  color: string;
+  icon: ComponentType<{ className?: string }>;
+} {
+  const meta = channel ? CHANNEL_META[channel as keyof typeof CHANNEL_META] : undefined;
+  return meta ?? { label: channel ?? "未知渠道", color: LEGACY_CHANNEL_COLOR, icon: RiMailFill };
+}
 
 /** Categorical slots after the three channel slots, in this order only. */
 export const CATEGORICAL_EXTRA = [HUE.purple, HUE.teal, HUE.amber, HUE.pink, HUE.sky] as const;

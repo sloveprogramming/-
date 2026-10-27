@@ -569,7 +569,7 @@ export async function reconcileDeliveryUncertain(input: {
       personId: scope.record.personId,
       request,
     }, {
-      provider: scope.attempt.provider as "gmail" | "unipile",
+      provider: scope.attempt.provider as NormalizedCrmSendResult["provider"],
       providerMessageId: input.providerMessageId ?? scope.attempt.providerMessageId,
       providerThreadId: request.providerThreadId,
       rfcMessageId: scope.attempt.providerRequestId,

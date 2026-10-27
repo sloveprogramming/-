@@ -5,7 +5,7 @@ import * as Button from "@/components/alignui/button";
 import * as Dropdown from "@/components/alignui/dropdown";
 import * as Table from "@/components/alignui/table";
 import * as Tooltip from "@/components/alignui/tooltip";
-import { CHANNEL_META } from "@/components/analytics/theme";
+import { HUE } from "@/components/analytics/theme";
 import { cn } from "@/utils/cn";
 import { Bar, Blob, CampaignSummary, CompanyFavicon, LinkIcon, stop, TwoLine } from "./LeadCells";
 import { cellClass, fixedTableStyle, SortableHead } from "./SortableHead";
@@ -51,7 +51,7 @@ function CompanyTableRow({ row, onOpen }: { row: CompanyRow; onOpen: (row: Compa
       <Table.Cell className={rowCell}>
         <div className="-ml-1.5 flex items-center gap-0.5">
           <LinkIcon href={`https://${company.domain}`} label="website" icon={RiGlobalLine} />
-          <LinkIcon href={linkedin} label="LinkedIn page" icon={RiLinkedinBoxFill} color={CHANNEL_META.linkedin.color} />
+          <LinkIcon href={linkedin} label="LinkedIn page" icon={RiLinkedinBoxFill} color={HUE.blue} />
         </div>
       </Table.Cell>
       <Table.Cell className={cn(rowCell, "whitespace-nowrap text-paragraph-sm tabular-nums text-text-sub-600")}>{shortDate(company.updatedAt)}</Table.Cell>
