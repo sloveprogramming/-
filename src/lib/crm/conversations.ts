@@ -1,6 +1,4 @@
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
-import { leads as linkedinLeads } from "@/lib/linkedin/schema";
-import { whatsappCampaignLeads, whatsappCampaigns } from "@/lib/whatsapp/schema";
 import { outreachCampaigns, outreachLeads, outreachMailboxQueue } from "@/lib/outreach/schema";
 import {
   crmConversationMessages,
@@ -378,21 +376,8 @@ export async function ingestInboundReplyInTransaction(
     await tx.update(outreachLeads).set({ sequenceStatus: "reply_received", nextSendAt: null, updatedAt: now })
       .where(inArray(outreachLeads.id, ids));
   }
-  await tx.update(linkedinLeads).set({ status: "REPLIED", updatedAt: now })
-    .where(and(
-      inOrg(linkedinLeads),
-      eq(linkedinLeads.personId, current.personId),
-      inArray(linkedinLeads.status, ["PENDING", "REQUEST_SENT", "CONNECTED", "ACCEPT_MESSAGE_SENT", "FOLLOW_UP_1_SENT", "FOLLOW_UP_2_SENT", "FOLLOW_UP_3_SENT"]),
-    ));
-  await tx.update(whatsappCampaignLeads).set({ status: "replied", repliedAt: now, nextSendAt: null, updatedAt: now })
-    .where(and(
-      inArray(
-        whatsappCampaignLeads.campaignId,
-        tx.select({ id: whatsappCampaigns.id }).from(whatsappCampaigns).where(inOrg(whatsappCampaigns)),
-      ),
-      eq(whatsappCampaignLeads.personId, current.personId),
-      inArray(whatsappCampaignLeads.status, ["queued", "in_sequence"]),
-    ));
+  // 改造：LinkedIn 线索状态与 WhatsApp 活动线索状态的同步随频道删除。国内渠道
+  // （企业微信 / 短信 / 外呼）接入后，在这里加回各自的"回复了"状态流转。
 
   await enqueueCrmJobInTransaction(tx, {
     kind: "classification",

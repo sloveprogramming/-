@@ -1,4 +1,4 @@
-export type Campaign = { id: string; name: string; channel: "email" | "linkedin"; status?: string };
+export type Campaign = { id: string; name: string; channel: "email"; status?: string };
 
 export type PersonRow = {
   person: { id: string; email: string | null; linkedinUrl: string | null; fullName: string | null; title: string | null; profilePictureUrl?: string | null; phone?: string | null; source: string; raw?: Record<string, unknown>; updatedAt: string | Date | null };

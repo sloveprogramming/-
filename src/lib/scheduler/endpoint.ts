@@ -1,7 +1,7 @@
 import "server-only";
 
 import { NextResponse, type NextRequest } from "next/server";
-import { serializeError } from "@/lib/linkedin/serializeError";
+import { serializeError } from "@/lib/errors";
 import { claimSlot, finishSlot } from "./claims";
 import { internalSchedulerEnabled } from "./config";
 import { rolloverStatus } from "./dailyRollover";

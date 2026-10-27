@@ -12,10 +12,11 @@
  * - "now" snapshots (queues, capacity, pipeline) ignore the range.
  */
 
-export const ANALYTICS_VIEWS = ["overview", "email", "linkedin", "whatsapp"] as const;
+// 改造：LinkedIn / WhatsApp 两个视图随频道删除，只保留总览与邮件。
+export const ANALYTICS_VIEWS = ["overview", "email"] as const;
 export type AnalyticsView = (typeof ANALYTICS_VIEWS)[number];
 
-export const ANALYTICS_CHANNELS = ["email", "linkedin", "whatsapp"] as const;
+export const ANALYTICS_CHANNELS = ["email"] as const;
 export type AnalyticsChannel = (typeof ANALYTICS_CHANNELS)[number];
 
 /** The longest range the endpoint answers, in days. Past 62 days points are weekly. */

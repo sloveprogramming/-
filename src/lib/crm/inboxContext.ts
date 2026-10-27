@@ -60,29 +60,31 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function relativeDue(dueAt: string, now: Date): string {
   const delta = new Date(dueAt).getTime() - now.getTime();
-  if (delta <= 0) return "due now";
+  if (delta <= 0) return "现在到期";
   if (delta < DAY_MS) {
     const hours = Math.max(1, Math.round(delta / (60 * 60 * 1000)));
-    return `due in ${hours}h`;
+    return `${hours} 小时后到期`;
   }
   const days = Math.round(delta / DAY_MS);
-  return `due in ${days}d`;
+  return `${days} 天后到期`;
 }
 
 /**
  * One phrase for "what is the immediate step" — the list shows it where the
  * flat "Replied" status used to be, since every row there has replied.
+ *
+ * 改造：中文化。这段文字出现在收件箱每一行上，是销售判断"下一步做什么"的依据。
  */
 export function inboxCrmStepLabel(summary: InboxCrmSummary, now = new Date()): string {
-  if (summary.workflowState === "closed") return "Closed";
-  if (summary.workflowState === "paused") return "Paused";
-  if (summary.workflowState === "error") return "Needs attention";
-  if (summary.workflowState === "classifying" || summary.workflowState === "unclassified") return "Classifying";
+  if (summary.workflowState === "closed") return "已关闭";
+  if (summary.workflowState === "paused") return "已暂停";
+  if (summary.workflowState === "error") return "需要处理";
+  if (summary.workflowState === "classifying" || summary.workflowState === "unclassified") return "识别中";
   const step = summary.step;
-  if (!step) return summary.hasDraft ? "Reply drafted" : "No next step";
-  const name = step.type === "reply" ? "Reply" : `Follow-up ${step.position - 1}`;
-  if (step.status === "awaiting_review") return `${name} drafted`;
-  if (step.status === "drafting") return `${name} drafting`;
-  if (step.status === "failed") return `${name} failed`;
-  return step.dueAt ? `${name} ${relativeDue(step.dueAt, now)}` : `${name} scheduled`;
+  if (!step) return summary.hasDraft ? "回复已起草" : "暂无下一步";
+  const name = step.type === "reply" ? "回复" : `第 ${step.position - 1} 次跟进`;
+  if (step.status === "awaiting_review") return `${name}已起草`;
+  if (step.status === "drafting") return `${name}起草中`;
+  if (step.status === "failed") return `${name}失败`;
+  return step.dueAt ? `${name}·${relativeDue(step.dueAt, now)}` : `${name}已排期`;
 }

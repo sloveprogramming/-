@@ -2,7 +2,6 @@ import { and, asc, count, desc, eq, exists, ilike, inArray, ne, or, sql } from "
 import { db } from "@/lib/db";
 import { companies, people } from "./schema";
 import { outreachCampaigns, outreachLeads } from "@/lib/outreach/schema";
-import { campaigns as linkedinCampaigns, leads as linkedinLeads } from "@/lib/linkedin/schema";
 import { inferCompanyDomainFromEmail, normalizeCompanyDomain, normalizeEmail, normalizeLinkedinSlug } from "./identity";
 import { personProfile } from "./variables";
 import { crmProjectionForPeople } from "@/lib/crm/queries";
@@ -366,24 +365,15 @@ function listBounds(input: { limit?: number; offset?: number }) {
 
 export async function campaignMemberships(personIds: string[]) {
   if (!personIds.length) return new Map<string, CampaignMembership[]>();
-  const [emailRows, linkedinRows] = await Promise.all([
-    db
-      .select({ personId: outreachLeads.personId, id: outreachCampaigns.id, name: outreachCampaigns.name, status: outreachCampaigns.status })
-      .from(outreachLeads)
-      .innerJoin(outreachCampaigns, eq(outreachLeads.campaignId, outreachCampaigns.id))
-      .where(and(inOrg(outreachCampaigns), inArray(outreachLeads.personId, personIds))),
-    db
-      .select({ personId: linkedinLeads.personId, id: linkedinCampaigns.id, name: linkedinCampaigns.name, status: linkedinCampaigns.status })
-      .from(linkedinLeads)
-      .innerJoin(linkedinCampaigns, eq(linkedinLeads.campaignId, linkedinCampaigns.id))
-      .where(and(inOrg(linkedinCampaigns), inArray(linkedinLeads.personId, personIds))),
-  ]);
+  // 改造：LinkedIn 活动线索随频道删除，这里只查邮件活动的归属。
+  const emailRows = await db
+    .select({ personId: outreachLeads.personId, id: outreachCampaigns.id, name: outreachCampaigns.name, status: outreachCampaigns.status })
+    .from(outreachLeads)
+    .innerJoin(outreachCampaigns, eq(outreachLeads.campaignId, outreachCampaigns.id))
+    .where(and(inOrg(outreachCampaigns), inArray(outreachLeads.personId, personIds)));
   const memberships = new Map<string, CampaignMembership[]>();
   for (const row of emailRows) {
     memberships.set(row.personId, [...(memberships.get(row.personId) ?? []), { ...row, channel: "email" }]);
-  }
-  for (const row of linkedinRows) {
-    memberships.set(row.personId, [...(memberships.get(row.personId) ?? []), { ...row, channel: "linkedin" }]);
   }
   return memberships;
 }
@@ -397,11 +387,9 @@ export async function listPeoplePage(input: PersonListInput = {}) {
     input.hasEmail === true ? sql`${people.email} is not null` : undefined,
     input.hasLinkedin === true ? sql`${people.linkedinUrl} is not null` : undefined,
     input.campaignChannel === "email" ? exists(db.select({ id: outreachLeads.id }).from(outreachLeads).where(eq(outreachLeads.personId, people.id))) : undefined,
-    input.campaignChannel === "linkedin" ? exists(db.select({ id: linkedinLeads.id }).from(linkedinLeads).where(eq(linkedinLeads.personId, people.id))) : undefined,
     input.campaignChannel === "unassigned"
       ? and(
           sql`not exists (select 1 from outreach_leads where person_id = ${people.id})`,
-          sql`not exists (select 1 from "Lead" where "personId" = ${people.id})`,
         )
       : undefined,
     input.crmCategory ? exists(db.select({ id: crmRecords.id }).from(crmRecords).where(and(eq(crmRecords.personId, people.id), eq(crmRecords.categoryKey, input.crmCategory)))) : undefined,

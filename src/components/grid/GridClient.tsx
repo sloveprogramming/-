@@ -74,7 +74,6 @@ import AiDialog from "./AiDialog";
 import EnrichmentDialog from "./EnrichmentDialog";
 import FilterPanel, { EMPTY_FILTERS } from "./FilterPanel";
 import ImportDialog from "./ImportDialog";
-import CreateCampaignFromGridDialog from "./CreateCampaignFromGridDialog";
 import Popover from "./Popover";
 import SortPanel from "./SortPanel";
 import { columnTypeMeta } from "./columnTypes";
@@ -696,7 +695,6 @@ export default function GridClient({
   const [runMenu, setRunMenu] = useState<{ column: GridColumn; rect: DOMRect } | null>(null);
   const [rowActionsRect, setRowActionsRect] = useState<DOMRect | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [createCampaignOpen, setCreateCampaignOpen] = useState(false);
   const [configuring, setConfiguring] = useState<{
     type: "formula" | "http";
     column?: GridColumn;
@@ -3046,19 +3044,6 @@ export default function GridClient({
                 </button>
                 <button
                   type="button"
-                  disabled={selectedRowIds.length > 5000}
-                  title={selectedRowIds.length > 5000 ? "Campaigns can contain at most 5,000 selected rows" : undefined}
-                  onClick={() => {
-                    setRowActionsRect(null);
-                    setCreateCampaignOpen(true);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-blue-700 dark:text-blue-400 transition hover:bg-blue-50 dark:hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <RiMegaphoneLine className="size-[17px]" />
-                  Create campaign
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
                     setRowActionsRect(null);
                     void deleteSelectedRows();
@@ -3139,22 +3124,6 @@ export default function GridClient({
           await refetch(appliedSearch, 0);
         }}
       />
-
-      {createCampaignOpen && (
-        <CreateCampaignFromGridDialog
-          open
-          tableId={table.id}
-          columns={columns}
-          rowIds={selectedRowIds}
-          onClose={() => setCreateCampaignOpen(false)}
-          onCreated={({ campaignId, channel, created, failed }) => {
-            setCreateCampaignOpen(false);
-            setSelectedRowIds([]);
-            setAllMatchingSelected(false);
-            setNotice(`Created ${channel === "email" ? "email" : "LinkedIn"} campaign with ${created} person${created === 1 ? "" : "s"}${failed ? `; ${failed} row${failed === 1 ? "" : "s"} skipped` : ""}. Campaign ID: ${campaignId}`);
-          }}
-        />
-      )}
 
       {configuring && (
         <ColumnConfigDialog

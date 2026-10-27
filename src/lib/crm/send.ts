@@ -2,17 +2,8 @@ import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inboxContacts, inboxMessages } from "@/lib/inbox/schema";
 import { people } from "@/lib/leads/schema";
-import { connections as linkedinConnections, messages as linkedinMessages } from "@/lib/linkedin/schema";
 import { isPlatformConnected, isPlatformNotConnectedError } from "@/lib/platform/credentials";
 import { sendEmail } from "@/lib/outreach/gmail";
-import { sendMessage as sendLinkedInMessage } from "@/services/unipile.service";
-import {
-  deliverWhatsappFromCrm,
-  WhatsappSendRefusedError,
-  type DeliverWhatsappInput,
-  type DeliverWhatsappResult,
-} from "@/lib/whatsapp/delivery";
-import { whatsappMessages } from "@/lib/whatsapp/schema";
 import { crmChannelSendProvider } from "./channels";
 import { insertConversationMessageInTransaction } from "./conversations";
 import { appendCrmEvent } from "./events";
@@ -46,7 +37,8 @@ import { adoptCurrentSequenceStepInTransaction, interruptActiveSequenceRunInTran
 import { workflowStateAfterOffScriptSend } from "./manualOutbound";
 
 export type NormalizedCrmSendResult = {
-  provider: "gmail" | "unipile";
+  /** 改造：原来只有 gmail / unipile。国内渠道接进来之后从这里分派。 */
+  provider: "gmail" | "smtp" | "wecom" | "sms" | "call";
   providerMessageId: string | null;
   providerThreadId: string | null;
   rfcMessageId: string | null;
@@ -149,6 +141,11 @@ function providerErrorIsDefinite(error: unknown): boolean {
   return Number.isInteger(status) && status >= 400 && status < 500 && ![408, 409, 425, 429].includes(status);
 }
 
+/**
+ * 改造：LinkedIn 与 WhatsApp 两条投递分支随频道删除。企业微信、短信、外呼还没有
+ * 接入发送服务，到这里是**确定没发出去**（DefiniteCrmSendError），草稿直接失败，
+ * 不会进入"投递不确定"需要人工核对的灰区。接入时在这三行上面各加一个分支。
+ */
 export const sendThroughCrmProvider: CrmSendAdapter = async (input) => {
   if (input.channel === "email") {
     if (!(await isPlatformConnected("google"))) throw new DefiniteCrmSendError("Google Workspace is not connected — connect it in Settings → Email → Connection");
@@ -174,58 +171,10 @@ export const sendThroughCrmProvider: CrmSendAdapter = async (input) => {
       response: result,
     };
   }
-  if (input.channel === "whatsapp") return sendWhatsappThroughCrm(input);
-  if (!input.providerThreadId) throw new DefiniteCrmSendError("LinkedIn conversation has no chat ID");
-  const messageId = await sendLinkedInMessage(input.providerThreadId, input.bodyText);
-  return {
-    provider: "unipile",
-    providerMessageId: messageId,
-    providerThreadId: input.providerThreadId,
-    rfcMessageId: null,
-    response: { messageId, chatId: input.providerThreadId },
-  };
+  throw new DefiniteCrmSendError(
+    `「${input.channel}」这个渠道还没有接入发送服务，暂时发不出去。接入后这里会换成对应的 SDK 调用。`,
+  );
 };
-
-/**
- * The WhatsApp branch of sendThroughCrmProvider, with the delivery injectable
- * for tests. Into the conversation's chat when it has one, else a new chat
- * with the Person's number. A guardrail refusal (warm-up, new-chat cap,
- * spacing, Do Not Contact) is definite: nothing reached WhatsApp, so the
- * draft fails rather than going delivery-uncertain.
- */
-export async function sendWhatsappThroughCrm(
-  input: CrmSendAdapterInput,
-  deliver: (input: DeliverWhatsappInput) => Promise<DeliverWhatsappResult> = deliverWhatsappFromCrm,
-): Promise<NormalizedCrmSendResult> {
-  if (input.channel !== "whatsapp") throw new Error(`Not a WhatsApp send: ${input.channel}`);
-  const phone = input.recipientPhone?.trim() || null;
-  if (!input.providerThreadId && !phone) {
-    throw new DefiniteCrmSendError("The Person has no phone number and the conversation has no WhatsApp chat");
-  }
-  let result: DeliverWhatsappResult;
-  try {
-    result = await deliver({
-      unipileAccountId: input.accountRef,
-      unipileChatId: input.providerThreadId,
-      phone,
-      text: input.bodyText,
-    });
-  } catch (error) {
-    if (error instanceof WhatsappSendRefusedError) throw new DefiniteCrmSendError(error.message);
-    throw error;
-  }
-  return {
-    provider: "unipile",
-    providerMessageId: result.unipileMessageId,
-    providerThreadId: result.unipileChatId,
-    rfcMessageId: null,
-    response: {
-      messageId: result.unipileMessageId,
-      chatId: result.unipileChatId,
-      whatsappMessageId: result.whatsappMessageId,
-    },
-  };
-}
 
 type PreparedSend = {
   attemptId: string;
@@ -325,7 +274,7 @@ async function prepareSend(tx: CrmTransaction, input: {
     providerThreadId: conversation.providerThreadId,
     providerContactId: conversation.providerContactId,
     recipientEmail: person.email,
-    recipientPhone: draft.channel === "whatsapp" ? person.phone : null,
+    recipientPhone: null,
     subject: draft.subject,
     bodyText,
     bodyHtml: draft.editedBodyHtml ?? draft.aiBodyHtml,
@@ -381,23 +330,6 @@ async function finishSuccessfulSend(
       .where(and(inOrg(crmConversations), eq(crmConversations.id, draft.conversationId))).limit(1);
     if (!conversation) throw new CrmNotFoundError("CRM conversation", draft.conversationId);
     const now = new Date();
-    // A WhatsApp conversation without a chat yet gets the one the send opened,
-    // so the lead's reply (keyed by chat) lands on this conversation. Skipped
-    // when another conversation already holds that chat, rather than tripping
-    // the (channel, account, thread) unique index inside this transaction.
-    if (!conversation.providerThreadId && result.providerThreadId && conversation.channel === "whatsapp") {
-      const [holder] = await tx.select({ id: crmConversations.id }).from(crmConversations)
-        .where(and(
-          inOrg(crmConversations),
-          eq(crmConversations.channel, conversation.channel),
-          eq(crmConversations.accountRef, conversation.accountRef),
-          eq(crmConversations.providerThreadId, result.providerThreadId),
-        )).limit(1);
-      if (!holder) {
-        await tx.update(crmConversations).set({ providerThreadId: result.providerThreadId, updatedAt: now })
-          .where(eq(crmConversations.id, conversation.id));
-      }
-    }
     const { message } = await insertConversationMessageInTransaction(tx, {
       conversationId: conversation.id,
       personId: record.personId,
@@ -418,42 +350,6 @@ async function finishSuccessfulSend(
       },
       sentAt: now,
     });
-    // During pilot/cutover the native LinkedIn inbox remains a read surface.
-    // Mirror confirmed CRM sends into its canonical message store, while CRM
-    // remains the sole workflow/state owner.
-    if (conversation.channel === "linkedin" && conversation.providerThreadId) {
-      const nativeStore = await tx.execute(sql<{ exists: boolean }>`select to_regclass('"Connection"') is not null as exists`);
-      if (nativeStore[0]?.exists) {
-        const [connection] = await tx.select({
-          id: linkedinConnections.id,
-          leadId: linkedinConnections.leadId,
-          organizationId: linkedinConnections.organizationId,
-        }).from(linkedinConnections).where(and(
-          inOrg(linkedinConnections),
-          eq(linkedinConnections.chatId, conversation.providerThreadId),
-        )).limit(1);
-        if (connection) {
-          await tx.insert(linkedinMessages).values({
-            organizationId: connection.organizationId,
-            type: "CUSTOM_SENT",
-            text: prepared.request.bodyText,
-            linkedinMessageId: result.providerMessageId,
-            connectionId: connection.id,
-            leadId: connection.leadId,
-            seen: true,
-            createdAt: now,
-          });
-        }
-      }
-    }
-    // The WhatsApp Messages tab already holds the message (delivery.ts stored
-    // it); link it to its CRM twin so neither side records it twice — the
-    // history backfill (outreachHistory.ts) skips linked rows.
-    const whatsappMessageId = result.response.whatsappMessageId;
-    if (conversation.channel === "whatsapp" && typeof whatsappMessageId === "string") {
-      await tx.update(whatsappMessages).set({ crmConversationMessageId: message.id })
-        .where(and(eq(whatsappMessages.id, whatsappMessageId), isNull(whatsappMessages.crmConversationMessageId)));
-    }
     // The email Master Inbox is a read surface in the same way: it only ever
     // stored inbound Gmail traffic (replyBridge.ts), so a CRM send would
     // otherwise be missing from the thread the operator replied from. Mirror

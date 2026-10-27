@@ -1,10 +1,13 @@
 // Next.js calls register() exactly once when the server process boots.
-// Starts the background loops: the outreach send tick and WhatsApp campaign
-// sender (single-instance, see their internalScheduler.ts), and the
-// scheduled jobs (src/lib/scheduler/internalScheduler.ts: each organization's
-// daily rollover at its own new-day time, LinkedIn outreach, webhook replay,
-// history pruning). Those run on fixed clock slots claimed in the database,
-// so restarts do not shift them and overlapping instances run each slot once.
+// Starts the background loops: the outreach send tick (single-instance, see
+// its internalScheduler.ts), the scheduled jobs
+// (src/lib/scheduler/internalScheduler.ts: each organization's daily rollover
+// at its own new-day time, CRM auto follow-ups, history pruning), the
+// enrichment grid worker and the CRM worker. Those run on fixed clock slots
+// claimed in the database, so restarts do not shift them and overlapping
+// instances run each slot once.
+//
+// 改造：WhatsApp 的消息活动发送器与 LinkedIn 的发送引擎随频道一并删除。
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return; // skip edge runtime invocations
 
@@ -23,8 +26,6 @@ export async function register() {
   if (process.env.NODE_ENV === "production") {
     const { startInternalOutreachScheduler } = await import("./lib/outreach/internalScheduler");
     startInternalOutreachScheduler();
-    const { startInternalWhatsappCampaignScheduler } = await import("./lib/whatsapp/campaigns/internalScheduler");
-    startInternalWhatsappCampaignScheduler();
   }
 
   // Scheduled jobs; INTERNAL_SCHEDULER=false leaves them to an external cron.

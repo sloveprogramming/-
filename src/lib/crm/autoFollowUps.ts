@@ -29,20 +29,13 @@ import { and, asc, desc, eq, isNotNull, lte, or, isNull, sql } from "drizzle-orm
 import { db } from "@/lib/db";
 import { channelRules } from "@/lib/channels/rules.server";
 import { pickInRange } from "@/lib/channels/rules";
-import { linkedInAccounts } from "@/lib/linkedin/schema";
-import { isWithinWorkingHours as isWithinLinkedinHours, withOrganizationHours } from "@/lib/linkedin/workingHours";
+
 import { isMigrationControlPaused, type MigrationControl } from "@/lib/migration/controls";
 import { mailboxes } from "@/lib/outreach/schema";
 import { isWithinWorkingHours, mailboxHoursFromWeekly } from "@/lib/outreach/workingHours";
 import { isPlatformConnected } from "@/lib/platform/credentials";
 import { inOrg, runInOrganization } from "@/lib/tenancy/scope";
-import {
-  deliverWhatsappFromCrm,
-  WhatsappSendRefusedError,
-  type DeliverWhatsappInput,
-} from "@/lib/whatsapp/delivery";
-import { whatsappAccounts } from "@/lib/whatsapp/schema";
-import { withinCampaignSendingHours } from "@/lib/whatsapp/campaigns/engineRules";
+
 import {
   autoFollowUpVerdict,
   followUpGapPassed,
@@ -269,40 +262,13 @@ async function takeAccountSlot(channel: CrmChannel, accountRef: string, now: Dat
     };
   }
 
-  if (channel === "linkedin") {
-    const [account] = await db.select().from(linkedInAccounts)
-      .where(and(inOrg(linkedInAccounts), eq(linkedInAccounts.linkedinId, accountRef))).limit(1);
-    if (!account || account.status !== "CONNECTED") return { ok: false };
-    const { workingHours } = await channelRules("linkedin");
-    return isWithinLinkedinHours(withOrganizationHours(account, workingHours), now) ? { ok: true } : { ok: false };
-  }
-
-  const [number] = await db.select().from(whatsappAccounts)
-    .where(and(inOrg(whatsappAccounts), eq(whatsappAccounts.unipileAccountId, accountRef))).limit(1);
-  if (!number || number.status !== "connected") return { ok: false };
-  const { sendingHours } = await channelRules("whatsapp");
-  return withinCampaignSendingHours(sendingHours, now) ? { ok: true } : { ok: false };
+  // 改造：LinkedIn 与 WhatsApp 的账号级时段判断随频道删除。企业微信、短信、外呼
+  // 接入后，在这里各自加一段（参考上面 email 分支：账号状态 → 时段 → 每日上限 → 占位）。
+  return { ok: false };
 }
 
-/**
- * WhatsApp's 10-second gap is shared with campaigns and a person's sends: if
- * one went out moments ago, wait it out and try once more rather than fail
- * the follow-up. Nothing reached WhatsApp on a refusal, so the retry is safe.
- */
-async function deliverAfterSendGap(input: DeliverWhatsappInput) {
-  try {
-    return await deliverWhatsappFromCrm(input);
-  } catch (error) {
-    if (!(error instanceof WhatsappSendRefusedError) || error.reason !== "send_gap") throw error;
-    const waitSeconds = Math.min(30, Math.max(1, error.retryAfterSeconds ?? 10));
-    await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
-    return deliverWhatsappFromCrm(input);
-  }
-}
-
-const sendAutomatically: CrmSendAdapter = (input) => input.channel === "whatsapp"
-  ? sendWhatsappThroughCrm(input, deliverAfterSendGap)
-  : sendThroughCrmProvider(input);
+/** 改造：自动跟进现在只走邮件；其它渠道接入后在这里分派。 */
+const sendAutomatically: CrmSendAdapter = sendThroughCrmProvider;
 
 async function runOrganization(summary: AutoFollowUpRunSummary, now: Date, send: CrmSendAdapter): Promise<void> {
   const sendable: AutoFollowUpCandidate[] = [];

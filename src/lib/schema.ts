@@ -15,11 +15,9 @@ export * from "./outreach/schema";
 // Enrichment grid tables (grid_tables, grid_columns, grid_rows, grid_jobs, ...).
 export * from "./grid/schema";
 
-// WhatsApp calls placed from the app and their recordings (call_sessions).
-export * from "./calls/schema";
-
-// WhatsApp messaging through Unipile: linked numbers, chats, messages.
-export * from "./whatsapp/schema";
+// 改造：WhatsApp 通话（call_sessions）与 WhatsApp 消息（whatsapp_*）两张表族的
+// Drizzle 定义随频道删除。数据库里这两组表还在，只是不再被应用读取——等确认没有
+// 历史数据需要保留后，用迁移脚本 DROP。
 
 // Sending rules per organization and channel (src/lib/channels/rules.ts).
 export * from "./channels/schema";
