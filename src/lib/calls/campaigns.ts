@@ -41,8 +41,8 @@ import {
   type UpdateCampaignRequest,
 } from "./contract";
 import { callCampaignContacts, callCampaigns, callMessages, callSessions } from "./schema";
-import { normalizePhone } from "./phone";
-import { organizationPhoneCountry } from "@/lib/calls/phone.server";
+import { normalizePhone } from "@/lib/phone";
+import { organizationPhoneCountry } from "@/lib/phone/server";
 import { photoExtensionFor, photoKey, putPhoto } from "./storage";
 import { CallApiError, expireStaleCalls, toCallDetail, toCallSummary } from "./sessions";
 import { nextContactCallState, stateOf } from "./contactCallStatus";

@@ -10,7 +10,7 @@ import { currentOrganizationId, inOrg, runInOrganization } from "@/lib/tenancy/s
 import { callSessions, callingProxies, callingStations } from "./schema";
 import { requireProxy, workerProxy } from "./proxies";
 import { deleteObject, headRecording, presignRecordingDownload, presignRecordingUpload, stationProfileKey } from "./storage";
-import { normalizePhone } from "./phone";
+import { normalizePhone } from "@/lib/phone";
 import { CallApiError, finishCall, recorderLeadFor } from "./sessions";
 import { createRecorderToken } from "./token";
 import {

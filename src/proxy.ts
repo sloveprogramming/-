@@ -6,10 +6,9 @@ import { DEMO_READ_ONLY_CODE, DEMO_READ_ONLY_MESSAGE, demoRequestBlock, isDemoMo
 /**
  * Unauthenticated paths.
  *
- * The Unipile callbacks are listed individually rather than as an
- * "/api/webhooks" prefix on purpose: /api/webhooks/[id] also lives under
- * that prefix and returns raw stored webhook bodies to the UI, so a prefix
- * match would expose it to anyone.
+ * 改造：原来这里列了 Unipile 的五个回调（LinkedIn / WhatsApp）、录音扩展的
+ * /api/call-recorder/ 和云端拨号服务的 /api/call-worker/。这三套东西随频道一并
+ * 删除，对应的公开入口也必须删干净——留着就是给外部留一条不需要登录的路由。
  */
 const PUBLIC = [
   // Signing in, up, back in, and joining — Better Auth's endpoints and pages.
@@ -29,22 +28,6 @@ const PUBLIC = [
   "/api/outreach/mailboxes/watch",
   "/unsubscribe",
   "/api/outreach/unsubscribe",
-  "/api/webhooks/connection-accepted",
-  "/api/webhooks/message-received",
-  "/api/webhooks/unipile-account",
-  // Unipile's WhatsApp messaging webhook; checks the stored Unipile notify secret itself.
-  "/api/webhooks/whatsapp-message",
-  // The single messaging webhook AgentSDR registers; routes to the two above.
-  "/api/webhooks/unipile-message",
-  // Called by the WhatsApp call-recorder Chrome extension's service worker,
-  // which holds a per-call bearer token, not the site cookie. Every route
-  // under this prefix authenticates itself with authorizeRecorder() (see
-  // src/lib/calls/sessions.ts) — never add a route here that doesn't.
-  "/api/call-recorder/",
-  // Called by the cloud call worker (services/call-worker), which holds
-  // CALL_WORKER_SECRET, not a session. Every route under this prefix starts
-  // with authorizeWorker() (src/lib/calls/stations.ts) — never add one that doesn't.
-  "/api/call-worker/",
 ];
 
 /**
@@ -52,7 +35,7 @@ const PUBLIC = [
  * cookie. The outreach equivalents are in PUBLIC above because they carry
  * their own OUTREACH_TICK_SECRET check inside the route.
  */
-const CRON_PATHS = ["/api/linkedin/jobs"];
+const CRON_PATHS: string[] = [];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

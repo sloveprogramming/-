@@ -7,20 +7,18 @@
  * - Platform-wide jobs below, each one slot at a time across every
  *   organization (the job's own code iterates organizations).
  * - The daily rollover, once per organization at the start of that
- *   organization's day (Settings → Organization → Time zone / New day starts
- *   at): builds its email queues, renews its Gmail watches, resets its
- *   LinkedIn daily limits. Its claim key is `daily-rollover:<organization id>`.
+ *   organization's day (Settings → 组织 → 时区 / 新的一天从几点开始):
+ *   builds its email queues and renews its Gmail watches.
+ *
+ * 改造：三个 LinkedIn 任务（run-outreach / search-queue / replay-webhooks）随
+ * 频道一起删除；剩下的两个与渠道无关。企微、短信、外呼的发送引擎接入时，
+ * 在这里加一项、在 jobs.ts 里加一个 case 即可。
  *
  * All times are UTC unless a job names a zone.
  */
 import { dailyAt, everyMinutes, type Schedule } from "./slots";
 
-export type PlatformJobName =
-  | "linkedin-run-outreach"
-  | "linkedin-run-search-queue"
-  | "linkedin-replay-webhooks"
-  | "crm-auto-follow-ups"
-  | "history-prune";
+export type PlatformJobName = "crm-auto-follow-ups" | "history-prune";
 
 export type PlatformJob = {
   name: PlatformJobName;
@@ -37,42 +35,18 @@ export type PlatformJob = {
 
 export const PLATFORM_JOBS: readonly PlatformJob[] = [
   {
-    name: "linkedin-run-outreach",
-    schedule: everyMinutes(30),
-    enabled: true,
-    endpoint: "/api/linkedin/jobs/run-outreach",
-    description: "LinkedIn invitations and follow-ups (each account's limits and working hours apply)",
-  },
-  {
-    // Not scheduled yet: today the search queue runs when someone clicks Run.
-    // Set `enabled: true` to work it every 10 minutes (the endpoint then
-    // dedupes external cron calls against the same slots).
-    name: "linkedin-run-search-queue",
-    schedule: everyMinutes(10),
-    enabled: false,
-    endpoint: "/api/linkedin/jobs/run-search-queue",
-    description: "LinkedIn search queue",
-  },
-  {
-    name: "linkedin-replay-webhooks",
-    schedule: everyMinutes(10),
-    enabled: true,
-    endpoint: "/api/linkedin/jobs/replay-webhooks",
-    description: "Retry LinkedIn webhook deliveries that failed",
-  },
-  {
     // Each run sends at most one follow-up per sending account; the
     // per-account gap (Sending rules, default 30 min) does the spacing.
     name: "crm-auto-follow-ups",
     schedule: everyMinutes(5),
     enabled: true,
-    description: "Automatic CRM follow-ups, one per sending account at a time (sequences with automatic follow-ups on)",
+    description: "CRM 自动跟进：每轮每个发信账号最多发一封（序列里开了「自动发送跟进」的）",
   },
   {
     name: "history-prune",
     schedule: dailyAt("00:00", "UTC"),
     enabled: true,
-    description: "Prune LinkedIn job history and old scheduler claims",
+    description: "清理历史任务记录与过期的调度占位",
   },
 ];
 

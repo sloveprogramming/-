@@ -2,8 +2,8 @@ import "server-only";
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { normalizePhone } from "@/lib/calls/phone";
-import { organizationPhoneCountry } from "@/lib/calls/phone.server";
+import { normalizePhone } from "@/lib/phone";
+import { organizationPhoneCountry } from "@/lib/phone/server";
 import { isPersonDoNotContact } from "@/lib/crm/policies";
 import { findUnipileWhatsappChat } from "@/services/unipile.whatsapp";
 import { findWhatsappAccountByUnipileId } from "./accounts";

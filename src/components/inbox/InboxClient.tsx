@@ -14,7 +14,6 @@ import {
 } from "@remixicon/react";
 import * as Button from "@/components/alignui/button";
 import * as Dropdown from "@/components/alignui/dropdown";
-import { CallButton } from "@/components/calls/CallButton";
 import { crmCategoryLabel as categoryName } from "@/lib/crm/labels";
 import { EmptyState } from "@/components/page/EmptyState";
 import { PageHeader } from "@/components/page/PageHeader";
@@ -401,7 +400,6 @@ export default function InboxClient() {
             ...(thread ? [{ label: "Messages", value: String(thread.messages.length) }] : []),
             ...(thread && thread.ccs.length > 0 ? [{ label: "Cc", value: thread.ccs.join(", "), title: thread.ccs.join(", ") }] : []),
           ]}
-          actions={record?.personId && record.phone ? <CallButton personId={record.personId} crmRecordId={recordId} phone={record.phone} numberMenu={false} /> : undefined}
         />
       </DetailsPanel>
     ) : undefined;

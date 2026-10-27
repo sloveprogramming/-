@@ -23,8 +23,6 @@ const nextConfig: NextConfig = {
       "./node_modules/moment/min/moment.min.js",
       "./node_modules/@formulajs/formulajs/lib/browser/formula.min.js",
     ],
-    // The Call Recorder zip, built by `bun run build` and read off disk by the download route.
-    "/downloads/call-recorder": ["./extensions/whatsapp-recorder/release/agentsdr-call-recorder.zip"],
   },
 
   async redirects() {
@@ -38,15 +36,12 @@ const nextConfig: NextConfig = {
       { source: "/grid", destination: "/tables", permanent: false },
       { source: "/grid/:path*", destination: "/tables/:path*", permanent: false },
 
-      // Settings screens moved into the settings box (src/app/settings). The
-      // LinkedIn one matters beyond bookmarks: a Unipile hosted-auth flow
-      // started before the move returns to /linkedin/accounts?unipile=…, and
-      // the query string is carried over to the page that handles it.
+      // Settings screens moved into the settings box (src/app/settings).
+      // 改造：LinkedIn / WhatsApp / Calling 三个频道已删除，指向它们设置页的
+      // 旧跳转一并去掉（目标路由不存在，留着只会 404）。
       { source: "/crm/settings", destination: "/settings/lead-categories", permanent: false },
       { source: "/crm/knowledge", destination: "/settings/knowledge", permanent: false },
       { source: "/outreach/mailboxes", destination: "/settings/email-accounts", permanent: false },
-      { source: "/linkedin/accounts", destination: "/settings/linkedin-accounts", permanent: false },
-      { source: "/calling/accounts", destination: "/settings/whatsapp-accounts", permanent: false },
       // Integrations moved into each channel's own Connection page.
       { source: "/settings/integrations", destination: "/settings/email-connection", permanent: false },
 

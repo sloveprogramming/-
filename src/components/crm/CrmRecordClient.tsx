@@ -35,13 +35,9 @@ import * as Modal from "@/components/alignui/modal";
 import * as SegmentedControl from "@/components/alignui/segmented-control";
 import { Frame, FrameHeader, FramePanel } from "@/components/analytics/kit/Frame";
 import { CHANNEL_META } from "@/components/analytics/theme";
-import { CallButton } from "@/components/calls/CallButton";
-import { CallsCard } from "@/components/calls/CallsCard";
 import { EmptyState } from "@/components/page/EmptyState";
 import { PageHeader } from "@/components/page/PageHeader";
 import { StatRow } from "@/components/page/StatRow";
-import { PersonWhatsappPanel } from "@/components/whatsapp/PersonWhatsappPanel";
-import { WhatsappLogo } from "@/components/whatsapp/WhatsappLogo";
 import { cn } from "@/utils/cn";
 import {
   ErrorState,
@@ -112,7 +108,7 @@ function initials(name: string): string {
 }
 
 function channelLabel(channel: unknown): string {
-  return channel === "linkedin" ? "LinkedIn" : channel === "whatsapp" ? "WhatsApp" : "Email";
+  return channel === "email" ? "邮件" : channel === "sms" ? "短信" : channel === "wecom" ? "企业微信" : channel === "call" ? "电话" : "邮件";
 }
 
 function channelColor(channel: unknown): string | undefined {
@@ -120,9 +116,7 @@ function channelColor(channel: unknown): string | undefined {
 }
 
 function channelIcon(channel: unknown, className = "size-4") {
-  if (channel === "whatsapp") return <WhatsappLogo className={className} />;
-  const Icon = channel === "linkedin" ? RiLinkedinLine : RiMailLine;
-  return <Icon className={className} aria-hidden="true" />;
+  return <RiMailLine className={className} aria-hidden="true" />;
 }
 
 /**
@@ -137,9 +131,6 @@ export default function CrmRecordClient({ recordId, variant = "page" }: { record
   const [error, setError] = useState("");
   const [workspaceRef, workspaceHeight] = useWorkspaceHeight<HTMLDivElement>(Boolean(data.id));
   const [notice, setNotice] = useState("");
-  // Bumped after a call starts so the Calls card below refetches without the
-  // rest of the page reloading.
-  const [callsRefreshKey, setCallsRefreshKey] = useState(0);
   // Shared by the stage controls in the reply header and the AI-proposal
   // notice, which both resolve subcategory names from it.
   const [categories, setCategories] = useState<Data[]>([]);
@@ -217,7 +208,6 @@ export default function CrmRecordClient({ recordId, variant = "page" }: { record
         currentStep={currentStep}
         activeRun={activeRun}
         onAction={mutate}
-        onCallStarted={() => setCallsRefreshKey((key) => key + 1)}
         moveStage={<MoveStageDialog
           categories={categories}
           categoryKey={String(data.categoryKey ?? asObject(data.classification).category ?? "other")}
@@ -258,14 +248,9 @@ export default function CrmRecordClient({ recordId, variant = "page" }: { record
           />
         </div>
         <div className="min-w-0 xl:min-h-0">
-          {data.activeChannel === "whatsapp"
-            ? <WhatsappRecordPanel personId={String(person.id ?? data.personId)} onSent={() => { announceRecordChanged(recordId); void load(); }}>
-                <ConversationPanel conversations={conversations} messages={messages} name={name} avatarUrl={avatarUrl} />
-              </WhatsappRecordPanel>
-            : <ConversationPanel conversations={conversations} messages={messages} name={name} avatarUrl={avatarUrl} />}
+          <ConversationPanel conversations={conversations} messages={messages} name={name} avatarUrl={avatarUrl} />
         </div>
       </div>
-      <CallsCard personId={String(person.id ?? data.personId)} refreshKey={callsRefreshKey} />
     </div>
   );
 }
@@ -321,7 +306,7 @@ const WORKFLOW_BADGE: Record<string, { label: string; color: React.ComponentProp
   idle: { label: "Idle", color: "gray" },
 };
 
-function RecordHeader({ back, data, person, name, avatarUrl, currentStep, activeRun, onAction, onCallStarted, moveStage }: {
+function RecordHeader({ back, data, person, name, avatarUrl, currentStep, activeRun, onAction, moveStage }: {
   /** The full page's way back to its list; the pop-up has its own close. */
   back?: { href: string; label: string };
   data: Data;
@@ -331,8 +316,6 @@ function RecordHeader({ back, data, person, name, avatarUrl, currentStep, active
   currentStep: Data;
   activeRun: Data;
   onAction: (path: string, body?: Data, method?: string, success?: string) => Promise<void>;
-  /** Bumps the Calls card's refreshKey once the extension accepts a call. */
-  onCallStarted: () => void;
   /** Move stage: record something that happened and move the lead on. */
   moveStage: React.ReactNode;
 }) {
@@ -348,11 +331,6 @@ function RecordHeader({ back, data, person, name, avatarUrl, currentStep, active
   const company = text(person.company);
   const email = text(person.email);
   const phone = text(person.phone) || null;
-  const linkedin = text(person.linkedinUrl);
-  // Show the profile address the way the email address is shown, rather than a
-  // "Profile" label that hides which account it points at.
-  const linkedinHref = linkedin.startsWith("http") ? linkedin : `https://www.linkedin.com/in/${linkedin}`;
-  const linkedinSlug = linkedin.replace(/\/+$/, "").split("/").pop() || linkedin;
   const state = WORKFLOW_BADGE[workflowState];
 
   return (
@@ -370,10 +348,8 @@ function RecordHeader({ back, data, person, name, avatarUrl, currentStep, active
         {(title || company) && <span className="inline-flex min-w-0 items-center gap-1.5"><RiBriefcaseLine className="size-4 shrink-0 text-text-soft-400" aria-hidden="true" /><span className="truncate">{[title, company].filter(Boolean).join(" · ")}</span></span>}
         {email && <a href={`mailto:${email}`} className="inline-flex min-w-0 items-center gap-1.5 transition hover:text-text-strong-950"><RiMailLine className="size-4 shrink-0 text-text-soft-400" aria-hidden="true" /><span className="truncate">{email}</span></a>}
         {phone && <span className="inline-flex items-center gap-1.5"><RiPhoneLine className="size-4 shrink-0 text-text-soft-400" aria-hidden="true" />{phone}</span>}
-        {linkedin && <a href={linkedinHref} target="_blank" rel="noreferrer" title={`Open ${name} on LinkedIn`} className="inline-flex min-w-0 items-center gap-1.5 transition hover:text-text-strong-950"><RiLinkedinLine className="size-4 shrink-0 text-text-soft-400" aria-hidden="true" /><span className="truncate">{linkedinSlug}</span><RiArrowRightUpLine className="size-3.5 shrink-0 text-text-soft-400" aria-hidden="true" /></a>}
       </div>}
       actions={<>
-        <CallButton personId={personId} crmRecordId={id} phone={phone} onCallStarted={onCallStarted} />
         {canSkip && <Button.Root
           variant="neutral"
           mode="stroke"
@@ -408,35 +384,6 @@ function RecordHeader({ back, data, person, name, avatarUrl, currentStep, active
         </Dropdown.Root>
       </>}
     />
-  );
-}
-
-/**
- * The right-hand column for a WhatsApp record: the lead's live WhatsApp thread
- * with a composer (sent through Unipile), and the CRM's all-channel timeline
- * one toggle away. The Call button lives in the lead header above.
- */
-function WhatsappRecordPanel({ personId, onSent, children }: { personId: string; onSent: () => void; children: React.ReactNode }) {
-  const [view, setView] = useState<"whatsapp" | "all">("whatsapp");
-  return (
-    <div className="flex h-full min-h-[28rem] flex-col gap-2">
-      <SegmentedControl.Root value={view} onValueChange={(value) => setView(value as "whatsapp" | "all")} className="shrink-0">
-        <SegmentedControl.List className="w-auto" aria-label="Conversation view">
-          <SegmentedControl.Trigger value="whatsapp" className="gap-1.5 px-3"><WhatsappLogo className="size-3.5" />WhatsApp</SegmentedControl.Trigger>
-          <SegmentedControl.Trigger value="all" className="px-3">All channels</SegmentedControl.Trigger>
-        </SegmentedControl.List>
-      </SegmentedControl.Root>
-      <div className="min-h-0 flex-1">
-        {view === "whatsapp"
-          ? <Frame className="h-full">
-              <FrameHeader title="WhatsApp" description="The live thread, sent through the linked number." />
-              <FramePanel className="flex min-h-0 flex-col overflow-hidden p-4 sm:p-4">
-                <PersonWhatsappPanel personId={personId} onSent={onSent} className="flex min-h-0 flex-1 flex-col" heightClass="min-h-0 flex-1" />
-              </FramePanel>
-            </Frame>
-          : children}
-      </div>
-    </div>
   );
 }
 

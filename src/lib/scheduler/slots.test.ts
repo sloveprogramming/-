@@ -105,10 +105,9 @@ describe("daily", () => {
 
 describe("registry", () => {
   test("in-process jobs and their schedules", () => {
-    expect(PLATFORM_JOBS.filter((j) => j.enabled).map((j) => j.name)).toEqual(["linkedin-run-outreach", "linkedin-replay-webhooks", "crm-auto-follow-ups", "history-prune"]);
-    expect(platformJob("linkedin-run-outreach").schedule).toEqual({ kind: "interval", minutes: 30 });
-    expect(platformJob("linkedin-replay-webhooks").schedule).toEqual({ kind: "interval", minutes: 10 });
-    expect(platformJob("linkedin-run-search-queue").enabled).toBe(false);
+    // 改造：LinkedIn 的三个任务已删除，只剩渠道无关的两个。
+    expect(PLATFORM_JOBS.filter((j) => j.enabled).map((j) => j.name)).toEqual(["crm-auto-follow-ups", "history-prune"]);
+    expect(platformJob("crm-auto-follow-ups").schedule).toEqual({ kind: "interval", minutes: 5 });
     expect(platformJob("history-prune").schedule).toEqual({ kind: "daily", at: "00:00", timeZone: "UTC" });
   });
 });

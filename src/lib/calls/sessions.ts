@@ -32,7 +32,7 @@ import {
 import { callCampaignContacts, callCampaigns, callSessions, callingStations } from "./schema";
 import { expireStaleCloudCalls, QUEUED_PHASE, stationForCloudCall } from "./stations";
 import { applyCallResultToContactSafely } from "./contactCallStatus";
-import { normalizePhone } from "./phone";
+import { normalizePhone } from "@/lib/phone";
 import { isPlatformNotConnectedError } from "@/lib/platform/credentials";
 import { headRecording, presignRecordingUpload, recordingKeyFor } from "./storage";
 import { createRecorderToken, recorderTokenMatches } from "./token";

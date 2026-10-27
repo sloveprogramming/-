@@ -14,7 +14,7 @@ import {
 } from "@remixicon/react";
 
 import * as Button from "@/components/alignui/button";
-import { CompanyFavicon } from "@/components/calling/callingShared";
+import { CompanyFavicon } from "@/components/page/CompanyFavicon";
 import { asObject, categoryColor, crmFetch } from "@/components/crm/crm-utils";
 import { Skeleton } from "@/components/page/Skeletons";
 import { crmWorkflowStateLabel } from "@/lib/crm/labels";

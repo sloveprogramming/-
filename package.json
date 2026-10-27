@@ -19,10 +19,10 @@
   "packageManager": "bun@1.3.14",
   "scripts": {
     "dev": "next dev",
-    "build": "bun run package:recorder && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental false",
     "test": "bun test --conditions=react-server",
     "db:setup": "bun scripts/db/setup.ts",
     "db:seed:demo": "bun --conditions=react-server scripts/db/seed-demo.ts",
@@ -40,8 +40,6 @@
     "export:people-reconciliation": "bun --conditions=react-server scripts/export-people-migration-reconciliation.ts",
     "rotate:integration-credentials": "bun scripts/rotate-integration-credentials.ts",
     "test:integrations:live": "bun --conditions=react-server scripts/test-integrations-live.ts",
-    "build:recorder": "rm -rf extensions/whatsapp-recorder/dist && bun build extensions/whatsapp-recorder/src/background.ts extensions/whatsapp-recorder/src/wa-hook.ts extensions/whatsapp-recorder/src/wa-agent.ts extensions/whatsapp-recorder/src/bridge.ts extensions/whatsapp-recorder/src/options.ts extensions/whatsapp-recorder/src/update.ts --outdir extensions/whatsapp-recorder/dist --target browser --format iife && cp extensions/whatsapp-recorder/static/* extensions/whatsapp-recorder/dist/",
-    "package:recorder": "bun run build:recorder && bun extensions/whatsapp-recorder/package.ts",
     "release:prepare": "bun scripts/release/prepare-public-repo.ts"
   },
   "dependencies": {

@@ -3,8 +3,8 @@ import { people } from "./schema";
 import { normalizeEmail, normalizeLinkedinSlug } from "./identity";
 import { inOrg } from "@/lib/tenancy/scope";
 import { upsertPerson, withLeadTransaction } from "./records";
-import { normalizePhone } from "@/lib/calls/phone";
-import { organizationPhoneCountry } from "@/lib/calls/phone.server";
+import { normalizePhone } from "@/lib/phone";
+import { organizationPhoneCountry } from "@/lib/phone/server";
 
 export type ManualPersonInput = {
   email?: string | null;

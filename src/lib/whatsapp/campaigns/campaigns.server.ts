@@ -4,7 +4,7 @@ import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "dr
 import { db } from "@/lib/db";
 import { companies, people } from "@/lib/leads/schema";
 import { withLeadTransaction } from "@/lib/leads/records";
-import { organizationPhoneCountry } from "@/lib/calls/phone.server";
+import { organizationPhoneCountry } from "@/lib/phone/server";
 import { findOrCreateContactPerson, resolveImportRow } from "@/lib/calls/campaigns";
 import { currentOrganizationId, inOrg } from "@/lib/tenancy/scope";
 import { WhatsappApiError } from "../errors";

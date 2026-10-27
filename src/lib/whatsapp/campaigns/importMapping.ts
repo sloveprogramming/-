@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { normalizePhone } from "@/lib/calls/phone";
+import { normalizePhone } from "@/lib/phone";
 import type { ManualPersonInput } from "@/lib/leads/manualImport";
 import { WHATSAPP_CAMPAIGN_IMPORT_FIELDS, type WhatsappCampaignImportField } from "./contract";
 

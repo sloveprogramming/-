@@ -1,22 +1,17 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
-import { db } from "@/lib/db";
 import { pruneJobHistory } from "@/jobs/resetDailyLimits";
-import { replayLinkedinWebhooks } from "@/jobs/replayLinkedinWebhooks";
-import { runOutreach } from "@/jobs/runOutreach";
-import { runSearchQueue } from "@/jobs/runSearchQueue";
-import { startTrackedJob } from "@/lib/linkedin/jobTracker";
-import { jobRuns } from "@/lib/linkedin/schema";
 import { runCrmAutoFollowUps } from "@/lib/crm/autoFollowUps";
 import { pruneClaims } from "./claims";
 import type { PlatformJobName } from "./schedules";
 
 /**
- * What each platform-wide scheduled job does: exactly what its endpoint does
- * when the cron (Bearer CRON_SECRET) calls it — every organization, the same
- * functions, the same JobRun tracking. Used by the in-process scheduler and
- * by those endpoints, so the two cannot drift apart.
+ * What each platform-wide scheduled job does, used by the in-process
+ * scheduler and by the cron endpoints, so the two cannot drift apart.
+ *
+ * 改造：原来这里有三个 LinkedIn 任务（发邀请、搜索队列、重放 webhook）和一个
+ * 基于 JobRun 的全局互斥锁。LinkedIn 整套删除后只剩 CRM 自动跟进与历史清理；
+ * 将来接入企微/短信的发送引擎时，按同样的形状在这里注册即可。
  */
 export type StartedJob = {
   /** What the endpoint answers. */
@@ -29,37 +24,11 @@ const finished: Promise<string | null> = Promise.resolve(null);
 
 export async function startPlatformJob(name: PlatformJobName): Promise<StartedJob> {
   switch (name) {
-    case "linkedin-run-outreach": {
-      const { runId, done } = await startTrackedJob("run-outreach", () => runOutreach({}));
-      return { body: { ok: true, runId }, done };
-    }
-    case "linkedin-run-search-queue": {
-      // runSearchQueue refuses to run beside an active run anyway; checking
-      // first keeps Job History free of no-op runs. JobRun is shared by every
-      // organization, so this lock is global by design.
-      const [alreadyRunning] = await db
-        .select()
-        .from(jobRuns)
-        .where(and(eq(jobRuns.job, "run-search-queue"), eq(jobRuns.status, "RUNNING")))
-        .limit(1);
-      if (alreadyRunning) return { body: { ok: true, runId: alreadyRunning.id, alreadyRunning: true }, done: finished };
-      const { runId, done } = await startTrackedJob("run-search-queue", (id) => runSearchQueue(id, { accountIds: undefined }));
-      return { body: { ok: true, runId }, done };
-    }
-    case "linkedin-replay-webhooks": {
-      let summary: Awaited<ReturnType<typeof replayLinkedinWebhooks>> | null = null;
-      const { runId, done } = await startTrackedJob("replay-linkedin-webhooks", async () => {
-        summary = await replayLinkedinWebhooks(100, undefined);
-      });
-      return { body: { ok: true, runId, summary }, done };
-    }
     case "crm-auto-follow-ups": {
       const summary = await runCrmAutoFollowUps();
       return { body: { ok: true, summary }, done: finished };
     }
     case "history-prune": {
-      // Shared history, once a day for the whole platform (it used to ride
-      // along with the LinkedIn daily reset, which is now per organization).
       await pruneJobHistory();
       const prunedClaims = await pruneClaims();
       return { body: { ok: true, prunedClaims }, done: finished };
