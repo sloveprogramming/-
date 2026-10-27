@@ -157,10 +157,44 @@ export function scoreLead(signals: LeadSignals): ScoreResult {
   if (signals.hasMobile === true) reasons.push("有手机号可直接联系");
   if (signals.decisionMakerIdentified === true) reasons.push("已定位到决策人");
 
-  if (qualification < 30) nextChecks.push("补企业底细：成立年限、规模、食品经营许可证");
-  if (channel < 30) nextChecks.push("补渠道情况：门店数、有没有电商店、在卖什么品类");
-  if (demand < 25) nextChecks.push("找需求信号：最近有没有招人、招标、上新品类、参展");
-  if (reachability < 15) nextChecks.push("补联系方式：手机号、企业微信、决策人是谁");
+  // 提示要具体到"缺哪一项"，不能把已经拿到的信号也列进去。举个例子：明明命中
+  // 了"在招渠道岗"，还提示"找需求信号：最近有没有招人"，销售会立刻不信任这张表。
+  const missingQualification: string[] = [];
+  if (signals.industryMatch !== true) missingQualification.push("经营范围是否含食品");
+  if (signals.foodLicense !== true) missingQualification.push("食品经营许可证");
+  if (yearsScore(signals.registeredYears) < WEIGHTS.registeredYears) missingQualification.push("成立年限");
+  if (!signals.scale) missingQualification.push("公司规模");
+
+  const missingChannel: string[] = [];
+  if (storeScore(signals.storeCount) < WEIGHTS.storeCount) missingChannel.push("门店数");
+  if (signals.hasOnlineStore !== true) missingChannel.push("有没有电商店");
+  if (signals.distributesSnacks !== true) missingChannel.push("在卖什么品类");
+  if (signals.distributionNetwork !== true) missingChannel.push("分销与配送能力");
+
+  const missingDemand: string[] = [];
+  if (signals.hiringChannelRole !== true) missingDemand.push("招渠道/采购岗");
+  if (signals.recentTender !== true) missingDemand.push("招标或中标");
+  if (signals.newSnackCategory !== true) missingDemand.push("上新坚果品类");
+  if (signals.attendedTradeShow !== true) missingDemand.push("参展记录");
+
+  const missingReach: string[] = [];
+  if (signals.hasMobile !== true) missingReach.push("手机号");
+  if (signals.hasWecom !== true) missingReach.push("企业微信");
+  if (signals.decisionMakerIdentified !== true) missingReach.push("决策人是谁");
+
+  // 只在维度明显不完整时才提示去补（低于 80%），否则"资质 29/30"也会被要求去补。
+  if (qualification < 24 && missingQualification.length) {
+    nextChecks.push(`补企业底细：${missingQualification.join("、")}`);
+  }
+  if (channel < 24 && missingChannel.length) {
+    nextChecks.push(`补渠道情况：${missingChannel.join("、")}`);
+  }
+  if (demand < 20 && missingDemand.length) {
+    nextChecks.push(`找需求信号：${missingDemand.join("、")}`);
+  }
+  if (reachability < 12 && missingReach.length) {
+    nextChecks.push(`补联系方式：${missingReach.join("、")}`);
+  }
 
   return { score, grade, dimensions, reasons, nextChecks };
 }

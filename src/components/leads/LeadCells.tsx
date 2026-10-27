@@ -1,13 +1,15 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- remote company favicons are domain-derived and intentionally unoptimized */
 
-import { useEffect, useRef, useState, type ComponentType, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { RiGlobalLine, RiLinkedinBoxFill, RiMailFill, RiPhoneFill, RiSparkling2Fill } from "@remixicon/react";
 import * as Tooltip from "@/components/alignui/tooltip";
 import { CHANNEL_META, CRM_CATEGORY_COLOR, HUE } from "@/components/analytics/theme";
 import { categoryColor } from "@/components/crm/crm-utils";
 import { cn } from "@/utils/cn";
 import { isFuture, linkedInPersonHref, shortDate, type Campaign, type PersonRow } from "./leadTypes";
+import { GRADE_LABEL, scoreLead } from "@/lib/icp/score";
+import { leadSignalsFromRow } from "@/lib/icp/fromLead";
 
 /** Stops a click on a control inside a clickable row from also opening the row. */
 export const stop = (event: MouseEvent | KeyboardEvent) => event.stopPropagation();
@@ -91,12 +93,43 @@ function ReachIcon({ item }: { item: Reach }) {
 
 export function ReachIcons({ person }: { person: PersonRow["person"] }) {
   const items: Reach[] = [
-    { key: "email", label: "Email", icon: RiMailFill, color: CHANNEL_META.email.color, value: person.email, copy: true },
-    { key: "linkedin", label: "LinkedIn", icon: RiLinkedinBoxFill, color: HUE.blue, value: person.linkedinUrl, href: person.linkedinUrl ? linkedInPersonHref(person.linkedinUrl) : undefined },
-    // The number WhatsApp calls and messages go to, hence WhatsApp's colour.
-    { key: "phone", label: "Phone", icon: RiPhoneFill, color: HUE.green, value: person.phone ?? null, copy: true },
+    { key: "email", label: "邮箱", icon: RiMailFill, color: CHANNEL_META.email.color, value: person.email, copy: true },
+    { key: "linkedin", label: "领英", icon: RiLinkedinBoxFill, color: HUE.blue, value: person.linkedinUrl, href: person.linkedinUrl ? linkedInPersonHref(person.linkedinUrl) : undefined },
+    { key: "phone", label: "手机号", icon: RiPhoneFill, color: HUE.green, value: person.phone ?? null, copy: true },
   ];
   return <div className="-ml-1.5 flex items-center gap-0.5">{items.map((item) => <ReachIcon key={item.key} item={item} />)}</div>;
+}
+
+/**
+ * 匹配度：这条线索有多像新农哥的客户（0-100，A/B/C）。
+ *
+ * 评分在浏览器里算——纯函数、没有额外请求。鼠标悬停给出「命中了什么」和
+ * 「还缺什么」，后者是销售真正用得上的：它明确说下一步该去查什么。
+ */
+export function MatchScore({ person, company }: { person: PersonRow["person"]; company: PersonRow["company"] }) {
+  const result = useMemo(
+    () => scoreLead(leadSignalsFromRow({ person: { ...person, custom: person.custom ?? null }, company })),
+    [person, company],
+  );
+  const tone = result.grade === "A"
+    ? "bg-success-lighter text-success-dark ring-success-light"
+    : result.grade === "B"
+      ? "bg-warning-lighter text-warning-dark ring-warning-light"
+      : "bg-bg-weak-50 text-text-sub-600 ring-stroke-soft-200";
+  const title = [
+    `${GRADE_LABEL[result.grade]}（${result.score} 分）`,
+    result.reasons.length ? `命中：${result.reasons.join("；")}` : "还没有任何命中信号",
+    result.nextChecks.length ? `还缺：${result.nextChecks.join("；")}` : "信息已齐",
+  ].join("\n");
+  return (
+    <span
+      title={title}
+      className={cn("inline-flex h-6 items-center gap-1 rounded-md px-2 text-label-xs ring-1 ring-inset", tone)}
+    >
+      <span className="font-semibold">{result.grade}</span>
+      <span className="tabular-nums opacity-80">{result.score}</span>
+    </span>
+  );
 }
 
 /** Links for a company row: website and LinkedIn page, same slots as ReachIcons. */

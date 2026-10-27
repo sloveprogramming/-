@@ -9,7 +9,7 @@ import * as Table from "@/components/alignui/table";
 import * as Tooltip from "@/components/alignui/tooltip";
 import { ContactAvatar } from "@/components/crm/ContactAvatar";
 import { cn } from "@/utils/cn";
-import { Bar, Blob, CampaignSummary, CompanyFavicon, CrmSummary, Empty, ReachIcons, stop, TwoLine } from "./LeadCells";
+import { Bar, Blob, CampaignSummary, CompanyFavicon, CrmSummary, Empty, MatchScore, ReachIcons, stop, TwoLine } from "./LeadCells";
 import { cellClass, fixedTableStyle, SortableHead } from "./SortableHead";
 import { initials, linkedInPersonHref, type Direction, type PersonRow } from "./leadTypes";
 
@@ -23,6 +23,7 @@ function SkeletonRow({ index }: { index: number }) {
     <Table.Row aria-hidden="true">
       <Table.Cell className={rowCell}><div className="flex items-center gap-3"><Blob className="size-8 rounded-full" /><div className="space-y-2"><Bar className={wide} /><Bar className={cn("h-2", narrow)} /></div></div></Table.Cell>
       <Table.Cell className={rowCell}><div className="flex items-center gap-3"><Blob className="size-7 rounded-lg" /><div className="space-y-2"><Bar className={narrow} /><Bar className="h-2 w-20" /></div></div></Table.Cell>
+      <Table.Cell className={rowCell}><Blob className="h-5 w-14 rounded-md" /></Table.Cell>
       <Table.Cell className={rowCell}><div className="flex gap-2.5">{[0, 1, 2].map((dot) => <Blob key={dot} className="size-4 rounded" />)}</div></Table.Cell>
       <Table.Cell className={rowCell}><div className="flex items-center gap-2"><Blob className="size-5 rounded-full" /><Bar className={wide} /></div></Table.Cell>
       <Table.Cell className={rowCell}><Blob className={cn("h-5 rounded-md", narrow)} /></Table.Cell>
@@ -35,12 +36,12 @@ function PersonTableRow({ row }: { row: PersonRow }) {
   const router = useRouter();
   const { person, company, campaigns, crm } = row;
   const href = crm ? `/crm/records/${crm.recordId}` : null;
-  const name = person.fullName || "Unnamed person";
+  const name = person.fullName || "未命名";
   const companyName = company ? company.name || company.domain : null;
   return (
     <Table.Row
       tabIndex={href ? 0 : undefined}
-      aria-label={href ? `Open ${name}` : undefined}
+      aria-label={href ? `打开 ${name}` : undefined}
       onClick={href ? () => router.push(href) : undefined}
       onKeyDown={href ? (event) => { if (event.target === event.currentTarget && event.key === "Enter") router.push(href); } : undefined}
       className={cn("outline-none focus-visible:[&>td]:bg-bg-weak-50", href && "cursor-pointer")}
@@ -63,6 +64,7 @@ function PersonTableRow({ row }: { row: PersonRow }) {
           </div>
         ) : <Empty label="No company" />}
       </Table.Cell>
+      <Table.Cell className={rowCell}><MatchScore person={person} company={company} /></Table.Cell>
       <Table.Cell className={rowCell}><ReachIcons person={person} /></Table.Cell>
       <Table.Cell className={rowCell}><CampaignSummary campaigns={campaigns} /></Table.Cell>
       <Table.Cell className={rowCell}><CrmSummary crm={crm} /></Table.Cell>
@@ -70,14 +72,14 @@ function PersonTableRow({ row }: { row: PersonRow }) {
         <div className="flex justify-end">
           <Dropdown.Root>
             <Dropdown.Trigger asChild>
-              <Button.Root variant="neutral" mode="ghost" size="xsmall" aria-label={`More actions for ${name}`}><Button.Icon as={RiMore2Line} /></Button.Root>
+              <Button.Root variant="neutral" mode="ghost" size="xsmall" aria-label={`${name} 的更多操作`}><Button.Icon as={RiMore2Line} /></Button.Root>
             </Dropdown.Trigger>
             <Dropdown.Content>
-              {href && <Dropdown.Item onSelect={() => router.push(href)}><Dropdown.ItemIcon as={RiUserSearchLine} />Open CRM record</Dropdown.Item>}
-              {person.linkedinUrl && <Dropdown.Item onSelect={() => window.open(linkedInPersonHref(person.linkedinUrl as string), "_blank", "noopener,noreferrer")}><Dropdown.ItemIcon as={RiExternalLinkLine} />Open LinkedIn profile</Dropdown.Item>}
-              {person.email && <Dropdown.Item onSelect={() => void navigator.clipboard?.writeText(person.email as string)}><Dropdown.ItemIcon as={RiFileCopyLine} />Copy email</Dropdown.Item>}
-              {person.phone && <Dropdown.Item onSelect={() => void navigator.clipboard?.writeText(person.phone as string)}><Dropdown.ItemIcon as={RiPhoneLine} />Copy phone</Dropdown.Item>}
-              {!href && !person.linkedinUrl && !person.email && !person.phone && <div className="p-2 text-paragraph-sm text-text-soft-400">No actions available</div>}
+              {href && <Dropdown.Item onSelect={() => router.push(href)}><Dropdown.ItemIcon as={RiUserSearchLine} />打开 CRM 记录</Dropdown.Item>}
+              {person.linkedinUrl && <Dropdown.Item onSelect={() => window.open(linkedInPersonHref(person.linkedinUrl as string), "_blank", "noopener,noreferrer")}><Dropdown.ItemIcon as={RiExternalLinkLine} />打开领英主页</Dropdown.Item>}
+              {person.email && <Dropdown.Item onSelect={() => void navigator.clipboard?.writeText(person.email as string)}><Dropdown.ItemIcon as={RiFileCopyLine} />复制邮箱</Dropdown.Item>}
+              {person.phone && <Dropdown.Item onSelect={() => void navigator.clipboard?.writeText(person.phone as string)}><Dropdown.ItemIcon as={RiPhoneLine} />复制手机号</Dropdown.Item>}
+              {!href && !person.linkedinUrl && !person.email && !person.phone && <div className="p-2 text-paragraph-sm text-text-soft-400">暂无可用操作</div>}
             </Dropdown.Content>
           </Dropdown.Root>
         </div>
@@ -99,12 +101,13 @@ export function PeopleTable({ rows, sort, direction, onSort, loading }: {
       <Table.Root style={fixedTableStyle}>
         <Table.Header>
           <tr>
-            <SortableHead label="Name" sortKey="name" className="w-[21%]" {...head} />
-            <SortableHead label="Company" sortKey="company" className="w-[18%]" {...head} />
-            <SortableHead label="Reach" className="w-28" />
-            <SortableHead label="Outreach" className="w-[18%]" />
+            <SortableHead label="姓名" sortKey="name" className="w-[19%]" {...head} />
+            <SortableHead label="公司" sortKey="company" className="w-[16%]" {...head} />
+            <SortableHead label="匹配度" className="w-24" />
+            <SortableHead label="联系方式" className="w-24" />
+            <SortableHead label="触达" className="w-[16%]" />
             <SortableHead label="CRM" />
-            <SortableHead label={<span className="sr-only">Actions</span>} className="w-12" />
+            <SortableHead label={<span className="sr-only">操作</span>} className="w-12" />
           </tr>
         </Table.Header>
         <Table.Body spacing={4} className={cn("transition-opacity", loading && rows && "opacity-60")} aria-busy={loading}>
