@@ -20,6 +20,7 @@ import { Callout } from "@/components/settings/SettingsKit";
 import { cn } from "@/utils/cn";
 import { PROSPECT_STAGES, STAGE_LABEL, type ProspectStage } from "@/lib/agent/pipelineTypes";
 import { TIER_LABEL, type CompanyAssessment } from "@/lib/icp/assess";
+import { RiUserAddLine } from "@remixicon/react";
 import type { ProductIntent } from "@/lib/icp/productIntent";
 import type { CompanyHit } from "@/lib/qcc/types";
 
@@ -63,6 +64,8 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [openCompany, setOpenCompany] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [promoted, setPromoted] = useState<Record<string, string>>({});
+  const [promoting, setPromoting] = useState<string | null>(null);
 
   async function run(event: React.FormEvent) {
     event.preventDefault();
@@ -100,6 +103,50 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
       window.setTimeout(() => setCopied(null), 1500);
     } catch {
       // 浏览器拒绝时静默失败，用户仍可手动选中。
+    }
+  }
+
+  /**
+   * 把一家公司加进 CRM：建公司 + 临时联系人 + 记录，然后跳过去。
+   *
+   * 成功后直接跳转，不弹"操作成功"——销售要的是"我现在能开始跟这家了"，
+   * 不是确认自己点对了。
+   */
+  async function promote(company: CompanyResult) {
+    setPromoting(company.hit.key);
+    setError(null);
+    try {
+      const response = await fetch("/api/prospect/promote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hits: [company.hit] }),
+      });
+      const body = (await response.json()) as {
+        ok?: boolean;
+        promoted?: Array<{ recordId: string }>;
+        failed?: Array<{ name: string; error: string }>;
+        error?: string;
+      };
+      if (!response.ok || !body.ok) {
+        setError(body.error ?? "加入失败");
+        return;
+      }
+      if (body.failed?.length) {
+        setError(`${body.failed[0].name}：${body.failed[0].error}`);
+        return;
+      }
+      const recordId = body.promoted?.[0]?.recordId;
+      if (!recordId) {
+        setError("加入成功但没有拿到记录 id");
+        return;
+      }
+      setPromoted((prev) => ({ ...prev, [company.hit.key]: recordId }));
+      // 直接进记录页——加进去的目的就是开始跟。
+      window.location.href = `/crm/actions?record=${recordId}`;
+    } catch {
+      setError("网络请求失败");
+    } finally {
+      setPromoting(null);
     }
   }
 
@@ -162,8 +209,11 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
                     company={company}
                     open={openCompany === company.hit.key}
                     copied={copied}
+                    promoted={Boolean(promoted[company.hit.key])}
+                    promoting={promoting === company.hit.key}
                     onToggle={() => setOpenCompany((prev) => (prev === company.hit.key ? null : company.hit.key))}
                     onCopy={copy}
+                    onPromote={() => void promote(company)}
                   />
                 ))}
               </div>
@@ -261,14 +311,20 @@ function CompanyRow({
   company,
   open,
   copied,
+  promoted,
+  promoting,
   onToggle,
   onCopy,
+  onPromote,
 }: {
   company: CompanyResult;
   open: boolean;
   copied: string | null;
+  promoted: boolean;
+  promoting: boolean;
   onToggle: () => void;
   onCopy: (text: string, key: string) => void;
+  onPromote: () => void;
 }) {
   const tierTone = company.tier === "priority"
     ? "bg-success-lighter text-success-dark ring-success-light"
@@ -339,11 +395,23 @@ function CompanyRow({
                     <Button.Icon as={RiFileCopyLine} />
                     {copied === company.hit.key ? "已复制" : "复制"}
                   </Button.Root>
-                  <Button.Root asChild variant="primary" mode="filled" size="xsmall">
+                  <Button.Root asChild variant="neutral" mode="stroke" size="xsmall">
                     <a href={`tel:${company.phones[0]}`}>
                       <RiPhoneLine className="size-4" />
                       拨号
                     </a>
+                  </Button.Root>
+                  <Button.Root
+                    variant="primary"
+                    mode="filled"
+                    size="xsmall"
+                    disabled={promoting || promoted}
+                    onClick={onPromote}
+                  >
+                    {promoting
+                      ? <Button.Icon as={RiLoader4Line} className="animate-spin" />
+                      : <RiUserAddLine className="size-4" />}
+                    {promoted ? "已加入" : promoting ? "加入中…" : "加入 CRM"}
                   </Button.Root>
                 </div>
               </div>
