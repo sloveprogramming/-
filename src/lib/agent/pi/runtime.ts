@@ -51,8 +51,24 @@ export async function resolveModelChoice(): Promise<{
       }
     }
   } catch (error) {
-    // 数据库读不到就走环境变量；这里的失败不该让整个 Agent 挂掉。
-    console.warn("[agent/pi] 读取数据库凭据失败，尝试环境变量：", error instanceof Error ? error.message : error);
+    const message = error instanceof Error ? error.message : String(error);
+
+    // **不能对所有错误都静默降级到环境变量。**
+    //
+    // "没有组织作用域"是**编程错误**（调用链漏了 runInOrganization），不是
+    // "这家没配 AI"。吞掉它会让生产环境用环境变量的 key 处理本该属于某个
+    // 组织的数据——跨租户用凭据，而且不报错，最难排查。
+    //
+    // 所以区分两类：
+    //   - 配置缺失（没连 OpenRouter / 没验证）→ 可以降级到 env
+    //   - 作用域 / 权限 / 认证错误 → 直接抛出
+    if (/organization scope|NOT_A_MEMBER|FORBIDDEN|UNAUTHENTICATED|NO_ACTIVE_ORGANIZATION/i.test(message)) {
+      throw new Error(
+        `Agent 无法读取 AI 凭据：${message}。` +
+        "这通常说明调用链没有包在 runInOrganization() 里——修调用方，不要用环境变量绕过。",
+      );
+    }
+    console.warn("[agent/pi] 读取数据库凭据失败，尝试环境变量：", message);
   }
 
   // ---- 2. 环境变量兜底（本地开发 / 演示）----

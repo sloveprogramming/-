@@ -112,7 +112,7 @@ export async function researchBeforeDraft(input: ResearchInput): Promise<Researc
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
       tools,
-      maxSteps: 3,
+      maxToolCalls: 6,
       timeoutMs: 45_000,
       signal: input.signal,
       onEvent: (event) => recorder.record(event),
