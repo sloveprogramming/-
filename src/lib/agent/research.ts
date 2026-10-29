@@ -113,6 +113,10 @@ export async function researchBeforeDraft(input: ResearchInput): Promise<Researc
       userPrompt,
       tools,
       maxToolCalls: 6,
+      // 把调用方指定的模型透传给 Pi。不传则用组织的默认模型。
+      requestedModel: input.requestedModel
+        ? { providerId: input.requestedModel.provider, modelId: input.requestedModel.modelId }
+        : null,
       timeoutMs: 45_000,
       signal: input.signal,
       onEvent: (event) => recorder.record(event),

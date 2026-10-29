@@ -55,6 +55,8 @@ export type PiAgentRunInput = {
    * 结果），但查询次数被硬限制了，成本不会失控。
    */
   maxToolCalls?: number;
+  /** 调用方指定的模型（覆盖组织的默认模型）。指定后校验失败会抛错，不静默回落。 */
+  requestedModel?: { providerId: string; modelId: string } | null;
   timeoutMs?: number;
   signal?: AbortSignal;
   onEvent?: (event: AgentStepEvent) => void;
@@ -84,7 +86,7 @@ export async function runPiAgent(input: PiAgentRunInput): Promise<PiAgentRunResu
   const started = Date.now();
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxToolCalls = Math.max(1, input.maxToolCalls ?? DEFAULT_MAX_TOOL_CALLS);
-  const { modelRuntime, model } = await createPiRuntime();
+  const { modelRuntime, model } = await createPiRuntime(input.requestedModel);
 
   const toolCalls: Array<{ name: string; ok: boolean }> = [];
   let text = "";

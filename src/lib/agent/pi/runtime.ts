@@ -3,6 +3,7 @@ import "server-only";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { getAiConnection, getAiCredentials } from "@/lib/ai/connections";
 import { getByokSettings } from "@/lib/ai/byok";
+import { ensurePiAgentDir } from "./sandbox";
 
 /**
  * Pi SDK 的模型运行时：把项目里存的 OpenRouter 凭据交给 Pi。
@@ -122,9 +123,25 @@ export type PiRuntimeHandle = {
  *
  * 每次调用都新建：凭据可能刚被改过，缓存会用到过期的 key。
  * ModelRuntime.create() 本身很轻（不发起网络请求）。
+ *
+ * @param requested 调用方指定的模型。传了就用它，不传用组织的默认模型。
+ *   **指定后校验失败要抛错，不能静默回落到默认模型**——调用方显式指定了模型
+ *   （比如为了省钱选小模型），悄悄换成默认模型会让成本和质量都不符合预期。
  */
-export async function createPiRuntime(): Promise<PiRuntimeHandle> {
-  const { choice, apiKey, source } = await resolveModelChoice();
+export async function createPiRuntime(requested?: PiModelChoice | null): Promise<PiRuntimeHandle> {
+  const resolved = await resolveModelChoice();
+  const apiKey = resolved.apiKey;
+  const source = resolved.source;
+
+  // 显式指定的模型优先；但凭据要按 provider 重新解析（指定 provider 可能和默认不同）。
+  let choice: PiModelChoice = resolved.choice;
+  if (requested?.providerId && requested.modelId) {
+    choice = { providerId: piProviderId(requested.providerId), modelId: requested.modelId };
+  }
+
+  // 重定向 Pi 的配置目录到进程私有临时目录：避免写 ~/.pi（多租户会串、
+  // 容器里没持久卷、key 落到磁盘）。必须在 ModelRuntime.create 之前。
+  ensurePiAgentDir();
   const modelRuntime = await ModelRuntime.create();
 
   // providerIds 是私有字段，运行时用 getProviders() 拿公开列表。
@@ -138,14 +155,28 @@ export async function createPiRuntime(): Promise<PiRuntimeHandle> {
   await modelRuntime.setRuntimeApiKey(choice.providerId, apiKey);
 
   const models = modelRuntime.getModels(choice.providerId) ?? [];
-  const model = models.find((entry) => entry.id === choice.modelId) ?? models[0];
+  const model = models.find((entry) => entry.id === choice.modelId);
   if (!model) {
-    throw new Error(
-      `provider「${choice.providerId}」下没有模型「${choice.modelId}」。可选：${models.map((m) => m.id).join("、") || "（无）"}`,
+    // 指定了模型的调用方不该被悄悄替换成别的模型。
+    if (requested?.modelId) {
+      throw new Error(
+        `provider「${choice.providerId}」下没有模型「${requested.modelId}」。可选的：` +
+        `${models.map((m) => m.id).join("、") || "（无）"}`,
+      );
+    }
+    // 没指定时回落到该 provider 的第一个模型（可能是数据库配置里过期的模型名）。
+    const fallback = models[0];
+    if (!fallback) {
+      throw new Error(`provider「${choice.providerId}」下没有可用模型。`);
+    }
+    console.warn(
+      `[agent/pi] 配置的模型「${choice.modelId}」不存在，回落到「${fallback.id}」。` +
+      "去「设置 → AI 模型」重新选择。",
     );
+    return { modelRuntime, model: fallback, providerId: choice.providerId, modelId: fallback.id };
   }
 
-  console.info(`[agent/pi] 模型 ${choice.providerId}/${model.id}（凭据来源：${source}）`);
+  console.info(`[agent/pi] 模型 ${choice.providerId}/${model.id}（凭据来源：${source}${requested ? "，调用方指定" : ""}）`);
   return { modelRuntime, model, providerId: choice.providerId, modelId: model.id };
 }
 
