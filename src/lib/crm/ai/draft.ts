@@ -101,6 +101,22 @@ export type DraftPromptInput = {
   /** crm_settings.draft_instructions; appended to the system prompt. */
   instructions?: string | null;
   /**
+   * 起草时实际要写的渠道，覆盖 conversation.channel。
+   *
+   * 为什么需要这个：conversation.channel 记录的是「这条会话从哪个渠道来」，
+   * 但**下一步要发的渠道可能是另一个**。典型场景：
+   *
+   *   探迹外呼打完电话（conversation.channel = "call"）
+   *     → 下一步不是再打电话，而是发一条微信
+   *     → 传 channelOverride: "wecom"
+   *
+   * 不覆盖时行为与改造前完全一致（老测试不受影响）。
+   *
+   * 注意：这只影响「写什么形态的话」，不影响发送走哪个通道——
+   * 发送通道由 send.ts 按会话渠道决定。
+   */
+  channelOverride?: CrmChannel | null;
+  /**
    * Agent 调研后整理的写作材料。
    *
    * 改造：起草前由 research.ts 的只读 Agent 主动查（客户档案、历史、知识库、
@@ -332,6 +348,8 @@ export function draftChannelConstraints(channel: CrmChannel): string[] {
 
 export function buildDraftPrompt(input: DraftPromptInput): BuiltDraftPrompt {
   const step = input.sequenceStep;
+  // 实际要写的渠道：调用方可以覆盖（比如打完电话改发微信）。
+  const channel = input.channelOverride ?? input.channel;
   if (!Number.isInteger(step.position) || step.position < 1) {
     throw new Error("CRM draft sequence step position must be a positive integer");
   }
@@ -356,10 +374,10 @@ export function buildDraftPrompt(input: DraftPromptInput): BuiltDraftPrompt {
     "Accepted CRM classification reasoning",
   );
   const mergeVariables = sortedRecord(input.mergeVariables);
-  const constraints = draftChannelConstraints(input.channel);
+  const constraints = draftChannelConstraints(channel);
 
   const snapshot: Record<string, unknown> = {
-    channel: input.channel,
+    channel,
     channelConstraints: constraints,
     sequenceStep: {
       id: cleanOptionalText(step.id),
@@ -415,7 +433,7 @@ export function buildDraftPrompt(input: DraftPromptInput): BuiltDraftPrompt {
       JSON.stringify(snapshot, null, 2),
     ].join("\n\n"),
     snapshot,
-    jsonSchema: draftJsonSchema(input.channel),
+    jsonSchema: draftJsonSchema(channel),
   };
 }
 
@@ -517,6 +535,8 @@ export async function generateCrmDraft(
   input: GenerateCrmDraftInput,
   dependencies: { complete?: DraftCompletion } = {},
 ): Promise<GeneratedCrmDraft> {
+  // 与 buildDraftPrompt 用同一套渠道解析：校验输出必须按同一个渠道来。
+  const channel = input.channelOverride ?? input.channel;
   const prompt = buildDraftPrompt(input);
   const timeoutMs = Math.floor(input.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const maxOutputTokens = Math.floor(input.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS);
@@ -529,7 +549,7 @@ export async function generateCrmDraft(
     ...prompt,
     // Validated inside the completion so an off-schema call is retried
     // rather than failing the job; validated again below for the result.
-    accept: (text) => { validateDraftOutput(text, input.channel); },
+    accept: (text) => { validateDraftOutput(text, channel); },
     requestedModel: input.requestedModel,
     timeoutMs,
     maxOutputTokens,
@@ -544,7 +564,7 @@ export async function generateCrmDraft(
   const provider = cleanRequiredText(completion.provider, "CRM draft completion provider");
   const model = cleanRequiredText(completion.model, "CRM draft completion model");
 
-  const content = validateDraftOutput(completion.text, input.channel);
+  const content = validateDraftOutput(completion.text, channel);
   const request = sanitizeProviderMetadata(completion.request);
   if (!isPlainObject(request)) throw new Error("CRM draft provider request metadata must be an object");
   return {
