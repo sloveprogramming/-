@@ -1,30 +1,32 @@
 import "server-only";
 
-import { z } from "zod";
 import { getOpenRouterRuntime } from "@/lib/ai/server/runtime";
-import { runAgentLoop, type AgentLoopResult, type ChatRequest, type ChatResponse } from "./runtime";
+import { runPiAgent, type PiAgentRunResult } from "./pi/session";
 import { startAgentRun } from "./observe";
 import { ToolRegistry } from "./tools";
 import { registerCustomerTools } from "./tools/customer";
 
 /**
- * 「先查后写」的起草 Agent。
+ * 「先查后写」的起草调研 Agent（基于 Pi SDK）。
  *
- * 这是这次改造的核心产物。改造前后对比：
+ * 改造前后的分工变化：
  *
- *   改造前：调用方把上下文攒成一坨塞给模型 → 模型直接写
- *   改造后：给模型四个只读工具 → 它自己决定先查什么 → 查够了再写
+ *   自研 runtime：调用方攒上下文 → 手写工具循环 → 模型调用
+ *   Pi SDK：createAgentSession → session.prompt() → Pi 管上下文与工具循环
  *
- * 为什么要这么做：起草一封回复，真正决定质量的是**它知道多少**。原来的上下
- * 文是调用方猜"模型可能需要什么"攒出来的——猜漏了（比如三周前报过价、客户
- * 上次说过在换供应商），写出来就是外行话。现在模型可以自己伸手去拿。
+ * 这次改造的核心是**职责切分**：
  *
- * 安全保障：
- * - 工具全是 read 风险，不改数据。
- * - 轮数上限 3：查两轮还不够，说明信息不在库里，继续查是烧钱。
- * - 观测落库：每次运行记录查了什么、花多少 token。
- * - **最终输出仍然走原来的结构化校验**：Agent 只负责"材料准备"，写出来的
- *   东西还是要过 validateDraftOutput，不会因为引入 Agent 而放宽约束。
+ *   **Pi 负责**：会话生命周期、上下文组装与压缩、工具循环、模型调用
+ *   **我们负责**：工具本身（4 个只读查询）、风险闸门、观测落库、失败兜底
+ *
+ * 「上下文管理」这类通用能力交给成熟实现，「业务工具 + 安全边界」留在自己
+ * 手里——两边都不重复造轮子。
+ *
+ * 安全保障（全部是代码，不是提示词）：
+ * - `noTools: "builtin"` 关掉 Pi 内置的 bash/edit/write/read
+ * - 只注册 4 个 `read` 风险的工具
+ * - destructive 工具在执行层直接拒绝
+ * - 最终输出仍走原来的结构化校验（Agent 只准备材料，不负责写作）
  */
 
 export type ResearchInput = {
@@ -39,8 +41,6 @@ export type ResearchInput = {
   organizationId: string;
   requestedModel?: { provider: string; modelId: string };
   signal?: AbortSignal;
-  /** 测试注入。 */
-  complete?: (request: ChatRequest) => Promise<ChatResponse>;
 };
 
 export type ResearchResult = {
@@ -80,15 +80,14 @@ export async function researchBeforeDraft(input: ResearchInput): Promise<Researc
     context: { channel: input.channel, step: input.stepLabel },
   });
 
-  let client: unknown = null;
-  let model = "unknown";
-  let provider: unknown = undefined;
-
-  if (!input.complete) {
-    const runtime = await getOpenRouterRuntime(input.requestedModel, 45_000);
-    client = runtime.client;
-    model = runtime.selection.modelId;
-    provider = runtime.provider;
+  // 数据库里没配 OpenRouter 不算错误：Pi 会走 DEEPSEEK_API_KEY / OPENROUTER_API_KEY
+  // 环境变量。这里只是提前探一下，出问题也继续——由 createPiRuntime 给出准确的报错。
+  if (!input.requestedModel) {
+    try {
+      await getOpenRouterRuntime(undefined, 45_000);
+    } catch {
+      // 忽略：Pi 会用环境变量兜底。
+    }
   }
 
   const userPrompt = [
@@ -105,27 +104,18 @@ export async function researchBeforeDraft(input: ResearchInput): Promise<Researc
     "请判断还缺什么，按需调用工具查询，最后给一段材料摘要。",
   ].join("\n");
 
-  let result: AgentLoopResult;
+  let result: PiAgentRunResult;
   try {
-    result = await runAgentLoop({
-      client: client as never,
-      model,
-      provider,
-      temperature: 0.2,
-      maxOutputTokens: 1_500,
+    result = await runPiAgent({
+      organizationId: input.organizationId,
+      subject: { type: "person", id: input.personId },
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
       tools,
-      context: {
-        organizationId: input.organizationId,
-        subject: { type: "person", id: input.personId },
-        signal: input.signal,
-      },
       maxSteps: 3,
       timeoutMs: 45_000,
       signal: input.signal,
       onEvent: (event) => recorder.record(event),
-      ...(input.complete ? { complete: input.complete } : {}),
     });
   } catch (error) {
     await recorder.finish({
@@ -151,8 +141,7 @@ export async function researchBeforeDraft(input: ResearchInput): Promise<Researc
   });
 
   return {
-    // 撞上限时用 partialText 兜底：总比没有材料强。
-    findings: result.text || result.partialText || "",
+    findings: result.text,
     lookups: result.toolCalls.map((call) => ({ tool: call.name, ok: call.ok })),
     steps: result.steps,
     stopReason: result.stopReason,

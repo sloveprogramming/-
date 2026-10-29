@@ -3,7 +3,6 @@ import "server-only";
 import { z } from "zod";
 import { assessCompany, type CompanyAssessment, type CompanyFacts } from "@/lib/icp/assess";
 import type { ProductIntent } from "@/lib/icp/productIntent";
-import { runAgentLoop, type AgentLoopResult, type ChatRequest, type ChatResponse } from "./runtime";
 import { startAgentRun } from "./observe";
 import { ToolRegistry, type ToolExecutionContext } from "./tools";
 import { interpretProduct } from "@/lib/icp/productIntent.server";

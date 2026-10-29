@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { currentOrganizationId } from "@/lib/tenancy/scope";
 import { agentEvents, agentRuns, costOf, type AgentEventType, type AgentRunKind, type AgentRunStatus } from "./schema";
-import type { AgentStepEvent } from "./runtime";
+import type { AgentStepEvent } from "./events";
 
 /**
  * Agent 运行的落库。
