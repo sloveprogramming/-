@@ -62,6 +62,7 @@
     "@tiptap/pm": "^3.29.2",
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
+    "@zilliz/milvus2-sdk-node": "^3.0.6",
     "ag-grid-community": "^36.1.0",
     "ag-grid-react": "^36.1.0",
     "axios": "^1.19.0",
