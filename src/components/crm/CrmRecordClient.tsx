@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RiArrowDownSLine,
-  RiArrowRightUpLine,
   RiBriefcaseLine,
   RiChat3Line,
   RiCheckLine,
@@ -12,7 +11,6 @@ import {
   RiCloseCircleLine,
   RiErrorWarningLine,
   RiHistoryLine,
-  RiLinkedinLine,
   RiLoopLeftLine,
   RiMailLine,
   RiMoreLine,
@@ -33,12 +31,13 @@ import * as Button from "@/components/alignui/button";
 import * as Dropdown from "@/components/alignui/dropdown";
 import * as Modal from "@/components/alignui/modal";
 import * as SegmentedControl from "@/components/alignui/segmented-control";
-import { Frame, FrameHeader, FramePanel } from "@/components/analytics/kit/Frame";
-import { CHANNEL_META } from "@/components/analytics/theme";
+import { Frame, FramePanel } from "@/components/analytics/kit/Frame";
+import { channelMeta } from "@/components/analytics/theme";
 import { EmptyState } from "@/components/page/EmptyState";
 import { PageHeader } from "@/components/page/PageHeader";
 import { StatRow } from "@/components/page/StatRow";
 import { cn } from "@/utils/cn";
+import { CRM_CHANNELS, crmChannelLabel, type CrmChannel } from "@/lib/crm/channels";
 import {
   ErrorState,
   dangerButtonClass,
@@ -59,8 +58,7 @@ import { setUnsavedReply } from "./recordQueue";
 import { ChannelAvatar } from "./CrmActionsClient";
 
 type Data = Record<string, unknown>;
-type Channel = "email" | "linkedin" | "whatsapp";
-type TimelineFilter = "all" | Channel;
+type TimelineFilter = "all" | CrmChannel;
 
 const eventLabels: Record<string, string> = {
   "record.created": "CRM record created",
@@ -109,16 +107,13 @@ function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
 }
 
-function channelLabel(channel: unknown): string {
-  return channel === "email" ? "邮件" : channel === "sms" ? "短信" : channel === "wecom" ? "企业微信" : channel === "call" ? "电话" : "邮件";
-}
-
 function channelColor(channel: unknown): string | undefined {
-  return CHANNEL_META[channel as keyof typeof CHANNEL_META]?.color;
+  return channelMeta(typeof channel === "string" ? channel : null).color;
 }
 
 function channelIcon(channel: unknown, className = "size-4") {
-  return <RiMailLine className={className} aria-hidden="true" />;
+  const Icon = channelMeta(typeof channel === "string" ? channel : null).icon;
+  return <Icon className={className} aria-hidden="true" />;
 }
 
 /**
@@ -192,7 +187,7 @@ export default function CrmRecordClient({ recordId, variant = "page" }: { record
   const currentStep = asObject(currentStepRow?.step);
   const name = displayName({ ...data, person });
   const avatarUrl = person.profilePictureUrl ? String(person.profilePictureUrl) : null;
-  const channels = [...new Set([...conversations, ...messages].map((item) => item.channel).filter(Boolean))].map(channelLabel);
+  const channels = [...new Set([...conversations, ...messages].map((item) => item.channel).filter(Boolean))].map((channel) => crmChannelLabel(String(channel)));
   const lastInbound = data.lastInboundAt ? relativeDate(data.lastInboundAt).replace(" overdue", " ago") : "No reply yet";
   const nextAction = text(currentStep.name, data.nextActionAt ? relativeDate(data.nextActionAt) : "None scheduled");
   // The message being answered: the newest inbound one on any channel.
@@ -396,7 +391,7 @@ function ConversationPanel({ conversations, messages, name, avatarUrl }: { conve
   const scrollRef = useRef<HTMLDivElement>(null);
   const visible = useMemo(() => messages.filter((message) => filter === "all" || message.channel === filter).sort((a, b) => String(a.sentAt ?? a.createdAt).localeCompare(String(b.sentAt ?? b.createdAt))), [messages, filter]);
   const channels = new Set([...conversations, ...messages].map((item) => item.channel));
-  const channelSummary = [...channels].filter(Boolean).map(channelLabel);
+  const channelSummary = [...channels].filter(Boolean).map((channel) => crmChannelLabel(String(channel)));
   // The thread reads oldest first, but the message being replied to is the
   // last one, so the rail opens at the bottom rather than at an introduction
   // from three weeks ago.
@@ -419,9 +414,9 @@ function ConversationPanel({ conversations, messages, name, avatarUrl }: { conve
         </div>
         <SegmentedControl.Root value={filter} onValueChange={(value) => setFilter(value as TimelineFilter)}>
           <SegmentedControl.List className="w-auto" aria-label="Channel">
-            {(["all", "email", "linkedin", "whatsapp"] as TimelineFilter[]).map((item) => {
+            {(["all", ...CRM_CHANNELS] as TimelineFilter[]).map((item) => {
               const disabled = item !== "all" && !channels.has(item);
-              return <SegmentedControl.Trigger key={item} value={item} disabled={disabled} className={cn("gap-1.5 px-2 text-label-xs sm:px-2.5", disabled && "opacity-40")}>{item !== "all" && channelIcon(item, "size-3.5")}{item === "all" ? "All" : channelLabel(item)}</SegmentedControl.Trigger>;
+              return <SegmentedControl.Trigger key={item} value={item} disabled={disabled} className={cn("gap-1.5 px-2 text-label-xs sm:px-2.5", disabled && "opacity-40")}>{item !== "all" && channelIcon(item, "size-3.5")}{item === "all" ? "All" : crmChannelLabel(item)}</SegmentedControl.Trigger>;
             })}
           </SegmentedControl.List>
         </SegmentedControl.Root>
@@ -441,7 +436,7 @@ function ConversationPanel({ conversations, messages, name, avatarUrl }: { conve
                   : <span className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-alpha-10 text-label-xs text-primary-base">You</span>}
                 <div className={cn("min-w-0 max-w-[88%]", !inbound && "text-right")}>
                   <div className={cn("mb-1.5 flex flex-wrap items-center gap-2 text-paragraph-xs text-text-soft-400", !inbound && "justify-end")}>
-                    <span className="inline-flex items-center gap-1" style={{ color: channelColor(message.channel) }}>{channelIcon(message.channel, "size-3.5")}<span className="text-text-soft-400">{channelLabel(message.channel)}</span></span>
+                    <span className="inline-flex items-center gap-1" style={{ color: channelColor(message.channel) }}>{channelIcon(message.channel, "size-3.5")}<span className="text-text-soft-400">{crmChannelLabel(String(message.channel ?? ""))}</span></span>
                     {label && <span className="rounded bg-bg-weak-50 px-1.5 py-0.5 text-label-xs text-text-sub-600 ring-1 ring-inset ring-stroke-soft-200">{label}</span>}
                     <time title={formatDate(message.sentAt ?? message.createdAt)}>{formatDate(message.sentAt ?? message.createdAt)}</time>
                   </div>
@@ -492,7 +487,7 @@ function ReplyComposer({ record, draft, conversations, citations, uncertainAttem
   }, [conversations, draft.body, draft.conversationId, draft.subject, record.activeChannel]);
 
   const conversation = conversations.find((item) => String(item.id) === conversationId);
-  const channel = String(conversation?.channel ?? draft.channel ?? "email") as Channel;
+  const channel = String(conversation?.channel ?? draft.channel ?? "email") as CrmChannel;
   const editingCurrentDraft = Boolean(draft.id && draftConversationId === conversationId);
 
   // Unsaved means differing from what is stored: the draft on its own
@@ -553,7 +548,7 @@ function ReplyComposer({ record, draft, conversations, citations, uncertainAttem
           <blockquote className="line-clamp-4 whitespace-pre-wrap text-paragraph-sm text-text-strong-950">{text(lastMessage.body ?? lastMessage.bodyText, "Message content unavailable")}</blockquote>
         </figure>}
 
-        {!editingCurrentDraft && Boolean(draft.id) && <div className="rounded-lg bg-information-lighter p-3 text-paragraph-xs text-information-dark ring-1 ring-inset ring-information-light">You switched channels. This will create a separate {channelLabel(channel)} draft; the existing {channelLabel(draft.channel)} draft is preserved.</div>}
+        {!editingCurrentDraft && Boolean(draft.id) && <div className="rounded-lg bg-information-lighter p-3 text-paragraph-xs text-information-dark ring-1 ring-inset ring-information-light">You switched channels. This will create a separate {crmChannelLabel(channel)} draft; the existing {crmChannelLabel(String(draft.channel))} draft is preserved.</div>}
 
         {channel === "email" && <label className="block"><span className="mb-1.5 block text-label-xs text-text-sub-600">Subject</span><input className={fieldClass} value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Email subject" /></label>}
         <div className="flex min-h-40 flex-1 flex-col">
@@ -564,7 +559,7 @@ function ReplyComposer({ record, draft, conversations, citations, uncertainAttem
             </span>
             {editingCurrentDraft && <button type="button" className={cn(secondaryButtonClass, "h-7 gap-1.5 whitespace-nowrap px-2.5 text-label-xs")} onClick={() => setRegenerateOpen(true)} aria-label="Regenerate draft"><RiRefreshLine className="size-3.5" aria-hidden="true" /><span className="hidden sm:inline">Regenerate draft</span></button>}
           </div>
-          <textarea id="crm-reply-body" className={cn(fieldClass, "min-h-32 flex-1 resize-y leading-6")} value={body} onChange={(event) => setBody(event.target.value)} placeholder={`Write a ${channelLabel(channel)} reply…`} />
+          <textarea id="crm-reply-body" className={cn(fieldClass, "min-h-32 flex-1 resize-y leading-6")} value={body} onChange={(event) => setBody(event.target.value)} placeholder={`Write a ${crmChannelLabel(channel)} reply…`} />
         </div>
 
         {citations.length > 0 && editingCurrentDraft && <details className="shrink-0 rounded-lg bg-bg-weak-50 p-3 ring-1 ring-inset ring-stroke-soft-200"><summary className="cursor-pointer text-label-xs text-text-sub-600">Knowledge used ({citations.length})</summary>{citations.map((citation, index) => <blockquote key={String(citation.id ?? index)} className="mt-2 border-l-2 border-primary-alpha-24 pl-2 text-paragraph-xs text-text-sub-600">{String(citation.excerpt ?? "")}</blockquote>)}</details>}
@@ -620,10 +615,10 @@ function SenderPicker({ conversations, value, onChange }: { conversations: Data[
     <>
       <ContactAvatar src={item.accountAvatarUrl ? String(item.accountAvatarUrl) : null} fallback={initials(senderName(item))} className="size-6 shrink-0 bg-primary-alpha-10 text-[10px] text-primary-base" />
       <span className="min-w-0 truncate text-label-sm text-text-strong-950">{senderName(item)}</span>
-      <span className="inline-flex shrink-0 items-center gap-1 text-paragraph-xs text-text-soft-400">{channelIcon(item.channel, "size-3.5")}{channelLabel(item.channel)}{item.status === "closed" ? " · closed" : ""}</span>
+      <span className="inline-flex shrink-0 items-center gap-1 text-paragraph-xs text-text-soft-400">{channelIcon(item.channel, "size-3.5")}{crmChannelLabel(String(item.channel))}{item.status === "closed" ? " · closed" : ""}</span>
     </>
   );
-  const title = `Sending as ${text(current.accountLabel ?? current.accountRef, "a connected account")} via ${channelLabel(current.channel)}`;
+  const title = `Sending as ${text(current.accountLabel ?? current.accountRef, "a connected account")} via ${crmChannelLabel(String(current.channel))}`;
   if (conversations.length === 1) {
     return <div title={title} className="flex min-w-0 items-center gap-2">{identity(current)}</div>;
   }

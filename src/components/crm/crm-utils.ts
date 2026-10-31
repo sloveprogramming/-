@@ -1,8 +1,6 @@
 import { CRM_CATEGORY_COLOR } from "@/components/analytics/theme";
 
 export type CrmCategory = "customer" | "interested" | "not_interested" | "other";
-export type CrmChannel = "email" | "linkedin" | "whatsapp";
-
 export const CATEGORY_LABELS: Record<CrmCategory, string> = {
   customer: "Customer",
   interested: "Interested",
