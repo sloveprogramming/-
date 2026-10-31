@@ -1,5 +1,13 @@
 # Agent instructions
 
+## Git workflow
+
+- `origin` is the owner's repository at `https://github.com/sloveprogramming/-.git`; `upstream` is the original open-source repository.
+- After completing and validating a code change, commit that cohesive change and push the current branch to `origin`. Keep unrelated changes in separate commits.
+- Before committing, run `npm run typecheck`, `npm run lint`, and the relevant tests. Do not commit with failing checks.
+- Never commit secrets, cookies, logs, generated reports, credentials, or lead data. Review `git status` and the staged diff before every commit.
+- Do not rewrite or force-push shared history. Leave `upstream` unchanged unless the user explicitly asks to sync it.
+
 ## UI implementation and verification
 
 - For UI change requests, implement the requested change first and hand off concise manual verification guidance.
