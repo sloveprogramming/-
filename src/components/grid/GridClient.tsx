@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AgGridReact, type CustomCellEditorProps } from "ag-grid-react";
+import { AgGridReact } from "ag-grid-react";
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -14,8 +14,6 @@ import {
   type ColDef,
   type ColumnMovedEvent,
   type DisplayedColumnsChangedEvent,
-  type IHeaderParams,
-  type ICellRendererParams,
 } from "ag-grid-community";
 import "./grid-theme.css";
 import {
@@ -25,45 +23,33 @@ import {
   RiArrowGoForwardLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
-  RiCheckboxCircleLine,
   RiCloseLine,
-  RiCloseCircleLine,
   RiDeleteBin6Line,
   RiDownload2Line,
   RiFilter3Line,
   RiLayoutColumnLine,
   RiLoader4Line,
   RiStopCircleLine,
-  RiMegaphoneLine,
   RiMore2Line,
   RiPlayLine,
   RiRefreshLine,
   RiSearchLine,
   RiSortDesc,
   RiTableLine,
-  RiTimeLine,
   RiToolsLine,
   RiUploadCloud2Line,
 } from "@remixicon/react";
 import type { GridColumn, GridRow, GridTable } from "@/lib/grid/schema";
-import { getIntegration } from "@/lib/integrations/catalog";
-import IntegrationIcon from "./IntegrationIcon";
 import {
   isStaticColumnType,
   type AiConfig,
   type AiOutputConfig,
   type CellMeta,
-  type CellMetaMap,
   type ColumnType,
   type IntegrationOutputConfig,
   type TableView,
 } from "@/lib/grid/types";
-import {
-  isFilterGroup,
-  VALUELESS_OPERATORS,
-  type FilterGroup,
-  type SortSpec,
-} from "@/lib/grid/query";
+import { isFilterGroup, type FilterGroup, type SortSpec } from "@/lib/grid/query";
 import AddColumnMenu from "./AddColumnMenu";
 import CellDetailsPanel, { type CellDetailsSelection } from "./CellDetailsPanel";
 import ColumnConfigDialog from "./ColumnConfigDialog";
@@ -78,7 +64,30 @@ import Popover from "./Popover";
 import SortPanel from "./SortPanel";
 import { columnTypeMeta } from "./columnTypes";
 import { clampGridPage, GRID_PAGE_SIZE, gridPageCount, gridPageRange } from "@/lib/grid/pagination";
-import * as Checkbox from "@/components/alignui/checkbox";
+import { effectiveColumnType } from "@/lib/grid/value-types";
+import { coerceClipboardValue, parseClipboardText, serializeClipboardGrid } from "@/lib/grid/clipboard";
+import { editorFor } from "./grid-cell-editors";
+import { AddColumnHeader, ColumnHeader, GutterCell, GutterHeader, IntegrationActionCell, IntegrationOutputCell, RunnerValueCell } from "./grid-cell-renderers";
+import { AddRowsControl, Toast, ToolbarToggle } from "./grid-chrome";
+import {
+  countActiveFilters,
+  displayOrderFor,
+  fillPreviewText,
+  fillSourceRowIndex,
+  formatCellValue,
+  gridRowIndexAtPoint,
+  hasPendingCells,
+  isEditingClipboardTarget,
+  normalizeCellRange,
+  outputColumnsOf,
+  RUNNABLE_SOURCE_TYPES,
+  toRowData,
+  UNGROUPED_NUMBER_NAME,
+  type CellEditCommand,
+  type CellRange,
+  type CellUpdate,
+  type RowData,
+} from "./grid-model";
 
 /**
  * What the Actions menu offers in one click.
@@ -88,12 +97,6 @@ import * as Checkbox from "@/components/alignui/checkbox";
  * copy of the add-column list.
  */
 const QUICK_COLUMN_TYPES: ColumnType[] = ["enrichment", "ai", "http", "formula"];
-import { displayHref, effectiveColumnType } from "@/lib/grid/value-types";
-import {
-  coerceClipboardValue,
-  parseClipboardText,
-  serializeClipboardGrid,
-} from "@/lib/grid/clipboard";
 
 // v33+ is modular: without this every grid throws "No AG Grid modules are
 // registered". AllCommunityModule is the whole MIT feature set.
@@ -106,72 +109,7 @@ const COL_W = 220;
 const ADD_COL_W = 186;
 const INTERNAL_CLIPBOARD_MIME = "application/x-agentsdr-grid+json";
 
-type RowData = Record<string, unknown> & { __id: string; __meta: CellMetaMap };
 type PanelName = "columns" | "filter" | "sort" | "search";
-type CellCoordinate = { rowIndex: number; columnKey: string };
-type CellRange = { anchor: CellCoordinate; focus: CellCoordinate };
-type NormalizedCellRange = {
-  startRow: number;
-  endRow: number;
-  startColumn: number;
-  endColumn: number;
-};
-type CellUpdate = { rowId: string; columnKey: string; value: unknown };
-type CellEditCommand = { undo: CellUpdate[]; redo: CellUpdate[] };
-
-function normalizeCellRange(
-  range: CellRange | null,
-  columnKeys: string[],
-  rowCount: number,
-): NormalizedCellRange | null {
-  if (!range || rowCount === 0) return null;
-  const anchorColumn = columnKeys.indexOf(range.anchor.columnKey);
-  const focusColumn = columnKeys.indexOf(range.focus.columnKey);
-  if (anchorColumn < 0 || focusColumn < 0) return null;
-  return {
-    startRow: Math.max(0, Math.min(range.anchor.rowIndex, range.focus.rowIndex)),
-    endRow: Math.min(rowCount - 1, Math.max(range.anchor.rowIndex, range.focus.rowIndex)),
-    startColumn: Math.min(anchorColumn, focusColumn),
-    endColumn: Math.max(anchorColumn, focusColumn),
-  };
-}
-
-function isEditingClipboardTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && Boolean(
-    target.closest("input, textarea, [contenteditable='true'], .ag-cell-inline-editing"),
-  );
-}
-
-function gridRowIndexAtPoint(clientX: number, clientY: number, rowCount: number): number | null {
-  const element = document.elementFromPoint(clientX, clientY);
-  const rowElement = element instanceof Element ? element.closest<HTMLElement>(".ag-row[row-index]") : null;
-  const rowIndex = Number(rowElement?.getAttribute("row-index"));
-  return Number.isInteger(rowIndex) && rowIndex >= 0 && rowIndex < rowCount ? rowIndex : null;
-}
-
-function fillSourceRowIndex(
-  range: NormalizedCellRange,
-  targetRow: number,
-  destinationRow: number,
-): number {
-  const sourceHeight = range.endRow - range.startRow + 1;
-  return targetRow < range.startRow
-    ? range.endRow - ((range.startRow - 1 - destinationRow) % sourceHeight)
-    : range.startRow + ((destinationRow - range.endRow - 1) % sourceHeight);
-}
-
-function fillPreviewText(value: unknown): string {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
-  }
-  return String(value);
-}
-
 /**
  * Delete / Backspace on a focused cell would make AG Grid open the editor
  * empty. The grid clears the selected cells itself (see onGridKeyDown), so the
@@ -200,448 +138,6 @@ const theme = themeQuartz.withParams({
   wrapperBorderRadius: 0,
 });
 
-function selectOptions(column: GridColumn): { value: string; label: string }[] {
-  const options = (column.config as { options?: unknown } | null)?.options;
-  if (!Array.isArray(options)) return [];
-  return options.flatMap((option: unknown) => {
-    if (typeof option === "string") return [{ value: option, label: option }];
-    const candidate = option as { value?: unknown; label?: unknown } | null;
-    if (candidate && typeof candidate.value === "string") {
-      return [{ value: candidate.value, label: typeof candidate.label === "string" ? candidate.label : candidate.value }];
-    }
-    return [];
-  });
-}
-
-/** Popup editor for multiselect cells: a checkbox per option, plus any stored value the list lacks. */
-function MultiSelectEditor(props: CustomCellEditorProps<RowData, unknown> & { options: string[] }) {
-  const current = Array.isArray(props.value) ? props.value.map(String) : [];
-  const choices = [...props.options, ...current.filter((value) => !props.options.includes(value))];
-  const toggle = (value: string) => {
-    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
-    props.onValueChange(next);
-  };
-  return (
-    <div className="max-h-64 min-w-[200px] overflow-auto rounded-lg border border-stroke-soft-200 bg-bg-white-0 p-1.5 shadow-lg">
-      {choices.length === 0 && <p className="px-2 py-1.5 text-[12px] text-text-sub-600">This column has no options.</p>}
-      {choices.map((value) => (
-        <label key={value} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-text-strong-950 hover:bg-bg-weak-50">
-          <input type="checkbox" checked={current.includes(value)} onChange={() => toggle(value)} />
-          <span className="truncate">{value}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Editing behaviour per static column type. Every editor result goes through
- * the same coercion as paste and import, so a typed "42" is the number 42 and
- * JSON is edited as JSON text instead of "[object Object]". Booleans have no
- * editor: a click or Space toggles them (see onCellClicked).
- */
-function editorFor(column: GridColumn): Pick<ColDef<RowData>, "cellEditor" | "cellEditorParams" | "cellEditorPopup" | "valueParser"> {
-  const type = column.type;
-  if (!isStaticColumnType(type)) return {};
-  const base = {
-    valueParser: (params: { newValue: unknown }) =>
-      coerceClipboardValue(params.newValue === undefined || params.newValue === null ? "" : String(params.newValue), type),
-  };
-  if (type === "select") {
-    const values = selectOptions(column).map((option) => option.value);
-    if (values.length) {
-      return {
-        ...base,
-        cellEditor: "agSelectCellEditor",
-        // A value the options lack stays selectable only while the cell holds it.
-        cellEditorParams: (params: { value?: unknown }) => {
-          const held = typeof params.value === "string" && params.value !== "" && !values.includes(params.value) ? [params.value] : [];
-          return { values: ["", ...values, ...held] };
-        },
-      };
-    }
-  }
-  if (type === "multiselect") {
-    return {
-      ...base,
-      cellEditor: MultiSelectEditor,
-      cellEditorParams: { options: selectOptions(column).map((option) => option.value) },
-      cellEditorPopup: true,
-    };
-  }
-  if (type === "json") return { ...base, cellEditorParams: { useFormatter: true } };
-  return base;
-}
-
-function isPendingMeta(meta: CellMeta | undefined): boolean {
-  return meta?.status === "queued" || meta?.status === "running" || meta?.status === "processing";
-}
-
-/** True while any of these rows still has a cell waiting on a run. */
-function hasPendingCells(rows: RowData[]): boolean {
-  return rows.some((row) => Object.values(row.__meta ?? {}).some((meta) => isPendingMeta(meta as CellMeta | undefined)));
-}
-
-/** Years and similar identifiers read as "2010", not "2,010". */
-const UNGROUPED_NUMBER_NAME = /year|founded/i;
-
-function toRowData(rows: GridRow[]): RowData[] {
-  return rows.map((r) => ({ ...(r.cells ?? {}), __id: r.id, __meta: r.cellMeta ?? {} }));
-}
-
-/** Column types whose cells are produced by running something, not typed. */
-const RUNNABLE_SOURCE_TYPES: ReadonlySet<ColumnType> = new Set(["enrichment", "ai", "http", "formula"]);
-
-/** A run column's own result columns, so deleting the source can take them along. */
-function outputColumnsOf(source: GridColumn, columns: GridColumn[]): GridColumn[] {
-  const outputKeys = new Set<string>();
-  if (source.type === "ai") {
-    for (const key of Object.values((source.config as AiConfig).outputColumns ?? {})) outputKeys.add(key);
-  }
-  return columns.filter((candidate) => {
-    if (candidate.id === source.id) return false;
-    if (outputKeys.has(candidate.key)) return true;
-    if (source.type === "enrichment" && candidate.type === "integration_output") {
-      return (candidate.config as IntegrationOutputConfig).sourceColumnKey === source.key;
-    }
-    if (source.type === "ai" && candidate.type === "ai_output") {
-      return (candidate.config as AiOutputConfig).sourceColumnKey === source.key;
-    }
-    return false;
-  });
-}
-
-/** Filters that actually narrow the rows: enabled, and with a value unless the operator needs none. */
-function countActiveFilters(group: FilterGroup): number {
-  let count = 0;
-  for (const condition of group.conditions) {
-    if (isFilterGroup(condition)) {
-      count += countActiveFilters(condition);
-    } else if (!condition.disabled && (VALUELESS_OPERATORS.has(condition.operator) || (condition.value ?? "") !== "")) {
-      count += 1;
-    }
-  }
-  return count;
-}
-
-/** Pinned columns render first, so the display order must start with them. */
-function displayOrderFor(columns: GridColumn[], pinnedKeys: string[]): string[] {
-  const pinnedSet = new Set(pinnedKeys);
-  return [
-    ...columns.filter((column) => pinnedSet.has(column.key)),
-    ...columns.filter((column) => !pinnedSet.has(column.key)),
-  ].map((column) => column.key);
-}
-
-/** What a cell shows as text. Objects and arrays must never fall through to "[object Object]". */
-function formatCellValue(value: unknown, column: GridColumn, valueType: ColumnType): string {
-  if (value === undefined || value === null) return "";
-  if (valueType === "boolean") return value === true || String(value).toLowerCase() === "true" ? "✓" : "";
-  if (Array.isArray(value)) {
-    return value.map((item) => (typeof item === "object" && item !== null ? JSON.stringify(item) : String(item))).join(", ");
-  }
-  if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
-  }
-  if (valueType === "select" && column.type === "select") {
-    return selectOptions(column).find((option) => option.value === value)?.label ?? String(value);
-  }
-  return String(value);
-}
-
-/* ---------- header renderers ---------- */
-
-/** Type icon + name, matching Clay's "T New Column". */
-function ColumnHeader(props: IHeaderParams & {
-  colType: ColumnType;
-  valueType?: ColumnType;
-  integrationKey?: string;
-  active?: boolean;
-  onSelect: (extend: boolean) => void;
-  onOpen: (rect: DOMRect) => void;
-  onRun?: (rect: DOMRect) => void;
-}) {
-  const meta = columnTypeMeta(props.valueType ?? props.colType);
-  const integration = props.integrationKey ? getIntegration(props.integrationKey) : null;
-  const iconClass = props.active ? "text-white" : "text-text-sub-600";
-  const icon = integration && props.colType === "enrichment" ? (
-    <IntegrationIcon integration={integration} size={17} className="rounded" />
-  ) : integration && props.colType === "integration_output" ? (
-    <span className="flex shrink-0 items-center gap-1">
-      <IntegrationIcon integration={integration} size={14} className="rounded" />
-      <meta.icon className={`size-[14px] ${iconClass}`} />
-    </span>
-  ) : props.colType === "formula" ? (
-    <span className={`w-[15px] shrink-0 text-center font-serif text-[18px] italic leading-none ${iconClass}`}>ƒ</span>
-  ) : (
-    <meta.icon className={`size-[15px] shrink-0 ${iconClass}`} />
-  );
-  return (
-    <div className={`-mx-3 flex h-full w-[calc(100%+24px)] items-center overflow-hidden transition ${props.active ? "bg-blue-600 text-white" : "hover:bg-bg-weak-50"}`}>
-      <button
-        type="button"
-        title="Select column (Shift-click to extend)"
-        onClick={(event) => props.onSelect(event.shiftKey)}
-        onDoubleClick={(event) => {
-          event.preventDefault();
-          props.onOpen(event.currentTarget.getBoundingClientRect());
-        }}
-        className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch pl-3 text-left"
-      >
-        {icon}
-        <span className={`truncate font-semibold ${props.active ? "text-white" : "text-text-strong-950"}`}>{props.displayName}</span>
-      </button>
-      <button
-        type="button"
-        title={`Configure ${props.displayName}`}
-        aria-label={`Configure ${props.displayName}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          props.onOpen(event.currentTarget.getBoundingClientRect());
-        }}
-        className={`rounded-md p-1 ${props.active ? "text-white hover:bg-blue-500" : "text-text-soft-400 hover:bg-bg-weak-50 hover:text-text-strong-950"}`}
-      >
-        <RiArrowDownSLine className="size-4" />
-      </button>
-      {props.onRun && (
-        <button type="button" title="Run column" aria-label={`Run ${props.displayName}`} onClick={(event) => { event.stopPropagation(); props.onRun?.(event.currentTarget.getBoundingClientRect()); }} className={`mr-1 rounded-md border p-1.5 ${props.active ? "border-blue-400 text-white hover:bg-blue-500" : "border-stroke-soft-200 bg-bg-white-0 text-text-strong-950 hover:bg-bg-weak-50"}`}>
-          <RiPlayLine className="size-4" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** The trailing "+ Add column" header cell. */
-function AddColumnHeader(props: IHeaderParams & { onOpen: (rect: DOMRect) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => props.onOpen(e.currentTarget.getBoundingClientRect())}
-      className="-mx-3 flex h-full w-[calc(100%+24px)] items-center gap-1.5 px-3 text-text-sub-600 transition hover:bg-bg-weak-50"
-    >
-      <RiAddLine className="size-[15px] shrink-0" />
-      <span className="font-medium">Add column</span>
-    </button>
-  );
-}
-
-/** Selection gutter: keep row numbers visible until hover, then reveal selection. */
-function GutterHeader(props: IHeaderParams & {
-  checked: boolean | "indeterminate";
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex size-full items-center justify-center">
-      <Checkbox.Root
-        checked={props.checked}
-        onCheckedChange={(checked) => props.onCheckedChange(checked !== false)}
-        aria-label="Select all rows on this page"
-      />
-    </div>
-  );
-}
-
-function GutterCell(props: ICellRendererParams<RowData> & {
-  isSelected: (rowId: string) => boolean;
-  onToggle: (rowId: string) => void;
-}) {
-  if (props.node.rowPinned === "top") {
-    return <span className="text-[11px] font-medium text-text-soft-400">%</span>;
-  }
-  const rowOffset = Number((props as ICellRendererParams<RowData> & { rowOffset?: number }).rowOffset ?? 0);
-  const selected = props.isSelected(props.data!.__id);
-  return (
-    <div className="group relative flex size-full items-center justify-center">
-      <span className={`text-[11px] tabular-nums text-text-soft-400 ${selected ? "hidden" : "group-hover:hidden group-focus-within:hidden"}`}>
-        {rowOffset + (props.node.rowIndex ?? 0) + 1}
-      </span>
-      <Checkbox.Root
-        checked={selected}
-        onCheckedChange={() => props.onToggle(props.data!.__id)}
-        aria-label={`${selected ? "Deselect" : "Select"} row ${rowOffset + (props.node.rowIndex ?? 0) + 1}`}
-        className={`absolute inset-0 m-auto ${selected ? "" : "invisible group-hover:visible group-focus-within:visible"}`}
-      />
-    </div>
-  );
-}
-
-/** A run that finished without finding anything (the server marks it outcome "miss"). */
-function isMiss(meta: CellMeta | undefined): boolean {
-  return (meta as { outcome?: string } | undefined)?.outcome === "miss";
-}
-
-/** A run that finished without finding anything, as opposed to one that has not run. */
-const NO_RESULT = <span className="italic text-text-soft-400">No result</span>;
-
-function IntegrationActionCell(props: ICellRendererParams<RowData> & { onRun?: (rowId: string) => void; disabled?: boolean }) {
-  if (props.node.rowPinned === "top") return props.value ?? "";
-  const meta = props.data?.__meta?.[props.colDef?.field ?? ""] as CellMeta | undefined;
-  const inProgress = meta?.status === "queued" || meta?.status === "running" || meta?.status === "processing";
-
-  let content: React.ReactNode;
-  if (meta?.status === "queued") {
-    content = <span className="flex items-center gap-1.5 text-text-sub-600"><RiTimeLine className="size-4" />Queued…</span>;
-  } else if (meta?.status === "running") {
-    content = <span className="flex items-center gap-1.5 text-text-sub-600"><RiLoader4Line className="size-4 animate-spin" />Running…</span>;
-  } else if (meta?.status === "processing") {
-    content = <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400"><RiLoader4Line className="size-4 animate-spin" />Waiting for provider…</span>;
-  } else if (meta?.status === "error") {
-    content = <span title={meta.error} className="flex items-center gap-1.5 truncate font-medium text-red-700 dark:text-red-400"><RiCloseCircleLine className="size-4 shrink-0" /><span className="truncate">{meta.error || "API call failed"}</span></span>;
-  } else if (meta?.status === "success" && isMiss(meta) && (props.value === undefined || props.value === null || props.value === "")) {
-    content = NO_RESULT;
-  } else if (meta?.status === "success") {
-    content = <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400"><RiCheckboxCircleLine className="size-4" />{String(props.value ?? "Completed")}</span>;
-  } else {
-    content = <span className="text-text-soft-400">Not run</span>;
-  }
-
-  return (
-    <div className="group/action flex size-full min-w-0 items-center gap-2">
-      <div className="min-w-0 flex-1 truncate">{content}</div>
-      {!inProgress && props.data && props.onRun && (
-        <button
-          type="button"
-          disabled={props.disabled}
-          title="Run this row"
-          aria-label="Run this row"
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            props.onRun?.(props.data!.__id);
-          }}
-          className="shrink-0 rounded-md bg-blue-600 p-1 text-white opacity-0 shadow-sm transition hover:bg-blue-700 focus:opacity-100 disabled:cursor-not-allowed disabled:bg-blue-300 group-hover/action:opacity-100"
-        >
-          <RiPlayLine className="size-3.5" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** Result cell for HTTP and formula columns: the value, or why there isn't one yet. */
-function RunnerValueCell(props: ICellRendererParams<RowData> & { onRun?: (rowId: string) => void; disabled?: boolean }) {
-  if (props.node.rowPinned === "top") return props.valueFormatted ?? props.value ?? "";
-  const meta = props.data?.__meta?.[props.colDef?.field ?? ""] as CellMeta | undefined;
-  const inProgress = meta?.status === "queued" || meta?.status === "running" || meta?.status === "processing";
-  const text = props.valueFormatted ?? (props.value === undefined || props.value === null ? "" : String(props.value));
-
-  let content: React.ReactNode;
-  if (meta?.status === "queued") {
-    content = <span className="flex items-center gap-1.5 text-text-sub-600"><RiTimeLine className="size-4" />Queued…</span>;
-  } else if (meta?.status === "running" || meta?.status === "processing") {
-    content = <span className="flex items-center gap-1.5 text-text-sub-600"><RiLoader4Line className="size-4 animate-spin" />Running…</span>;
-  } else if (meta?.status === "error") {
-    content = <span title={meta.error} className="flex items-center gap-1.5 truncate font-medium text-red-700 dark:text-red-400"><RiCloseCircleLine className="size-4 shrink-0" /><span className="truncate">{meta.error || "Run failed"}</span></span>;
-  } else if (isMiss(meta) && text === "") {
-    content = NO_RESULT;
-  } else {
-    content = <span title={text}>{text}</span>;
-  }
-
-  return (
-    <div className="group/action flex size-full min-w-0 items-center gap-2">
-      <div className="min-w-0 flex-1 truncate">{content}</div>
-      {!inProgress && props.data && props.onRun && (
-        <button
-          type="button"
-          disabled={props.disabled}
-          title="Run this row"
-          aria-label="Run this row"
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            props.onRun?.(props.data!.__id);
-          }}
-          className="shrink-0 rounded-md bg-blue-600 p-1 text-white opacity-0 shadow-sm transition hover:bg-blue-700 focus:opacity-100 disabled:cursor-not-allowed disabled:bg-blue-300 group-hover/action:opacity-100"
-        >
-          <RiPlayLine className="size-3.5" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function IntegrationOutputCell(props: ICellRendererParams<RowData> & { sourceColumnKey?: string; valueType?: ColumnType; ungrouped?: boolean }) {
-  if (props.node.rowPinned === "top") return props.value ?? "";
-  if (props.value !== undefined && props.value !== null && props.value !== "") {
-    const type = props.valueType ?? "text";
-    if (type === "image" && typeof props.value === "string") {
-      const src = props.value.trim();
-      if (/^(?:https?:\/\/|data:image\/)/i.test(src)) {
-        // eslint-disable-next-line @next/next/no-img-element
-        return <img src={src} alt="Generated result" className="h-8 max-w-full rounded object-cover" />;
-      }
-    }
-    const href = displayHref(props.value, type);
-    if (href) {
-      return <a href={href} target={type === "email" ? undefined : "_blank"} rel={type === "email" ? undefined : "noreferrer"} onClick={(event) => event.stopPropagation()} className="truncate text-blue-600 dark:text-blue-400 hover:underline">{String(props.value)}</a>;
-    }
-    if (type === "date") {
-      const raw = String(props.value);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-      const parsed = new Date(raw);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleString();
-    }
-    if (type === "number" && Number.isFinite(Number(props.value))) return Number(props.value).toLocaleString(undefined, props.ungrouped ? { useGrouping: false } : undefined);
-    if (type === "boolean") {
-      const checked = props.value === true || props.value === 1 || String(props.value).toLowerCase() === "true";
-      return <span className="flex items-center gap-1.5"><RiCheckboxCircleLine className={`size-4 ${checked ? "text-emerald-600 dark:text-emerald-400" : "text-text-disabled-300"}`} />{checked ? "True" : "False"}</span>;
-    }
-    if (type === "json" || typeof props.value === "object") {
-      const json = JSON.stringify(props.value);
-      return <span title={json} className="block truncate font-mono text-[11px] text-text-sub-600">{json}</span>;
-    }
-    return String(props.value);
-  }
-  const sourceMeta = props.sourceColumnKey
-    ? props.data?.__meta?.[props.sourceColumnKey] as CellMeta | undefined
-    : undefined;
-  if (sourceMeta?.status === "queued" || sourceMeta?.status === "running" || sourceMeta?.status === "processing") {
-    return <span className="flex items-center gap-1.5 italic text-text-soft-400"><RiTimeLine className="size-4" />Waiting for result…</span>;
-  }
-  if (sourceMeta?.status === "error") {
-    return <span className="italic text-text-soft-400">Action failed</span>;
-  }
-  if (isMiss(sourceMeta)) return NO_RESULT;
-  return "";
-}
-
-function AddRowsControl(props: {
-  addRows: number;
-  busy: boolean;
-  onAdd: () => void;
-  onCountChange: (count: number) => void;
-}) {
-  return (
-    <div className="flex h-full items-center gap-2 bg-bg-white-0 px-3">
-      <button
-        type="button"
-        onClick={props.onAdd}
-        disabled={props.busy}
-        className="flex items-center gap-1.5 rounded-lg border border-stroke-soft-200 px-2.5 py-[7px] text-[13px] font-medium text-text-strong-950 transition hover:bg-bg-weak-50 disabled:opacity-50"
-      >
-        <RiAddLine className="size-4" />
-        Add
-      </button>
-      <input
-        type="number"
-        min={1}
-        max={1000}
-        value={props.addRows}
-        onChange={(event) =>
-          props.onCountChange(Math.max(1, Math.min(1000, Number(event.target.value) || 1)))
-        }
-        className="w-[68px] rounded-lg border border-stroke-soft-200 px-2 py-[7px] text-[13px] text-text-strong-950 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-      />
-      <span className="text-[13px] text-text-sub-600">more rows at the bottom</span>
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 
@@ -3158,57 +2654,5 @@ export default function GridClient({
         />
       )}
     </div>
-  );
-}
-
-/** Floating message over the grid: it never moves the rows underneath it. */
-function Toast({ tone, onClose, children }: { tone: "error" | "success"; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div
-      className={`pointer-events-auto flex max-w-xl items-start gap-2 rounded-lg border px-3 py-2 text-[13px] shadow-lg ${
-        tone === "error"
-          ? "border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400"
-          : "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400"
-      }`}
-    >
-      <span className="min-w-0 flex-1 break-words">{children}</span>
-      <button type="button" aria-label="Dismiss" onClick={onClose} className="shrink-0 rounded p-0.5 opacity-70 hover:opacity-100">
-        <RiCloseLine className="size-4" />
-      </button>
-    </div>
-  );
-}
-
-function ToolbarToggle({
-  icon: Icon,
-  label,
-  title,
-  active,
-  highlight,
-  onClick,
-}: {
-  icon: typeof RiTableLine;
-  label?: string;
-  title?: string;
-  active?: boolean;
-  highlight?: boolean;
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition ${
-        active
-          ? "bg-bg-weak-50 text-text-strong-950"
-          : highlight
-            ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/15"
-            : "text-text-strong-950 hover:bg-bg-weak-50"
-      }`}
-    >
-      <Icon className={`size-4 ${highlight && !active ? "text-blue-500" : "text-text-soft-400"}`} />
-      {label}
-    </button>
   );
 }
