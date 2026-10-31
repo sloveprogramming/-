@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/outreach/sender";
 import { smtpConfigForAddress } from "@/lib/outreach/smtp";
 import { sendTextToExternalContact } from "@/lib/wecom/client";
 import { crmChannelSendProvider } from "./channels";
+import { reviewDraft, summarizeReview } from "./ai/review";
 import { insertConversationMessageInTransaction } from "./conversations";
 import { appendCrmEvent } from "./events";
 import { isEmailDoNotContact, isPersonDoNotContact } from "./policies";
@@ -303,6 +304,20 @@ async function prepareSend(tx: CrmTransaction, input: {
   }
   const bodyText = draft.editedBodyText?.trim() || draft.aiBodyText?.trim() || "";
   if (!bodyText) throw new CrmConflictError("Draft has no sendable body");
+
+  // ---- 发送前再审一次 ----
+  //
+  // 生成时审的是 AI 原稿，但人可以在中间删掉两句、也可能自己加一句价格。
+  // 这里审的是**这一刻真正要发的文本**（上面那行：有编辑稿就用编辑稿）。
+  //
+  // 命中硬红线时**只记录、不拦截**：人已经按在发送键上，责任在他；自动发送那条路
+  // 在 finishGeneratedDraft 已经被硬拦了。系统该做的是留痕，不是替人做决定。
+  const finalReview = reviewDraft({
+    bodyText,
+    subject: draft.subject,
+    channel: draft.channel,
+  });
+  const wasEdited = Boolean(draft.editedBodyText?.trim());
   const request: CrmSendAdapterInput = {
     channel: draft.channel,
     accountRef: conversation.accountRef,
@@ -338,7 +353,22 @@ async function prepareSend(tx: CrmTransaction, input: {
     personId: record.personId, crmRecordId: record.id, pipelineId: record.pipelineId,
     eventType: "message.sending", actorType: input.actorType ?? "authenticated_operator", actorRef: input.actorRef,
     toData: { draftId: draft.id, sendAttemptId: attempt.id },
-    meta: { idempotencyKey: input.idempotencyKey, requestId: input.requestId },
+    meta: {
+      idempotencyKey: input.idempotencyKey,
+      requestId: input.requestId,
+      // 只在查出东西时记：每条消息都带一份空数组只会把事件表撑大。
+      ...(finalReview.violations.length
+        ? {
+            review: {
+              verdict: finalReview.verdict,
+              summary: summarizeReview(finalReview),
+              violations: finalReview.violations,
+              /** 审的是人工改过的稿子，不是 AI 原稿——这决定了责任归属。 */
+              reviewedEditedDraft: wasEdited,
+            },
+          }
+        : {}),
+    },
     contextVersion: record.contextVersion,
   });
   return { attemptId: attempt.id, draftId: draft.id, personId: record.personId, request };

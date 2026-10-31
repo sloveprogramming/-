@@ -12,6 +12,22 @@ const nextConfig: NextConfig = {
   // package.json's version, inlined into client code for the Help menu's bug-report link.
   env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
 
+  /**
+   * Pi SDK 必须作为外部包，不能让 Next 的打包器进去解析。
+   *
+   * 为什么（2026-10-30 实测）：Pi 依赖 `quickjs-wasi`（沙箱执行 JS 用），
+   * 里面的 `quickjs.wasm_.loader.mjs` 有空导入 `wasi_snapshot_preview1` /
+   * `env`。Turbopack 会把它当真模块去解析，报 `Module not found`，于是
+   * **任何 import 了 Pi 的路由都会 500**（/api/prospect/run、/api/crm/**）。
+   *
+   * 关键点：要 external 的是**父包**。只列 `quickjs-wasi` 没用——父包仍被打包，
+   * 它内部的 import 照样会被解析（这条踩过）。
+   */
+  serverExternalPackages: [
+    "@earendil-works/pi-coding-agent",
+    "@earendil-works/pi-ai",
+  ],
+
   // The formula sandbox reads these library sources off disk at runtime and
   // evaluates them inside the QuickJS isolate (src/lib/grid/runners/sandbox.ts).
   // A readFileSync path is invisible to Next's module tracer, so without this

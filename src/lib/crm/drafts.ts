@@ -4,6 +4,7 @@ import { formatAiInstructions } from "./ai/instructions";
 import { db } from "@/lib/db";
 import { companies, people } from "@/lib/leads/schema";
 import { generateCrmDraft, type DraftCompletion, type DraftRevisionRequest, type GenerateCrmDraftInput } from "./ai/draft";
+import { reviewDraft, summarizeReview } from "./ai/review";
 import { appendCrmEvent } from "./events";
 import { retrieveKnowledge } from "./knowledge";
 import { isPersonDoNotContact } from "./policies";
@@ -273,6 +274,23 @@ async function finishGeneratedDraft(
     assertCurrentCrmContext(record, { contextVersion: draft.expectedContextVersion });
 
     const now = new Date();
+
+    // ---- 审校：落库前先过商业红线 ----
+    //
+    // 为什么放在这里而不是让 AI 自己"注意不要报价"：提示词是请求，这一步是检查。
+    // 规则判定零成本、结果可复现，而且能拦住下面那条最关键的路——自动发送。
+    //
+    // 渠道取 snapshot 里的实际写作渠道：打完电话改发微信时，conversation.channel
+    // 还是 "call"，但这条草稿的形态是微信，短信长度规则要按微信来判。
+    const snapshotChannel = generated.prompt.snapshot.channel;
+    const review = reviewDraft({
+      bodyText: generated.bodyText,
+      subject: generated.subject,
+      channel: (typeof snapshotChannel === "string"
+        ? snapshotChannel
+        : prepared.promptInput.channel) as typeof prepared.promptInput.channel,
+    });
+
     const [updated] = await tx.update(crmDrafts).set({
       subject: generated.subject,
       aiBodyText: generated.bodyText,
@@ -329,6 +347,17 @@ async function finishGeneratedDraft(
         autoSend = scope?.stepType === "follow_up" && scope.autoSend;
       }
     }
+    // 审校命中硬红线时，这条草稿绝不允许自动发送。
+    //
+    // 拦下的是一封发出去就收不回来的消息：自动发送没有人工把关，靠的只有这道闸。
+    // 走人工后销售会看到具体命中了哪条，改完再发。
+    const blockedByReview = autoSend && review.verdict === "block";
+    if (blockedByReview) {
+      autoSend = false;
+      console.warn(
+        `[crm/drafts] 审校拦截自动发送 draft=${draft.id}：${summarizeReview(review)}`,
+      );
+    }
     if (autoSend) {
       // Off the person's desk: it waits for its account's turn
       // (autoFollowUps.ts), where "Review before sending" can still stop it.
@@ -352,6 +381,17 @@ async function finishGeneratedDraft(
         model: generated.model,
         ...(prepared.promptInput.revision ? { reviewerFeedback: prepared.promptInput.revision.reviewerFeedback } : {}),
         ...(autoSend ? { autoSend: true } : {}),
+        // 只在真的查出东西时记，避免每条草稿都多一份空数组。
+        ...(review.violations.length
+          ? {
+              review: {
+                verdict: review.verdict,
+                summary: summarizeReview(review),
+                violations: review.violations,
+              },
+            }
+          : {}),
+        ...(blockedByReview ? { autoSendBlockedByReview: true } : {}),
       },
       contextVersion: record.contextVersion,
     });

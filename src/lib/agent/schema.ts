@@ -23,7 +23,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations } from "@/lib/auth/schema";
 
-export type AgentRunKind = "classify" | "draft" | "research";
+/**
+ * 一次执行属于哪类工作。
+ *
+ * `replan` 是拓客场景的重规划（搜到的公司太少时换词重搜）。单独列出来而不是
+ * 混进 `research`：否则"调研花了多少钱"的统计会把两类开销算在一起，分不清
+ * 是哪条链在烧钱。
+ */
+export type AgentRunKind = "classify" | "draft" | "research" | "replan" | "qualify";
 export type AgentRunStatus = "running" | "completed" | "failed" | "aborted";
 
 /** 一次 Agent 执行。 */
@@ -35,6 +42,17 @@ export const agentRuns = pgTable(
       .references(() => organizations.id),
     id: uuid("id").primaryKey().defaultRandom(),
     kind: text("kind").notNull().$type<AgentRunKind>(),
+    /**
+     * 一次业务动作的追踪 id：同一次"找客户"里所有角色的执行共享一个 trace。
+     *
+     * 不用外键，因为 trace 的发起方可能不是 Agent（比如确定性流水线），
+     * 它只是给一组 run 打的标签。
+     */
+    traceId: uuid("trace_id"),
+    /** 谁调起了这次执行。为空表示是根节点（用户直接触发）。 */
+    parentRunId: uuid("parent_run_id"),
+    /** 执行角色，与 artifacts.ts 的 AgentRole 对应（历史数据为空）。 */
+    role: text("role"),
     status: text("status").notNull().default("running").$type<AgentRunStatus>(),
     /** 关联的业务对象：crm_record / crm_conversation 等。 */
     subjectType: text("subject_type"),
@@ -57,6 +75,44 @@ export const agentRuns = pgTable(
   (t) => [
     index("agent_runs_org_started_idx").on(t.organizationId, t.startedAt),
     index("agent_runs_subject_idx").on(t.subjectType, t.subjectId),
+    index("agent_runs_trace_idx").on(t.traceId),
+    index("agent_runs_parent_idx").on(t.parentRunId),
+  ],
+);
+
+/**
+ * 角色之间传递的结构化产物。
+ *
+ * 为什么不复用 `agent_runs.context`：那是"本次执行的输入摘要"，一次执行一行；
+ * 而 artifact 是"交给下游的东西"，一次 trace 会有多条，且要按顺序回放。
+ * 混在一起会让"这次到底产出了什么"变得难查。
+ *
+ * 为什么不给它外键指向 agent_runs：产物可能是确定性代码写的（比如打分），
+ * 那时根本没有对应的 Agent 执行记录。用 `trace_id` 聚合就够，且不会因为
+ * 某条 run 被清理而丢掉产物。
+ */
+export const agentArtifacts = pgTable(
+  "agent_artifacts",
+  {
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** 同一次业务动作的追踪 id。 */
+    traceId: uuid("trace_id").notNull(),
+    /** 产出角色（planner / qualifier / …）。 */
+    role: text("role").notNull(),
+    /** 产物种类（plan / sourcing / qualification / …）。 */
+    kind: text("kind").notNull(),
+    /** 同 trace 内的顺序，便于按流程回放。 */
+    seq: integer("seq").notNull(),
+    /** 已通过 zod 校验的 payload。 */
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("agent_artifacts_trace_idx").on(t.organizationId, t.traceId, t.seq),
+    index("agent_artifacts_kind_idx").on(t.kind),
   ],
 );
 

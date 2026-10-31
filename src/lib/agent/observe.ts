@@ -38,6 +38,17 @@ export async function startAgentRun(input: {
   subjectType: string | null;
   subjectId: string | null;
   context?: Record<string, unknown>;
+  /**
+   * 同一次业务动作的追踪 id。多角色协作时，所有角色的 run 共享同一个 trace，
+   * 这样"一次找客户"在库里是一棵树，而不是一堆孤立的执行记录。
+   *
+   * 不传时为 null：单次调用的场景（比如分类）不需要 trace 概念。
+   */
+  traceId?: string | null;
+  /** 调起本次执行的上级 run；根节点为 null。 */
+  parentRunId?: string | null;
+  /** 执行角色（planner / qualifier / researcher …）。历史调用不传即为 null。 */
+  role?: string | null;
 }): Promise<AgentRunRecorder> {
   const organizationId = currentOrganizationId();
   let runId = "";
@@ -51,6 +62,9 @@ export async function startAgentRun(input: {
         model: input.model,
         subjectType: input.subjectType,
         subjectId: input.subjectId,
+        traceId: input.traceId ?? null,
+        parentRunId: input.parentRunId ?? null,
+        role: input.role ?? null,
         context: input.context ?? {},
       })
       .returning({ id: agentRuns.id });

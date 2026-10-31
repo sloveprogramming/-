@@ -38,11 +38,29 @@ import type { CompanyHit } from "@/lib/qcc/types";
  * 分数偏高）。把中间产物摊开，销售能一眼看出"哪里不对"，而不是盲信一个总分。
  */
 
+/** 灰色带深查的结论（企查查 MCP 查回来的）。 */
+type DeepCheckView = {
+  verdict: "pursue" | "hold" | "drop";
+  reasoning: string;
+  /** 它查了哪些工具，展示时翻成中文维度名。 */
+  lookups: string[];
+};
+
+/** 换词重搜的记录。 */
+type ReplanInfo = {
+  triggered: boolean;
+  newTerms: string[];
+  reasoning: string;
+  addedCompanies: number;
+};
+
 type CompanyResult = CompanyAssessment & {
   hit: CompanyHit;
   phones: string[];
   reachable: boolean;
   scriptText: string | null;
+  /** 只有灰色带（45–65 分）会被深查；其余为 null。 */
+  deepCheck: DeepCheckView | null;
 };
 
 type RunResponse = {
@@ -51,8 +69,30 @@ type RunResponse = {
   product: string;
   intent: ProductIntent;
   stats: { searchedTerms: number; found: number; reachable: number; priority: number };
+  replan?: ReplanInfo | null;
   companies: CompanyResult[];
   error?: string;
+};
+
+/**
+ * 深查结论的显示文案。
+ *
+ * 刻意用动词而不是"pursue/hold/drop"——销售看到的是一个动作建议，
+ * 不是一个状态码。
+ */
+const DEEP_CHECK_LABEL: Record<DeepCheckView["verdict"], string> = {
+  pursue: "建议跟进",
+  hold: "可以打",
+  drop: "建议放弃",
+};
+
+/** 工具名 → 中文维度名。查了哪几项要让人看得懂。 */
+const LOOKUP_LABEL: Record<string, string> = {
+  lookup_company_profile: "企业画像",
+  lookup_recruitment: "招聘",
+  lookup_bidding: "招投标",
+  lookup_qualifications: "资质",
+  lookup_food_safety: "食品安全",
 };
 
 const STAGES = PROSPECT_STAGES;
@@ -199,6 +239,13 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
           ) : (
             <>
               <IntentPanel result={result} />
+              {result.replan?.triggered && (
+                <Callout tone="info" title={`换了 ${result.replan.newTerms.length} 个词重搜`}>
+                  第一轮的词没搜到足够公司，规划员先试着搜了几个词，最后改用
+                  「{result.replan.newTerms.join("」「")}」，新增 {result.replan.addedCompanies} 家。
+                  {result.replan.reasoning ? `理由是：${result.replan.reasoning}` : ""}
+                </Callout>
+              )}
               <div className="flex flex-col gap-2">
                 <p className="text-label-sm text-text-strong-950">
                   评估结果（{result.companies.length} 家，按可打性与体量排序）
@@ -217,10 +264,14 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
                   />
                 ))}
               </div>
-              <Callout tone="warning" title="关于分数">
+              <Callout tone="warning" title="关于分数与深查">
                 分数由公开工商数据推断：注册资本（认缴）、成立年限、行业匹配、经营状态。
                 **不含参保人数与实缴出资**——这两项需要企查查付费详情接口，拿不到就没有。
                 分数高只说明"看起来对得上"，不代表对方有真实采购需求。
+                <br />
+                分数落在 45–65 的灰色带公司，会额外查企查查的经营信号（招聘 / 招投标 /
+                资质 / 食品安全），结果显示为「深查」标签。**深查不改分数**：分数是公式
+                算的、可解释；深查是另一路证据，供你判断要不要打这个电话。
               </Callout>
             </>
           )}
@@ -307,6 +358,18 @@ function IntentPanel({ result }: { result: RunResponse }) {
   );
 }
 
+/** 深查结论的配色：跟进=绿，可打=中性，放弃=红。 */
+function deepCheckTone(verdict: DeepCheckView["verdict"]): string {
+  switch (verdict) {
+    case "pursue":
+      return "bg-success-lighter text-success-dark ring-success-light";
+    case "drop":
+      return "bg-error-lighter text-error-dark ring-error-light";
+    default:
+      return "bg-bg-weak-50 text-text-sub-600 ring-stroke-soft-200";
+  }
+}
+
 function CompanyRow({
   company,
   open,
@@ -338,7 +401,17 @@ function CompanyRow({
         <span className={cn("shrink-0 rounded-md px-2 py-0.5 text-label-xs ring-1 ring-inset", tierTone)}>
           {TIER_LABEL[company.tier]}
         </span>
-        <span className="min-w-0 flex-1 truncate text-label-sm text-text-strong-950">{company.hit.name}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-label-sm text-text-strong-950">{company.hit.name}</span>
+          {company.deepCheck && (
+            <span className={cn(
+              "shrink-0 rounded px-1.5 py-0.5 text-[10px] ring-1 ring-inset",
+              deepCheckTone(company.deepCheck.verdict),
+            )}>
+              深查 · {DEEP_CHECK_LABEL[company.deepCheck.verdict]}
+            </span>
+          )}
+        </span>
         <span className="shrink-0 text-label-sm text-text-strong-950">{company.score}<span className="text-text-soft-400">/100</span></span>
         {company.reachable ? (
           <span className="inline-flex shrink-0 items-center gap-1 text-paragraph-xs text-text-strong-950">
@@ -356,6 +429,28 @@ function CompanyRow({
       {open && (
         <div className="border-t border-stroke-soft-200 px-4 py-3">
           <p className="text-paragraph-sm text-text-sub-600">{company.verdict}</p>
+
+          {company.deepCheck && (
+            <div className="mt-2 rounded-lg bg-bg-weak-50 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={cn(
+                  "rounded px-1.5 py-0.5 text-[10px] ring-1 ring-inset",
+                  deepCheckTone(company.deepCheck.verdict),
+                )}>
+                  深查 · {DEEP_CHECK_LABEL[company.deepCheck.verdict]}
+                </span>
+                <span className="text-paragraph-xs text-text-soft-400">
+                  企查查 · 查了
+                  {company.deepCheck.lookups.length
+                    ? company.deepCheck.lookups.map((tool) => LOOKUP_LABEL[tool] ?? tool).join(" / ")
+                    : "（未记录）"}
+                </span>
+              </div>
+              {company.deepCheck.reasoning && (
+                <p className="mt-1.5 text-paragraph-sm text-text-strong-950">{company.deepCheck.reasoning}</p>
+              )}
+            </div>
+          )}
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {company.dimensions.map((dimension) => (

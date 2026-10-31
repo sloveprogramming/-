@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authContextErrorResponse, withOrgContext } from "@/lib/auth/context";
 import { runProspectPipeline, summarizeResult } from "@/lib/agent/pipeline";
+import { createArtifactRecorder } from "@/lib/agent/artifactStore";
 import { buildCallScript, renderCallScriptText } from "@/lib/icp/callScript";
 
 /**
@@ -13,6 +14,9 @@ import { buildCallScript, renderCallScriptText } from "@/lib/icp/callScript";
  * 每次跑都可能因为上游数据变化给不同结果。
  *
  * 返回里带每个可打公司的**话术摘要**，让前端不用再算一遍。
+ *
+ * 每一段的产物都会落进 `agent_artifacts`（按 traceId 聚合），响应里回传
+ * `traceId`，便于事后查"这次到底产出了什么、哪一步慢了"。
  */
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +25,17 @@ export async function POST(request: NextRequest) {
       const product = body?.product?.trim();
       if (!product) return NextResponse.json({ error: "请填写产品名" }, { status: 400 });
 
+      const traceId = crypto.randomUUID();
       const result = await runProspectPipeline({
         product,
         organizationId: ctx.organizationId,
+        traceId,
+        deps: {
+          recordArtifact: createArtifactRecorder({
+            organizationId: ctx.organizationId,
+            traceId,
+          }),
+        },
       });
 
       // 给每家公司附上电话话术：销售点开就能用，不用再发起一次请求。
@@ -43,10 +55,13 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         ok: true,
+        traceId: result.traceId,
         summary: summarizeResult(result),
         product: result.product,
         intent: result.intent,
         stats: result.stats,
+        // 换词重搜的记录：界面要告诉销售"名单是怎么来的"，尤其是"换过词"这件事。
+        replan: result.replan,
         companies,
       });
     });
