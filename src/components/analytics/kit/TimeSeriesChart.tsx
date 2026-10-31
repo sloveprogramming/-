@@ -12,7 +12,7 @@ import { EmptyChart } from "./EmptyChart";
  * most 24px with a 4px round data-end (top segment only) and a 2px surface gap
  * between stacked segments, area fill at 10%, hairline solid gridlines, one
  * y-axis. Tooltip = crosshair + every series at that x, values first, line keys.
- * Render the legend yourself in ChartCard's `legend` slot (ChartLegend).
+ * Render the legend yourself in ChartCard's `legend` slot.
  *
  * Props:
  * - series: TimeSeries<K> from the contract

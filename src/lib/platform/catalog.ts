@@ -369,8 +369,8 @@ export const OPENROUTER_ICON_URL = "/Integrations - Icon/openrouter.svg";
 
 /**
  * Where each integration is connected in Settings: the Connection page of
- * the channel it powers. Unipile powers LinkedIn and WhatsApp; WhatsApp
- * screens pass their own page to RequiresPlatform.
+ * the channel it powers. Screens that need a connection link here rather than
+ * hard-coding a settings path.
  */
 export const PLATFORM_SETTINGS_HREF: Record<PlatformKey, string> = {
   google: "/settings/email-connection",

@@ -95,7 +95,8 @@ the reply itself already reaches Action required through the existing path.
 | `GET /[id]/merge-fields` · `POST /[id]/preview` | merge-field picker · render a step for a lead |
 
 Every route opens the organization scope (`requireCrmMutationContext` +
-`runInOrganization`); pages wrap in `RequiresPlatform platform="unipile"`.
+`runInOrganization`); pages show a connection prompt when the Unipile
+integration is not ready.
 
 ## Pages
 

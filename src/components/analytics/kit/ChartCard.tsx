@@ -14,7 +14,7 @@ import { Frame, FrameFooter, FrameHeader, FramePanel } from "./Frame";
  * - title, description
  * - actions: header controls (SegmentedControl, Select, badge…), left of the toggle
  * - legend: node at the top of the panel — use <SeriesStats> (values + deltas
- *   double as the legend) or <ChartLegend>
+ *   double as the legend), or render a custom legend
  * - table: the DataTableView twin; when given, an icon toggle swaps `children`
  *   for it. Every chart should pass one.
  * - footer: note under the panel

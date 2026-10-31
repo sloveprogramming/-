@@ -126,9 +126,10 @@ belongs to.
 
 A feature works only while its integration is connected: background jobs
 return early, user-facing routes answer 409 (`PlatformNotConnectedError`),
-and pages wrap in `RequiresPlatform`, which shows a Connect prompt. New code
-that calls one of these services must do the same — never read its keys
-from `process.env`.
+and pages use the relevant readiness guard (for example,
+`RequiresEmailSending`), which shows a Connect prompt. New code that calls
+one of these services must do the same — never read its keys from
+`process.env`.
 
 Env keeps only what is needed before the database can be read or decrypted
 (`DATABASE_URL`, `BETTER_AUTH_*`, `INTEGRATION_CREDENTIALS_KEY`), platform
