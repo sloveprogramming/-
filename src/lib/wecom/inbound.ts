@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { people } from "@/lib/leads/schema";
 import { ingestInboundReply } from "@/lib/crm/conversations";

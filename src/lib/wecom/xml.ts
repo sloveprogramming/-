@@ -38,7 +38,7 @@ export function parseFlatXml(xml: string, allowedTags?: readonly string[]): Reco
 
   // 1. 先把 CDATA 段抽出来，换成占位符——里面可能有 < >，直接扫会被切碎。
   const cdata: string[] = [];
-  let inner = outer[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (_, value: string) => {
+  const inner = outer[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (_, value: string) => {
     cdata.push(value);
     return `${CDATA_OPEN}${cdata.length - 1}\u0000`;
   });

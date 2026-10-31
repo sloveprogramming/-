@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { companies, people } from "@/lib/leads/schema";
 import { currentOrganizationId, inOrg } from "@/lib/tenancy/scope";

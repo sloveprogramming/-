@@ -8,7 +8,6 @@ import {
   intentsFor,
   validateCallLog,
   type CallIntent,
-  type CallOutcome,
 } from "./callTypes";
 
 /**

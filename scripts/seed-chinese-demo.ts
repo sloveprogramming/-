@@ -37,10 +37,6 @@ function daysAgo(now: Date, days: number, hour = 10): Date {
   return date;
 }
 
-function daysAhead(now: Date, days: number, hour = 10): Date {
-  return daysAgo(now, -days, hour);
-}
-
 /** 8 家公司，覆盖不同行业、地区、体量——让名单和评分有层次。 */
 const COMPANIES = [
   {

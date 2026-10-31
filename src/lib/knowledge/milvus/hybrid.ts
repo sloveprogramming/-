@@ -77,8 +77,6 @@ export async function hybridSearch(
   // 复用现有 searchKnowledge：它内部做 ts_rank_cd 排序 + tag 匹配 + token 预算。
   // 这里只要它返回的候选块，不要它的"选段"逻辑（那套是给起草拼上下文用的）。
   const textRoute: Array<{ key: string; entry: HybridKnowledgeHit }> = [];
-  let textError: string | null = null;
-  let textAvailable = true;
   try {
     const selection = await searchKnowledge(options.executor ?? (await defaultExecutor()), {
       query: text,
@@ -92,10 +90,6 @@ export async function hybridSearch(
       const rank = typeof entry.rank === "number" ? entry.rank : Number(entry.rank ?? 0);
       return Number.isFinite(rank) && rank > 0;
     });
-    if (selection.entries.length && scored.length === 0) {
-      textAvailable = false;
-      textError = "全文检索未匹配到关键词（中文未分词，或用词不在文档里）";
-    }
     for (const entry of scored) {
       // 全文检索返回的是「整篇文档的摘录」，不是 chunk。用它作为一路召回，
       // 与向量路按 documentId 对齐——这样两路都能认出是同一篇文档。
@@ -118,9 +112,8 @@ export async function hybridSearch(
       });
       if (textRoute.length >= perRoute) break;
     }
-  } catch (error) {
-    textAvailable = false;
-    textError = error instanceof Error ? error.message : String(error);
+  } catch {
+    // 全文检索是尽力而为：失败时仍可只靠向量路返回结果。
   }
 
   // ---- 第二路：Milvus 向量检索 ----

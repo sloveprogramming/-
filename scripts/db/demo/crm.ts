@@ -1370,10 +1370,9 @@ async function writeDraftNow(env: Env, p: Plan, at: Date, key: CopyKey | null, s
   return true;
 }
 
-function sendStub(env: Env, p: Plan, at: Date): CrmSendAdapter {
+function sendStub(env: Env): CrmSendAdapter {
   return async (input) => {
     const id = `${env.hex()}`;
-    const sentAt = new Date(at.getTime() + 4000);
     return {
       provider: "gmail", providerMessageId: `demo-gm-${id}`, providerThreadId: input.providerThreadId, rfcMessageId: `<demo.${id}@mail.northwind.example>`,
       response: { id: `demo-gm-${id}`, threadId: input.providerThreadId },
@@ -1392,7 +1391,7 @@ async function sendNow(env: Env, p: Plan, tEdit: Date | null, tSend: Date, actor
   const sendAt = tSend;
   await phase(p, sendAt, () => sendDraft(
     { draftId: draft!.id, revision: draft!.revision, idempotencyKey: `demo-send:${draft!.id}`, requestId: `demo-${draft!.id}`, actorRef: actor },
-    { send: sendStub(env, p, sendAt) },
+    { send: sendStub(env) },
   ));
   await fixSchedule(env.ctx, p.reply.recordId, sendAt);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { RiCalendarEventLine, RiCheckLine, RiCloseLine, RiLoader4Line, RiMapPinLine } from "@remixicon/react";
 
 import * as Button from "@/components/alignui/button";

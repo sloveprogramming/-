@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   RiAlertLine,
   RiArrowRightLine,
@@ -18,7 +19,7 @@ import { EmptyState } from "@/components/page/EmptyState";
 import { PageHeader } from "@/components/page/PageHeader";
 import { Callout } from "@/components/settings/SettingsKit";
 import { cn } from "@/utils/cn";
-import { PROSPECT_STAGES, STAGE_LABEL, type ProspectStage } from "@/lib/agent/pipelineTypes";
+import { PROSPECT_STAGES, STAGE_LABEL } from "@/lib/agent/pipelineTypes";
 import { TIER_LABEL, type CompanyAssessment } from "@/lib/icp/assess";
 import { RiUserAddLine } from "@remixicon/react";
 import type { ProductIntent } from "@/lib/icp/productIntent";
@@ -98,6 +99,7 @@ const LOOKUP_LABEL: Record<string, string> = {
 const STAGES = PROSPECT_STAGES;
 
 export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
+  const router = useRouter();
   const [product, setProduct] = useState("");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResponse | null>(null);
@@ -182,7 +184,7 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
       }
       setPromoted((prev) => ({ ...prev, [company.hit.key]: recordId }));
       // 直接进记录页——加进去的目的就是开始跟。
-      window.location.href = `/crm/actions?record=${recordId}`;
+      router.push(`/crm/actions?record=${recordId}`);
     } catch {
       setError("网络请求失败");
     } finally {
@@ -267,7 +269,7 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
               <Callout tone="warning" title="关于分数与深查">
                 分数由公开工商数据推断：注册资本（认缴）、成立年限、行业匹配、经营状态。
                 **不含参保人数与实缴出资**——这两项需要企查查付费详情接口，拿不到就没有。
-                分数高只说明"看起来对得上"，不代表对方有真实采购需求。
+                分数高只说明“看起来对得上”，不代表对方有真实采购需求。
                 <br />
                 分数落在 45–65 的灰色带公司，会额外查企查查的经营信号（招聘 / 招投标 /
                 资质 / 食品安全），结果显示为「深查」标签。**深查不改分数**：分数是公式

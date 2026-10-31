@@ -1,10 +1,10 @@
 import "server-only";
 
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { crmEvents, crmRecords } from "@/lib/crm/schema";
+import { crmEvents } from "@/lib/crm/schema";
 import { appendCrmEvent } from "@/lib/crm/events";
-import { CrmConflictError, CrmNotFoundError, withCrmTransaction } from "@/lib/crm/repository";
+import { CrmConflictError, withCrmTransaction } from "@/lib/crm/repository";
 import { lockCrmRecord } from "@/lib/crm/records";
 import { inOrg } from "@/lib/tenancy/scope";
 

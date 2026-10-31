@@ -1,10 +1,7 @@
 import "server-only";
 
-import { z } from "zod";
 import { assessCompany, type CompanyAssessment, type CompanyFacts } from "@/lib/icp/assess";
 import type { ProductIntent } from "@/lib/icp/productIntent";
-import { startAgentRun } from "./observe";
-import { ToolRegistry, type ToolExecutionContext } from "./tools";
 import { interpretProduct } from "@/lib/icp/productIntent.server";
 import { searchCompanies } from "@/lib/qcc/provider";
 import type { CompanyHit } from "@/lib/qcc/types";
@@ -39,7 +36,7 @@ import { MAX_DEEP_CHECK, inGrayZone, qualifyCompany, qualifierEnabled } from "./
 // 阶段名与类型放在 pipelineTypes.ts（客户端安全）；这里重导出，调用方不用改 import。
 export { PROSPECT_STAGES, STAGE_LABEL, NATURE_LABEL } from "./pipelineTypes";
 export type { ProspectStage, ProspectProgress, ProspectStats, AssessmentNature } from "./pipelineTypes";
-import type { ProspectProgress, ProspectStage, ProspectStats } from "./pipelineTypes";
+import type { ProspectProgress, ProspectStats } from "./pipelineTypes";
 
 export type AssessedCompany = CompanyAssessment & {
   hit: CompanyHit;

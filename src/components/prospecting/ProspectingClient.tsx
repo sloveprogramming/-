@@ -58,7 +58,7 @@ export function ProspectingClient({
     }
   }, []);
 
-  const hits = result?.hits ?? [];
+  const hits = useMemo(() => result?.hits ?? [], [result]);
   const selectedHits = useMemo(() => hits.filter((hit) => selected[hit.key]), [hits, selected]);
   const importable = selectedHits.filter((hit) => !hit.inLibrary);
 

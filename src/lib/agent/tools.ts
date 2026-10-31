@@ -103,7 +103,8 @@ export class ToolRegistry {
  */
 export function toToolParameters(schema: z.ZodType): Record<string, unknown> {
   const generated = z.toJSONSchema(schema, { io: "input" }) as Record<string, unknown>;
-  const { $schema: _ignored, ...rest } = generated;
+  const rest = { ...generated };
+  delete rest.$schema;
   return stripDefaults(rest) as Record<string, unknown>;
 }
 

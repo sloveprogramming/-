@@ -63,7 +63,6 @@ describe("渠道覆盖", () => {
 
 describe("各渠道的输出校验", () => {
   test("电话渠道产出的是要点（纯文本，无主题）", () => {
-    const built = buildDraftPrompt(baseInput());
     expect(() => validateDraftOutput(JSON.stringify({ subject: null, bodyText: "1. 开场自报家门\n2. 确认用量", bodyHtml: null }), "call")).not.toThrow();
   });
 

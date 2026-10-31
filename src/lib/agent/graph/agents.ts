@@ -1,7 +1,6 @@
 import "server-only";
 
 import { researchBeforeDraft } from "../research";
-import { assessCompany } from "@/lib/icp/assess";
 import { buildCallScript, renderCallScriptText } from "@/lib/icp/callScript";
 import { matchDictionary, fallbackIntent } from "@/lib/icp/productIntent";
 import { channelConstraintsForDraft } from "./channel";

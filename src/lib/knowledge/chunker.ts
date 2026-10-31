@@ -35,9 +35,6 @@ export type ChunkOptions = {
 const DEFAULT_MAX_CHARS = 500;
 const DEFAULT_MIN_CHARS = 40;
 
-/** 中文与英文都覆盖的句子终止符。 */
-const SENTENCE_END = /([。！？；\.\!\?;])/;
-
 /**
  * 切分一篇文档。
  *

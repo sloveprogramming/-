@@ -52,7 +52,7 @@ export async function interpretProduct(input: {
   if (input.allowAi === false) return fallbackIntent(query);
   try {
     const prompt = buildIntentPrompt(query, SEGMENT_KEYS);
-    const runtime = await getOpenRouterRuntime(undefined, 20_000);
+    await getOpenRouterRuntime(undefined, 20_000);
     const result = await completeStructuredWithOpenRouter({
       timeoutMs: 20_000,
       systemPrompt: prompt.systemPrompt,

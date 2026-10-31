@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { agentArtifacts } from "./schema";
-import { validateArtifact, type ArtifactKind, type ArtifactRecorder, type RawArtifact, type ProspectArtifact } from "./artifacts";
+import { validateArtifact, type ArtifactKind, type ArtifactRecorder, type ProspectArtifact } from "./artifacts";
 
 export type { ArtifactRecorder };
 
