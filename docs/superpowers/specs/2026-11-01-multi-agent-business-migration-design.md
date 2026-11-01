@@ -1,18 +1,35 @@
 # 多 Agent 业务迁移与拓客评分设计
 
 - 日期：2026-11-01
-- 状态：待评审
+- 状态：阶段 1 已实施；阶段 2-5 待实施
 - 范围：AgentSDR 的拓客、CRM 回复、业务能力分层与后续多 Agent 迁移
 - 决策基线：业务主干保持确定性；产品买家画像和公司合作判断分别建模；Agent 不直接执行外部副作用
 
 ## 1. 结论
 
-当前项目不是一个已经运行在多 Agent 上的产品。真实状态是：
+当前项目是“确定性业务主干 + 局部 Agent 工作流”，不是一个覆盖全系统的大
+Supervisor。真实状态是：
 
-- 拓客主链路是固定顺序的流水线。
-- CRM 回复链路是单次结构化 AI 调用，加上一个默认关闭的只读调研 Agent。
-- `src/lib/agent/graph` 里存在 LangGraph 多 Agent 原型，但没有接入生产请求。
-- 现有 `qualifyCompany` 是工具型 Agent，但只作为灰色带公司的可选增强，不修改基础分。
+- 拓客主链路已经由 `ProspectGraph` 编排，并在 `/api/prospect/run` 的生产路径中运行。
+- `ProductIntentAgent`、`SourcingAgent`、`ScoringAgent` 是三个独立图节点。
+- `SourcingAgent` 和 `ScoringAgent` 的增强能力仍是可选开关；关闭时走确定性主路径。
+- CRM 回复链路的 `ReplyAgent`（分类）和 `DraftAgent`（起草）已有生产实现，但尚未合并
+  成跨队列作业的 `CrmReplyGraph`。
+- 旧的、仅测试引用的 LangGraph 原型已经删除，避免与生产图并存造成误判。
+
+### 1.1 已落地的代码边界
+
+| 能力 | 生产实现 | 当前编排层级 |
+| --- | --- | --- |
+| 产品买家画像 | `src/lib/icp/productIntent.server.ts` | L1 单次结构化 AI + 词典快路径 |
+| 找企业 | `src/lib/agent/workflows/prospect/nodes.ts` + `qcc/provider.ts` | L0 确定性搜索 + 可选 L2 换词 Agent |
+| 公司合作评分 | `src/lib/icp/assess.ts` + `agent/qualifier.ts` | 确定性基础分 + 可选只读证据深查 |
+| 拓客流程 | `src/lib/agent/workflows/prospect/graph.ts` | L3 局部 LangGraph 工作流 |
+| 客户回复判断 | `src/lib/crm/ai/classify.ts` | L1 单次结构化 AI |
+| 回复/跟进草稿 | `src/lib/crm/ai/draft.ts` + `crm/drafts.ts` | L1 单次结构化 AI + 确定性审校 + 人工审核 |
+
+五个角色的共同边界定义在 `src/lib/agent/workflows/contracts.ts`。Agent 只能无副作用
+或只读；草稿必须人工审核；最终评分由确定性聚合器计算，模型不能直接返回不可解释的总分。
 
 迁移方向不是把全部业务交给一个 Supervisor，而是按业务旅程建立局部 Agent 图：
 
@@ -34,29 +51,40 @@
 
 ### 2.1 当前真实链路
 
-`src/app/api/prospect/run/route.ts` 调用 `runProspectPipeline`，当前顺序为：
+`src/app/api/prospect/run/route.ts` 仍调用 `runProspectPipeline`，但该函数现在是一个薄
+入口，真正的编排在 `runProspectGraph`：
 
 ```text
-产品解析 -> 搜索公司 -> 基础评分 -> 电话清洗
+POST /api/prospect/run
+  -> runProspectPipeline
+  -> runProspectGraph
+       ProductIntentAgent
+       -> SourcingAgent
+       -> ScoringAgent（可选灰色带深查）
+       -> contact_enrichment（确定性）
+       -> finish
 ```
 
 对应代码：
 
-- `src/lib/agent/pipeline.ts:102`：拓客流水线入口。
-- `src/lib/icp/productIntent.server.ts:39`：产品买家画像解析。
-- `src/lib/icp/assess.ts:142`：基础公司评分。
-- `src/lib/agent/pipeline.ts:310`：灰色带深查不修改基础分。
+- `src/lib/agent/pipeline.ts`：兼容入口。
+- `src/lib/agent/workflows/prospect/graph.ts`：图结构与执行入口。
+- `src/lib/agent/workflows/prospect/nodes.ts`：三个 Agent 节点和确定性收尾节点。
+- `src/lib/agent/workflows/prospect/state.ts`：节点之间传递的结构化状态。
+- `src/lib/icp/productIntent.server.ts`：产品买家画像解析。
+- `src/lib/icp/assess.ts`：可解释的基础合作评分。
+- `src/lib/agent/qualifier.ts`：灰色带只读深查，不直接修改基础分。
 
-### 2.2 当前多 Agent 原型
+### 2.2 旧原型已移除
 
-`src/lib/agent/graph/build.ts:63` 定义了 `supervisor -> research / assess_intent / draft / close / finish` 图。搜索结果显示，它只被 `src/lib/agent/graph/graph.test.ts` 引用，没有生产 API 或页面调用。
+原先 `src/lib/agent/graph` 中的 `supervisor -> research / assess_intent / draft / close / finish`
+原型只被自己的测试引用，且存在两类误导：
 
-因此：
+- `assess_intent` 是关键词启发式，不是客户回复分类。
+- `draft` 是模板/词典生成，不是真实草稿模型。
 
-- 不能把 `buildAgentGraph` 直接接入生产来宣称完成迁移。
-- 图里的 `assess_intent` 是关键词启发式。
-- 图里的 `draft` 是模板/词典生成，不是模型写作。
-- 只有 `research` 节点会通过 Pi SDK 走真实工具循环。
+该目录已删除。当前保留的唯一生产图是 `ProspectGraph`；`CrmReplyGraph` 的接入
+必须等待 Queue、上下文版本、幂等和人工审核边界设计完成，不能复用旧原型冒充迁移。
 
 ### 2.3 当前术语问题
 
@@ -637,12 +665,19 @@ human_reviewed
 - 标记旧 `/domains`、`/campaigns`、`/api/qualify` 为历史链路。
 - 不改变业务行为。
 
-### 阶段 1：ProspectGraph 骨架
+### 阶段 1：ProspectGraph 骨架（已完成）
 
 - 用 LangGraph 表达现有四段流水线。
 - 所有节点先复用确定性函数。
 - 保持现有 API 返回结构。
 - 不启用新 Agent。
+
+实现结果：
+
+- 生产入口仍为 `runProspectPipeline`，内部改为 `runProspectGraph`。
+- 图节点为 `product_intent -> sourcing -> scoring -> contact -> finish`。
+- 原有 `plan / sourcing / qualification / contact` artifact 顺序和 API 响应不变。
+- 删除只被测试引用的旧 `src/lib/agent/graph` 原型。
 
 ### 阶段 2：ProductBuyerProfileAgent
 
@@ -680,6 +715,17 @@ AGENT_COMPANY_COOPERATION=off|shadow|on
 AGENT_PROSPECT_GRAPH=off|on
 ```
 
+当前已经存在并实际使用的兼容开关：
+
+| 环境变量 | 作用 | 默认 |
+| --- | --- | --- |
+| `AGENT_REPLAN_SEARCH` | `SourcingAgent` 结果不足时启用只读换词探测 | 关闭 |
+| `AGENT_QUALIFY_GRAY_ZONE` | `ScoringAgent` 对灰色带公司启用只读证据深查 | 关闭 |
+| `AGENT_RESEARCH_BEFORE_DRAFT` | CRM 起草前启用只读调研 Agent | 关闭 |
+
+`AGENT_PRODUCT_PROFILE`、`AGENT_COMPANY_COOPERATION`、`AGENT_PROSPECT_GRAPH` 是后续
+shadow / 全量迁移要增加的开关；当前阶段不要把它们写进部署配置后误以为已生效。
+
 规则：
 
 - `shadow`：运行并记录，但业务结果使用旧路径。
@@ -702,13 +748,14 @@ AGENT_PROSPECT_GRAPH=off|on
 | 模型配置 | 复用现有 OpenRouter BYOK / Pi 配置，不新增硬编码密钥 |
 | 第一版试点 | 产品拓客，只读、可回滚、风险最低 |
 
-## 16. 评审后下一步
+## 16. 下一步
 
-本文档确认后，进入实施计划编写，不直接开始编码。实施计划必须拆成可以独立验证和提交的步骤，并为每一步列出：
+阶段 1 已落地。后续按顺序推进：
 
-- 修改的文件和接口。
-- 新增/变更的契约。
-- 单元和集成测试。
-- 观测字段。
-- 开关和回滚方式。
-- 推送 `origin` 的提交边界。
+1. 为 `ProductIntentAgent` 增加工具型探测、组织级人工修正和 shadow 评测。
+2. 把 `ScoringAgent` 的灰色带证据输出扩展为“基础分 + 有界调整 + coverage/confidence”，
+   并保证最终总分只能由确定性聚合器生成。
+3. 在 CRM 的 Queue、上下文版本、幂等和人工审核边界稳定后，再接入
+   `ReplyAgent -> optional research -> DraftAgent -> deterministic review -> human_review`。
+
+每一步仍需单独提交、运行类型检查/静态检查/相关测试，并推送 `origin`。
