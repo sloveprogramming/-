@@ -1,5 +1,17 @@
 # Agent instructions
 
+## Backend language
+
+- All new server-side business logic belongs in `backend/` and must be written
+  in Python. This includes API routes, Agent workflows, database access, queues,
+  webhooks and external integrations.
+- Existing TypeScript server code under `src/app/api` and `src/lib` is legacy
+  during the migration. Do not add business logic there; only make the minimum
+  change needed to connect the existing frontend to the Python backend or to
+  remove a fully migrated slice.
+- Frontend pages, layouts, client components and styles remain TypeScript /
+  TSX. The target architecture is a Next.js frontend backed by FastAPI.
+
 ## Git workflow
 
 - `origin` is the owner's repository at `https://github.com/sloveprogramming/-.git`; `upstream` is the original open-source repository.

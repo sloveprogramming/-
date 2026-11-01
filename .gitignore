@@ -72,6 +72,16 @@ domains.json
 .claude/settings.local.json
 .conductor/
 
+# Python backend
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+backend/.venv/
+backend/htmlcov/
+backend/.coverage
+
 # Generated reports of any kind (integration runs, audits) — may hold provider
 # responses and lead data
 /reports/

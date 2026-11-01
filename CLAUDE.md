@@ -1,6 +1,16 @@
 # AgentSDR_v2
 
-## TypeScript, not JavaScript
+## Frontend TypeScript, Python backend
+
+All server-side business logic belongs in `backend/` and must be Python:
+FastAPI routes, Agent workflows, database access, queues, webhooks and external
+integrations. Existing TypeScript server code under `src/app/api` and
+`src/lib` is legacy during the migration; do not add new business logic there.
+
+Frontend pages, layouts, client components and styles remain TypeScript/TSX.
+The target architecture is a Next.js frontend backed by FastAPI.
+
+## TypeScript, not JavaScript (frontend)
 
 Write all new code in TypeScript (`.ts` / `.tsx`). Do not add new `.js` or `.mjs`
 files, including one-off tooling — a throwaway script tends not to stay
