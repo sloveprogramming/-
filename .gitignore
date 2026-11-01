@@ -81,6 +81,7 @@ __pycache__/
 backend/.venv/
 backend/htmlcov/
 backend/.coverage
+backend/*.egg-info/
 
 # Generated reports of any kind (integration runs, audits) — may hold provider
 # responses and lead data
