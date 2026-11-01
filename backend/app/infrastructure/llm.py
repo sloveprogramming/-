@@ -5,10 +5,20 @@ import re
 from typing import Any
 
 import httpx
+from langsmith import traceable
 
 
 class ModelError(RuntimeError):
     """A language-model call did not produce a JSON object."""
+
+
+def _trace_llm_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_name": inputs.get("schema_name"),
+        "max_output_tokens": inputs.get("max_output_tokens"),
+        "system_prompt": inputs.get("system_prompt"),
+        "user_prompt": inputs.get("user_prompt"),
+    }
 
 
 class DeepSeekModel:
@@ -27,6 +37,12 @@ class DeepSeekModel:
         self._model = model
         self._timeout_seconds = timeout_seconds
 
+    @traceable(
+        run_type="llm",
+        name="DeepSeek JSON completion",
+        tags=["llm", "deepseek"],
+        process_inputs=_trace_llm_inputs,
+    )
     async def complete_json(
         self,
         *,

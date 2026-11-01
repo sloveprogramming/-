@@ -49,6 +49,33 @@ The API expects `Authorization: Bearer <AGENT_BACKEND_TOKEN>` and
 This is an internal migration guard, not a replacement for the final
 session-based authentication.
 
+## LangSmith tracing (optional)
+
+Tracing is disabled unless both `LANGSMITH_TRACING=true` and a valid
+`LANGSMITH_API_KEY` are present. Create the key in the LangSmith workspace
+under `Settings -> API Keys`; do not use the DeepSeek key here.
+
+```powershell
+$env:LANGSMITH_TRACING="true"
+$env:LANGSMITH_API_KEY="<langsmith-key>"
+$env:LANGSMITH_PROJECT="agentsdr-dev"
+uvicorn app.main:app --reload --port 8000
+```
+
+Set `LANGSMITH_ENDPOINT` only when the workspace uses a non-default region.
+If you keep these values in `backend/.env`, start Uvicorn with
+`--env-file .env`; the file is ignored by Git.
+
+One `POST /api/prospect/run` then appears in LangSmith as `prospect-run`. The
+graph nodes, DeepSeek calls and QCC searches are separate spans. Phone numbers,
+email addresses and common credential formats are masked client-side before
+upload, and the raw organization UUID is replaced by a short fingerprint.
+
+The dev tracer keeps prompts and company names so failures can be diagnosed.
+For production, use sampling or set `LANGSMITH_HIDE_INPUTS=true` and
+`LANGSMITH_HIDE_OUTPUTS=true`. Do not send real customer conversations, phone
+lists or other lead data to a cloud project without an explicit data policy.
+
 ## Verify
 
 ```powershell

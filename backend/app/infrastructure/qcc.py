@@ -6,12 +6,39 @@ import time
 from collections.abc import Mapping
 
 import httpx
+from langsmith import traceable
 
 from app.domain.prospect.models import CompanyHit
 
 
 class QccError(RuntimeError):
     """QCC did not return a usable result."""
+
+
+def _trace_qcc_inputs(inputs: dict[str, object]) -> dict[str, object]:
+    return {
+        "query": inputs.get("query"),
+        "limit": inputs.get("limit"),
+    }
+
+
+def _trace_qcc_outputs(hits: object) -> object:
+    if not isinstance(hits, list):
+        return hits
+    companies = [
+        {
+            "name": hit.name,
+            "region": hit.region,
+            "industry": hit.industry,
+            "founded_at": hit.founded_at,
+            "registered_capital": hit.registered_capital,
+            "has_phone": bool(hit.phones),
+            "in_library": hit.in_library,
+        }
+        for hit in hits
+        if isinstance(hit, CompanyHit)
+    ]
+    return {"count": len(hits), "companies": companies}
 
 
 def qcc_token(key: str, timestamp: str, secret: str) -> str:
@@ -89,6 +116,13 @@ class QccClient:
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
 
+    @traceable(
+        run_type="tool",
+        name="QCC company search",
+        tags=["tool", "qcc"],
+        process_inputs=_trace_qcc_inputs,
+        process_outputs=_trace_qcc_outputs,
+    )
     async def search(self, query: str, *, limit: int = 20) -> list[CompanyHit]:
         timestamp = str(int(time.time()))
         params = {

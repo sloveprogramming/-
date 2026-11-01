@@ -4,6 +4,7 @@ import logging
 import operator
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
+from hashlib import sha256
 from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -329,6 +330,7 @@ async def run_prospect_workflow(
 ) -> ProspectResult:
     normalized_product = product.strip()
     compiled = build_prospect_graph(deps)
+    organization_fingerprint = sha256(organization_id.encode()).hexdigest()[:12]
     state = await compiled.ainvoke(
         {
             "product": normalized_product,
@@ -343,7 +345,15 @@ async def run_prospect_workflow(
             "priority": 0,
             "error": None,
             "trail": [],
-        }
+        },
+        config={
+            "run_name": "prospect-run",
+            "tags": ["prospect"],
+            "metadata": {
+                "business_trace_id": trace_id,
+                "organization_fingerprint": organization_fingerprint,
+            },
+        },
     )
     intent = state.get("intent") or fallback_intent(normalized_product)
     companies = state.get("assessed", [])

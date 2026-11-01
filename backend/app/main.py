@@ -8,10 +8,12 @@ from fastapi.responses import JSONResponse
 from app.api.routes import health, prospect
 from app.config import get_settings
 from app.errors import ApiError
+from app.infrastructure.tracing import configure_tracing
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    configure_tracing(settings)
     app = FastAPI(
         title="AgentSDR Python backend",
         version="0.1.0",
