@@ -40,7 +40,6 @@ describe("demoRequestBlock", () => {
 
   test("refuses reads that start paid or background work", () => {
     expect(demoRequestBlock("/api/qualify", "GET", demo)).toEqual({ kind: "refuse" });
-    expect(demoRequestBlock("/api/debug-env", "GET", demo)).toEqual({ kind: "refuse" });
     expect(demoRequestBlock("/api/campaigns/123/stream", "GET", demo)).toEqual({ kind: "refuse" });
   });
 

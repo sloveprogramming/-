@@ -65,7 +65,6 @@ const SILENT_WRITES: RegExp[] = [
  * catalog in the demo instead: src/lib/demo/openrouterCatalog.ts.)
  */
 const ACTIVE_GETS: RegExp[] = [
-  /^\/api\/debug-env/,
   /^\/api\/qualify/,
   /^\/api\/campaigns\/[^/]+\/stream$/,
 ];
