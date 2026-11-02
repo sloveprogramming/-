@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.domain.prospect.intent import fallback_intent
 from app.domain.prospect.models import (
     CompanyAssessment,
     CompanyHit,
@@ -96,6 +97,20 @@ async def test_no_hits_skips_scoring_and_finishes() -> None:
     assert result.stats.found == 0
     assert result.companies == []
     assert result.stats.priority == 0
+
+
+async def test_zero_confidence_intent_is_visible_in_warnings() -> None:
+    async def fallback_interpret(query: str) -> ProductIntent:
+        return fallback_intent(query)
+
+    result = await run_prospect_workflow(
+        product="未知产品",
+        organization_id=ORG_ID,
+        trace_id="11111111-1111-4111-8111-111111111111",
+        deps=dependencies(interpret=fallback_interpret),
+    )
+
+    assert any("产品画像置信度为 0" in warning for warning in result.warnings)
 
 
 async def test_sourcing_deduplicates_and_contactable_companies_sort_first() -> None:

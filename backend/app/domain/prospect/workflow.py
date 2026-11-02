@@ -117,11 +117,17 @@ class ProductIntentAgent:
 
     async def run(self, state: ProspectState) -> dict[str, Any]:
         product = state["product"]
+        warnings: list[str] = []
         try:
             intent = await self._dependencies.interpret(product)
         except Exception:
             logger.exception("产品画像失败，退回兜底画像")
             intent = fallback_intent(product)
+        if intent.confidence <= 0:
+            _append_warning(
+                warnings,
+                "产品画像置信度为 0，已使用兜底搜索词，结果可能不精准。",
+            )
         detail = intent.category or "未识别品类"
         await _emit(
             self._dependencies,
@@ -130,6 +136,7 @@ class ProductIntentAgent:
         )
         return {
             "intent": intent,
+            "warnings": warnings,
             "trail": [f"product_intent: {detail}，{len(intent.search_terms)} 个搜索词"],
         }
 

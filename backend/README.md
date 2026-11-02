@@ -26,8 +26,8 @@ The slice now matches the TypeScript prospect contract for the observable
 parts of the run:
 
 - `excludeTerms` filters both search terms and returned companies;
-- search fallback and per-term failures are returned in `warnings` instead of
-  silently looking like "no companies found";
+- product-intent fallback, search fallback and per-term failures are returned in
+  `warnings` instead of silently looking trustworthy or like "no companies found";
 - `plan`, `sourcing`, `qualification` and `contact` artifacts are written to the
   shared `agent_artifacts` table when `DATABASE_URL` is configured, with a
   per-trace `seq`;

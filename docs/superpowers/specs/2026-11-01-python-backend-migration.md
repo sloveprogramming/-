@@ -97,7 +97,8 @@ finish
 当前 Python 切片与 TS 拓客契约对齐的范围：
 
 - `ProductIntent.excludeTerms` 同时过滤搜索词和命中公司；全部词被排除时不会执行空搜索。
-- `SearchResult.notice`、单个搜索词异常、换词失败和深查降级都会进入响应 `warnings`。
+- 产品画像兜底、`SearchResult.notice`、单个搜索词异常、换词失败和深查降级都会进入响应
+  `warnings`。
 - `plan / sourcing / qualification / contact` 四类 artifact 按顺序写入共享
   `agent_artifacts` 表，`seq` 由单次 trace 的 recorder 递增；落库失败不影响业务结果。
 - `DeepCheck` 只作为资质员的附加结论，`lookups` 记录实际调用过且成功/失败的工具，
