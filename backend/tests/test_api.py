@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from urllib.parse import quote
 from uuid import UUID
 
 import pytest
@@ -21,6 +22,9 @@ ORG_ID = "00000000-0000-4000-8000-000000000001"
 
 
 class StubProspectService:
+    def __init__(self, expected_user_name: str | None = None) -> None:
+        self.expected_user_name = expected_user_name
+
     async def run(
         self,
         *,
@@ -31,7 +35,7 @@ class StubProspectService:
     ) -> ProspectRunResponse:
         assert organization_id == UUID(ORG_ID)
         assert trace_id
-        assert user_name is None
+        assert user_name == self.expected_user_name
         company_hit = CompanyHit(
             key="k1",
             name="临安烘焙食品有限公司",
@@ -115,6 +119,25 @@ def test_prospect_requires_internal_token(client: TestClient) -> None:
 
     assert response.status_code == 401
     assert response.json()["code"] == "UNAUTHENTICATED"
+
+
+def test_prospect_decodes_encoded_user_name_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_BACKEND_TOKEN", "test-token")
+    get_settings.cache_clear()
+    app = create_app()
+    app.dependency_overrides[get_prospect_service] = lambda: StubProspectService("张三")
+    try:
+        with TestClient(app) as test_client:
+            response = test_client.post(
+                "/api/prospect/run",
+                json={"product": "面包丝"},
+                headers={**auth_headers(), "X-User-Name-Encoded": quote("张三")},
+            )
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+    assert response.status_code == 200
 
 
 def test_prospect_requires_valid_organization_header(client: TestClient) -> None:

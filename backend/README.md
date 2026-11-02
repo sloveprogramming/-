@@ -68,6 +68,7 @@ Prospecting:
 POST http://localhost:8000/api/prospect/run
 Authorization: Bearer <AGENT_BACKEND_TOKEN>
 X-Organization-Id: <organization uuid>
+X-User-Name-Encoded: <percent-encoded user name, optional>
 
 {"product":"面包丝"}
 ```
@@ -75,7 +76,30 @@ X-Organization-Id: <organization uuid>
 The API expects `Authorization: Bearer <AGENT_BACKEND_TOKEN>` and
 `X-Organization-Id` while the TypeScript and Python services run side by side.
 This is an internal migration guard, not a replacement for the final
-session-based authentication.
+session-based authentication. Direct callers may still send `X-User-Name`; the
+Next.js proxy sends `X-User-Name-Encoded` so Chinese names do not become invalid
+HTTP header values. The backend percent-decodes the encoded value.
+
+## Next.js cutover
+
+Add these server-only values to the Next.js environment when testing the Python
+slice. `PROSPECT_BACKEND` defaults to `ts`, so existing deployments are unchanged.
+
+```text
+PROSPECT_BACKEND=python
+PYTHON_BACKEND_URL=http://127.0.0.1:8000
+AGENT_BACKEND_TOKEN=<same value as backend/.env>
+```
+
+The browser keeps calling `/api/prospect/run`. Next.js verifies the session and
+organization, forwards `X-Organization-Id`, and never exposes the internal token
+to the browser. If `PROSPECT_BACKEND=python` is set but either value is missing,
+the route returns `503` instead of silently using the legacy pipeline. Set
+`PROSPECT_BACKEND=ts` to roll back.
+
+The proxy has a 90-second timeout and maps upstream failures to safe `502/504`
+responses. Python `warnings` are returned unchanged and rendered above the result
+list.
 
 ## LangSmith tracing (optional)
 
@@ -126,11 +150,13 @@ webhooks, grid, integrations and scheduling are still in TypeScript and must be
 migrated in that order. Do not add new server-side business logic under
 `src/lib` or `src/app/api`; put it in `backend/app` during the migration.
 
-The Next.js `/api/prospect/run` route still serves production traffic while the
-Python slice is being reviewed. Do not cut traffic over until the local company
-library, QCC search and (when enabled) QCC MCP paths have been exercised with a
-real tenant and real credentials. Local tests use fakes for the external
-providers and do not prove provider authorization or production data quality.
+The Next.js `/api/prospect/run` route still serves production traffic by default
+while the Python slice is being reviewed. The server-side proxy and explicit
+`PROSPECT_BACKEND` switch are implemented, but do not enable them in production
+until the local company library, QCC search and (when enabled) QCC MCP paths have
+been exercised with a real tenant and real credentials. Local tests use fakes for
+the external providers and do not prove provider authorization or production
+data quality.
 
 ## Migration rule
 

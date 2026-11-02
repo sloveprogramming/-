@@ -72,6 +72,8 @@ type RunResponse = {
   stats: { searchedTerms: number; found: number; reachable: number; priority: number };
   replan?: ReplanInfo | null;
   companies: CompanyResult[];
+  /** Python 后端返回的降级说明；TS 链路为空数组。 */
+  warnings?: string[];
   error?: string;
 };
 
@@ -232,6 +234,15 @@ export function ProspectRunClient({ qccEnabled }: { qccEnabled: boolean }) {
 
       {result && (
         <>
+          {result.warnings?.length ? (
+            <Callout tone="warning" title="本次结果有降级提示">
+              <ul className="space-y-1">
+                {result.warnings.map((warning, index) => (
+                  <li key={`${index}-${warning}`}>· {warning}</li>
+                ))}
+              </ul>
+            </Callout>
+          ) : null}
           {result.companies.length === 0 ? (
             <EmptyState
               icon={RiSearchLine}

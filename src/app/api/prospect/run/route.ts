@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { authContextErrorResponse, withOrgContext } from "@/lib/auth/context";
 import { runProspectPipeline, summarizeResult } from "@/lib/agent/pipeline";
 import { createArtifactRecorder } from "@/lib/agent/artifactStore";
+import {
+  callPythonProspect,
+  ProspectBackendConfigError,
+  resolveProspectBackendConfig,
+} from "@/lib/agent/backendRouting";
 import { buildCallScript, renderCallScriptText } from "@/lib/icp/callScript";
 
 /**
@@ -24,6 +29,24 @@ export async function POST(request: NextRequest) {
       const body = (await request.json().catch(() => null)) as { product?: string } | null;
       const product = body?.product?.trim();
       if (!product) return NextResponse.json({ error: "请填写产品名" }, { status: 400 });
+
+      const backend = resolveProspectBackendConfig();
+      if (backend.kind === "python") {
+        const result = await callPythonProspect({
+          baseUrl: backend.baseUrl,
+          token: backend.token,
+          product,
+          organizationId: ctx.organizationId,
+          userName: ctx.userName,
+        });
+        if (!result.ok) {
+          return NextResponse.json(
+            { error: result.message, code: result.code },
+            { status: result.status },
+          );
+        }
+        return NextResponse.json(result.payload);
+      }
 
       const traceId = crypto.randomUUID();
       const result = await runProspectPipeline({
@@ -63,11 +86,18 @@ export async function POST(request: NextRequest) {
         // 换词重搜的记录：界面要告诉销售"名单是怎么来的"，尤其是"换过词"这件事。
         replan: result.replan,
         companies,
+        warnings: [],
       });
     });
   } catch (error) {
     const response = authContextErrorResponse(error);
     if (response) return response;
+    if (error instanceof ProspectBackendConfigError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: 503 },
+      );
+    }
     throw error;
   }
 }

@@ -107,8 +107,9 @@ finish
   和最多 2 家灰色带深查。
 
 以下仍不能仅凭本地测试宣称完成：真实企查查 MCP 授权、真实 QCC 企业搜索字段、
-真实租户本地企业库、生产数据库 `agent_artifacts` 写入和前端切流。它们属于切流门禁，
-需要用真实凭据与租户验证。
+真实租户本地企业库、生产数据库 `agent_artifacts` 写入，以及生产切流后的观测。
+它们属于切流门禁，需要用真实凭据与租户验证。服务端代理、显式开关和前端
+`warnings` 展示已经实现，但生产流量仍默认走 TypeScript。
 
 评分回答的是“这家公司值不值得合作”，不是产品买家画像。产品意图回答的是“这个产品卖给谁”，两者输入、缓存键和验收标准不同。
 
@@ -116,7 +117,8 @@ finish
 
 ### 批次 1：基础设施与拓客
 
-- 状态：拓客垂直切片已实现并补齐 artifact、warnings、排除词和可选深查；尚未切流。
+- 状态：拓客垂直切片已实现并补齐 artifact、warnings、排除词和可选深查；Next.js
+  服务端代理与 `PROSPECT_BACKEND` 开关已实现，生产流量仍默认走 TypeScript。
 - 内容包括：内部鉴权、租户绑定、Postgres 企业库查询、DeepSeek、企查查、QCC MCP 只读信号、ProspectGraph、artifact 落库、测试。
 - 切换条件：前端代理改用 Python 路由；本地库与企查查两条路径都完成真实环境验证。
 
@@ -153,15 +155,34 @@ finish
 
 ## 6. 前端切换方式
 
-第 1 批先使用 Next.js 服务端代理，不让浏览器直接持有内部 token：
+第 1 批使用 Next.js 服务端代理，不让浏览器直接持有内部 token：
 
 ```text
 browser -> Next.js proxy -> FastAPI
                           Authorization: Bearer <server-only token>
                           X-Organization-Id: <resolved from session>
+                          X-User-Name-Encoded: <percent-encoded user name>
 ```
 
 前端页面不得自行拼接 `X-Organization-Id`。组织 ID 必须来自服务端会话和组织成员校验，否则会形成跨租户入口。
+
+Next.js 侧使用以下**服务端**环境变量：
+
+```text
+PROSPECT_BACKEND=ts
+PYTHON_BACKEND_URL=http://127.0.0.1:8000
+AGENT_BACKEND_TOKEN=<same value as backend/.env>
+```
+
+- `PROSPECT_BACKEND` 默认是 `ts`，历史部署行为不变。
+- 只有显式设为 `python` 才会走 FastAPI；此时缺 URL/token 或 URL 非法会返回 `503`，
+  不会静默回退 TypeScript。回滚同样只需改回 `ts`。
+- 代理超时为 90 秒；上游网络错误、鉴权失败和非法响应分别映射为安全的 `502/504`，
+  不向浏览器透传内部 token、后端地址或上游错误正文。
+- Python 返回的 `warnings` 直接透传，前端在结果区展示产品画像兜底、搜索降级、
+  换词失败和深查降级等提示。
+
+生产切流前仍需完成真实租户、真实 QCC 和 QCC MCP 验证；开关存在不等于验收通过。
 
 ## 7. 验证命令
 

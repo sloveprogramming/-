@@ -3,6 +3,7 @@ from __future__ import annotations
 import secrets
 from dataclasses import dataclass
 from typing import Annotated
+from urllib.parse import unquote
 from uuid import UUID
 
 from fastapi import Header
@@ -21,6 +22,7 @@ async def require_request_context(
     authorization: Annotated[str | None, Header()] = None,
     organization_id: Annotated[str | None, Header(alias="X-Organization-Id")] = None,
     user_name: Annotated[str | None, Header(alias="X-User-Name")] = None,
+    user_name_encoded: Annotated[str | None, Header(alias="X-User-Name-Encoded")] = None,
 ) -> RequestContext:
     """Authenticate the internal caller and bind it to exactly one tenant."""
 
@@ -52,5 +54,6 @@ async def require_request_context(
         ) from error
     return RequestContext(
         organization_id=parsed_organization_id,
-        user_name=(user_name or "").strip() or None,
+        user_name=(unquote(user_name_encoded) if user_name_encoded else user_name or "").strip()
+        or None,
     )
