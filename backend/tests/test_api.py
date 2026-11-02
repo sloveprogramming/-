@@ -72,6 +72,7 @@ class StubProspectService:
             ),
             stats=ProspectStats(searched_terms=1, found=1, reachable=1, priority=1),
             replan=None,
+            warnings=["搜索降级：当前只在本地线索库里搜索。"],
             companies=[
                 ProspectCompanyResult(
                     **assessment.model_dump(),
@@ -159,3 +160,4 @@ def test_prospect_response_keeps_frontend_contract(client: TestClient) -> None:
     assert payload["companies"][0]["companyName"] == "临安烘焙食品有限公司"
     assert payload["companies"][0]["hit"]["creditCode"] is None
     assert payload["companies"][0]["scriptText"] == "【电话】临安烘焙食品有限公司"
+    assert payload["warnings"] == ["搜索降级：当前只在本地线索库里搜索。"]

@@ -1,7 +1,7 @@
 # Python 后端迁移设计
 
 - 日期：2026-11-01
-- 状态：第 1 个垂直切片已实现，其余业务按批次迁移
+- 状态：第 1 个垂直切片已补齐行为与可观测性，生产流量仍走 TypeScript；其余业务按批次迁移
 - 目标：Next.js 只负责页面与交互，所有服务端业务逻辑、Agent 编排、数据库访问和外部集成统一由 FastAPI/Python 提供
 - 非目标：在行为尚未对齐前一次性删除 TypeScript 后端；同时维护两套业务写路径
 
@@ -87,11 +87,27 @@ ScoringAgent
   -> 注册资本 25 + 成立年限 20 + 行业匹配 25 + 经营状态 15 + 经营范围 15
   -> 注销/吊销直接 skip
   -> 灰色带深查是可选附加信号，不直接改公式分数
+  -> 深查只读企查查 MCP；失败、未授权或未配置时保留原分档并回传 warning
 ContactAgent
   -> 电话清洗、去重
   -> 有电话的公司优先，再按合作分排序
 finish
 ```
+
+当前 Python 切片与 TS 拓客契约对齐的范围：
+
+- `ProductIntent.excludeTerms` 同时过滤搜索词和命中公司；全部词被排除时不会执行空搜索。
+- `SearchResult.notice`、单个搜索词异常、换词失败和深查降级都会进入响应 `warnings`。
+- `plan / sourcing / qualification / contact` 四类 artifact 按顺序写入共享
+  `agent_artifacts` 表，`seq` 由单次 trace 的 recorder 递增；落库失败不影响业务结果。
+- `DeepCheck` 只作为资质员的附加结论，`lookups` 记录实际调用过且成功/失败的工具，
+  不改写确定性分数；API 响应继续返回工具名字符串数组，兼容现有前端。
+- `AGENT_REPLAN_SEARCH` 与 `AGENT_QUALIFY_GRAY_ZONE` 默认关闭，分别对齐 TS 的有界换词
+  和最多 2 家灰色带深查。
+
+以下仍不能仅凭本地测试宣称完成：真实企查查 MCP 授权、真实 QCC 企业搜索字段、
+真实租户本地企业库、生产数据库 `agent_artifacts` 写入和前端切流。它们属于切流门禁，
+需要用真实凭据与租户验证。
 
 评分回答的是“这家公司值不值得合作”，不是产品买家画像。产品意图回答的是“这个产品卖给谁”，两者输入、缓存键和验收标准不同。
 
@@ -99,8 +115,8 @@ finish
 
 ### 批次 1：基础设施与拓客
 
-- 状态：拓客垂直切片已实现。
-- 内容包括：内部鉴权、租户绑定、Postgres 企业库查询、DeepSeek、企查查、ProspectGraph、测试。
+- 状态：拓客垂直切片已实现并补齐 artifact、warnings、排除词和可选深查；尚未切流。
+- 内容包括：内部鉴权、租户绑定、Postgres 企业库查询、DeepSeek、企查查、QCC MCP 只读信号、ProspectGraph、artifact 落库、测试。
 - 切换条件：前端代理改用 Python 路由；本地库与企查查两条路径都完成真实环境验证。
 
 ### 批次 2：认证、组织与线索库

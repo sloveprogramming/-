@@ -33,6 +33,10 @@ class Settings:
     langsmith_project: str
     langsmith_endpoint: str | None
     cors_origins: tuple[str, ...]
+    qcc_mcp_token: str | None = None
+    qcc_mcp_base_url: str = "https://agent.qcc.com/mcp"
+    agent_replan_search: bool = False
+    agent_qualify_gray_zone: bool = False
 
     @property
     def is_production(self) -> bool:
@@ -51,6 +55,12 @@ def get_settings() -> Settings:
         qcc_app_key=os.getenv("QCC_APP_KEY", "").strip() or None,
         qcc_secret_key=os.getenv("QCC_SECRET_KEY", "").strip() or None,
         qcc_base_url=os.getenv("QCC_BASE_URL", "https://api.qichacha.com").rstrip("/"),
+        qcc_mcp_token=os.getenv("QCC_MCP_TOKEN", "").strip() or None,
+        qcc_mcp_base_url=(
+            os.getenv("QCC_MCP_BASE_URL", "").strip().rstrip("/") or "https://agent.qcc.com/mcp"
+        ),
+        agent_replan_search=_bool(os.getenv("AGENT_REPLAN_SEARCH")),
+        agent_qualify_gray_zone=_bool(os.getenv("AGENT_QUALIFY_GRAY_ZONE")),
         langsmith_tracing=_bool(os.getenv("LANGSMITH_TRACING")),
         langsmith_api_key=os.getenv("LANGSMITH_API_KEY", "").strip() or None,
         langsmith_project=os.getenv("LANGSMITH_PROJECT", "agentsdr-dev").strip() or "agentsdr-dev",

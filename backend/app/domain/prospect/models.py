@@ -82,6 +82,8 @@ class TermHit(ApiModel):
     term: str
     hits: int
     error: str | None = None
+    source: Literal["local", "qcc"] | None = None
+    notice: str | None = None
 
 
 class ReplanInput(ApiModel):
@@ -120,6 +122,13 @@ class CompanyAssessment(ApiModel):
     caveats: list[str]
 
 
+class Lookup(ApiModel):
+    """One read-only signal lookup, including whether it succeeded."""
+
+    tool: str
+    ok: bool
+
+
 class DeepCheck(ApiModel):
     verdict: Literal["pursue", "hold", "drop"]
     reasoning: str
@@ -132,12 +141,18 @@ class QualifierInput(ApiModel):
     tier: CompanyTier
     buyer_description: str
     product: str
+    industry: str | None = None
+    scope: str | None = None
+    region: str | None = None
+    registered_capital: str | None = None
+    founded_at: str | None = None
+    status: str | None = None
 
 
 class QualifierResult(ApiModel):
     verdict: Literal["pursue", "hold", "drop"]
     reasoning: str
-    lookups: list[str]
+    lookups: list[Lookup]
 
 
 class AssessedCompany(CompanyAssessment):
@@ -161,6 +176,7 @@ class ProspectResult(ApiModel):
     companies: list[AssessedCompany]
     stats: ProspectStats
     replan: SourcingReplan | None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ProspectCompanyResult(AssessedCompany):
@@ -176,6 +192,7 @@ class ProspectRunResponse(ApiModel):
     stats: ProspectStats
     replan: SourcingReplan | None
     companies: list[ProspectCompanyResult]
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ProspectRunRequest(ApiModel):

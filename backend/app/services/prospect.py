@@ -14,10 +14,16 @@ from app.domain.prospect.models import (
     ReplanDecision,
     ReplanInput,
 )
+from app.domain.prospect.qualification import ProspectQualifier
 from app.domain.prospect.sourcing import CompanySearchService
 from app.domain.prospect.workflow import (
     ProspectWorkflowDependencies,
     run_prospect_workflow,
+)
+from app.infrastructure.artifacts import (
+    ArtifactWriter,
+    PostgresArtifactWriter,
+    artifact_recorder,
 )
 from app.infrastructure.database import (
     CompanyRepository,
@@ -26,6 +32,7 @@ from app.infrastructure.database import (
 )
 from app.infrastructure.llm import DeepSeekModel
 from app.infrastructure.qcc import QccClient, qcc_configured
+from app.infrastructure.qcc_mcp import QccMcpClient
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +46,18 @@ class ProspectService:
         repository: CompanyRepository,
         model: DeepSeekModel | None,
         qcc: QccClient | None,
+        artifact_writer: ArtifactWriter | None = None,
+        qcc_mcp: QccMcpClient | None = None,
+        replan_enabled: bool = False,
+        qualify_gray_zone: bool = False,
     ) -> None:
         self._repository = repository
         self._model = model
         self._qcc = qcc
+        self._artifact_writer = artifact_writer
+        self._qcc_mcp = qcc_mcp
+        self._replan_enabled = replan_enabled
+        self._qualify_gray_zone = qualify_gray_zone
 
     @classmethod
     def from_settings(cls, settings: Settings) -> ProspectService:
@@ -69,10 +84,26 @@ class ProspectService:
             if qcc_configured(settings.qcc_app_key, settings.qcc_secret_key)
             else None
         )
-        return cls(repository=repository, model=model, qcc=qcc)
+        artifact_writer = (
+            PostgresArtifactWriter(settings.database_url) if settings.database_url else None
+        )
+        return cls(
+            repository=repository,
+            model=model,
+            qcc=qcc,
+            artifact_writer=artifact_writer,
+            qcc_mcp=QccMcpClient(
+                token=settings.qcc_mcp_token,
+                base_url=settings.qcc_mcp_base_url,
+            ),
+            replan_enabled=settings.agent_replan_search,
+            qualify_gray_zone=settings.agent_qualify_gray_zone,
+        )
 
     async def close(self) -> None:
         await self._repository.close()
+        if self._artifact_writer is not None:
+            await self._artifact_writer.close()
 
     async def run(
         self,
@@ -91,10 +122,26 @@ class ProspectService:
         async def interpret(query: str) -> ProductIntent:
             return await interpret_product(query, model=self._model)
 
+        recorder = (
+            artifact_recorder(
+                writer=self._artifact_writer,
+                organization_id=organization_id,
+                trace_id=trace_id,
+            )
+            if self._artifact_writer is not None
+            else None
+        )
+        qualifier = (
+            ProspectQualifier(model=self._model, mcp=self._qcc_mcp)
+            if self._qualify_gray_zone
+            else None
+        )
         dependencies = ProspectWorkflowDependencies(
             interpret=interpret,
             search=search,
-            replan=self._replan if self._model is not None else None,
+            replan=(self._replan if self._replan_enabled and self._model is not None else None),
+            qualify=qualifier,
+            record_artifact=recorder,
         )
         result = await run_prospect_workflow(
             product=product,
@@ -168,6 +215,7 @@ class ProspectService:
             stats=result.stats,
             replan=result.replan,
             companies=companies,
+            warnings=result.warnings,
         )
 
 

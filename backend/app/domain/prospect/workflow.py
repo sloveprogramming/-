@@ -65,6 +65,7 @@ class ProspectState(TypedDict, total=False):
     reachable: int
     priority: int
     error: str | None
+    warnings: Annotated[list[str], operator.add]
     trail: Annotated[list[str], operator.add]
 
 
@@ -91,6 +92,25 @@ async def _emit(
         logger.exception("Agent 产物落库失败，不改变业务结果")
 
 
+def _excluded_term(term: str, exclude_terms: Sequence[str]) -> bool:
+    normalized = term.strip().lower()
+    return any(value in normalized for value in exclude_terms if value)
+
+
+def _excluded_hit(hit: CompanyHit, exclude_terms: Sequence[str]) -> bool:
+    haystack = " ".join(
+        value.strip().lower()
+        for value in (hit.name, hit.industry, hit.scope)
+        if value and value.strip()
+    )
+    return any(value in haystack for value in exclude_terms if value)
+
+
+def _append_warning(warnings: list[str], warning: str) -> None:
+    if warning and warning not in warnings:
+        warnings.append(warning)
+
+
 class ProductIntentAgent:
     def __init__(self, dependencies: ProspectWorkflowDependencies) -> None:
         self._dependencies = dependencies
@@ -103,7 +123,11 @@ class ProductIntentAgent:
             logger.exception("产品画像失败，退回兜底画像")
             intent = fallback_intent(product)
         detail = intent.category or "未识别品类"
-        await _emit(self._dependencies, "planner", intent.model_dump(mode="python"))
+        await _emit(
+            self._dependencies,
+            "planner",
+            intent.model_dump(mode="python", by_alias=True),
+        )
         return {
             "intent": intent,
             "trail": [f"product_intent: {detail}，{len(intent.search_terms)} 个搜索词"],
@@ -121,21 +145,43 @@ class SourcingAgent:
 
         by_name: dict[str, CompanyHit] = {}
         term_hits: list[TermHit] = []
+        warnings: list[str] = []
+        exclude_terms = [term.strip().lower() for term in intent.exclude_terms if term.strip()]
+        terms = [term for term in intent.search_terms if not _excluded_term(term, exclude_terms)]
+        if not terms:
+            _append_warning(warnings, "所有搜索词都命中了排除项，已跳过搜索，请检查产品画像。")
 
         async def run_terms(terms: Sequence[str]) -> None:
             for term in terms:
                 try:
                     result = await self._dependencies.search(term, SEARCH_LIMIT_PER_TERM)
-                    term_hits.append(TermHit(term=term, hits=result.total))
+                    term_hits.append(
+                        TermHit(
+                            term=term,
+                            hits=result.total,
+                            source=result.source,
+                            notice=result.notice,
+                        )
+                    )
+                    if result.notice:
+                        _append_warning(warnings, f"搜索降级：{result.notice}")
                     for hit in result.hits:
+                        if _excluded_hit(hit, exclude_terms):
+                            continue
                         by_name.setdefault(hit.name, hit)
                 except Exception as error:
-                    term_hits.append(TermHit(term=term, hits=0, error=str(error)))
+                    message = str(error)
+                    term_hits.append(TermHit(term=term, hits=0, error=message))
+                    _append_warning(warnings, f"搜索「{term}」失败：{message}")
 
-        await run_terms(intent.search_terms)
+        await run_terms(terms)
         replan_info: SourcingReplan | None = None
 
-        if self._dependencies.replan is not None and len(by_name) < MIN_COMPANIES_BEFORE_REPLAN:
+        if (
+            terms
+            and self._dependencies.replan is not None
+            and len(by_name) < MIN_COMPANIES_BEFORE_REPLAN
+        ):
             try:
                 decision = await self._dependencies.replan(
                     ReplanInput(
@@ -145,16 +191,22 @@ class SourcingAgent:
                     )
                 )
                 before = len(by_name)
-                if decision.new_terms:
-                    await run_terms(decision.new_terms)
+                replan_terms = [
+                    term for term in decision.new_terms if not _excluded_term(term, exclude_terms)
+                ]
+                if len(replan_terms) < len(decision.new_terms):
+                    _append_warning(warnings, "换词结果包含排除项，已忽略对应搜索词。")
+                if replan_terms:
+                    await run_terms(replan_terms)
                 replan_info = SourcingReplan(
                     triggered=True,
-                    new_terms=decision.new_terms,
+                    new_terms=replan_terms,
                     reasoning=decision.reasoning,
                     added_companies=len(by_name) - before,
                 )
             except Exception:
                 logger.exception("拓客重规划失败，保持第一轮搜索结果")
+                _append_warning(warnings, "换词重搜失败，已保留第一轮结果。")
                 replan_info = SourcingReplan(
                     triggered=False,
                     new_terms=[],
@@ -167,16 +219,37 @@ class SourcingAgent:
             self._dependencies,
             "sourcer",
             {
-                "terms": [item.model_dump(mode="python") for item in term_hits],
+                "terms": [
+                    {
+                        "term": item.term,
+                        "hits": item.hits,
+                        **({"error": item.error} if item.error else {}),
+                    }
+                    for item in term_hits
+                ],
                 "total": len(hits),
-                "companies": [hit.name for hit in hits],
-                "replan": replan_info.model_dump(mode="python") if replan_info else None,
+                "companies": [
+                    {
+                        "key": hit.key,
+                        "name": hit.name,
+                        "region": hit.region,
+                        "industry": hit.industry,
+                        "status": hit.status,
+                        "inLibrary": hit.in_library,
+                    }
+                    for hit in hits
+                ],
+                "replan": (
+                    replan_info.model_dump(mode="python", by_alias=True) if replan_info else None
+                ),
+                "warnings": warnings,
             },
         )
         return {
             "hits": hits,
             "term_hits": term_hits,
             "replan": replan_info,
+            "warnings": warnings,
             "trail": [f"sourcing: {len(term_hits)} 个词，去重后 {len(hits)} 家"],
         }
 
@@ -216,7 +289,7 @@ class ScoringAgent:
 
         assessed = sort_assessed_companies(assessed)
         priority = sum(company.tier == "priority" for company in assessed)
-        deep_checks = await self._run_deep_checks(state, intent, assessed)
+        deep_checks, warnings = await self._run_deep_checks(state, intent, assessed)
         if deep_checks:
             assessed = [
                 company.model_copy(update={"deep_check": deep_checks.get(company.company_name)})
@@ -232,9 +305,22 @@ class ScoringAgent:
                         "score": company.score,
                         "tier": company.tier,
                         "verdict": company.verdict,
+                        "caveats": company.caveats,
                         "dimensions": [
-                            dimension.model_dump(mode="python") for dimension in company.dimensions
+                            dimension.model_dump(mode="python", by_alias=True)
+                            for dimension in company.dimensions
                         ],
+                        **(
+                            {
+                                "deepCheck": {
+                                    "verdict": company.deep_check.verdict,
+                                    "reasoning": company.deep_check.reasoning,
+                                    "lookups": company.deep_check.lookups,
+                                }
+                            }
+                            if company.deep_check
+                            else {}
+                        ),
                     }
                     for company in assessed
                 ]
@@ -243,7 +329,11 @@ class ScoringAgent:
         return {
             "assessed": assessed,
             "priority": priority,
-            "trail": [f"scoring: {len(assessed)} 家，{priority} 家优先"],
+            "warnings": warnings,
+            "trail": [
+                f"scoring: {len(assessed)} 家，{priority} 家优先"
+                + (f"，深查 {len(deep_checks)} 家" if deep_checks else "")
+            ],
         }
 
     async def _run_deep_checks(
@@ -251,13 +341,14 @@ class ScoringAgent:
         state: ProspectState,
         intent: ProductIntent,
         assessed: Sequence[AssessedCompany],
-    ) -> dict[str, DeepCheck]:
+    ) -> tuple[dict[str, DeepCheck], list[str]]:
         if self._dependencies.qualify is None:
-            return {}
+            return {}, []
         candidates = [
             company for company in assessed if GRAY_ZONE_MIN <= company.score <= GRAY_ZONE_MAX
         ][:MAX_DEEP_CHECK]
         results: dict[str, DeepCheck] = {}
+        warnings: list[str] = []
         for company in candidates:
             try:
                 outcome = await self._dependencies.qualify(
@@ -267,23 +358,56 @@ class ScoringAgent:
                         tier=company.tier,
                         buyer_description=intent.buyer_description,
                         product=state["product"],
+                        industry=company.hit.industry,
+                        scope=company.hit.scope,
+                        region=company.hit.region,
+                        registered_capital=company.hit.registered_capital,
+                        founded_at=company.hit.founded_at,
+                        status=company.hit.status,
                     )
                 )
-            except Exception:
+            except Exception as error:
                 logger.exception("灰色带公司深查失败：%s", company.company_name)
-                continue
-            if outcome is not None:
-                results[company.company_name] = DeepCheck(
-                    verdict=outcome.verdict,
-                    reasoning=outcome.reasoning,
-                    lookups=outcome.lookups,
+                _append_warning(
+                    warnings,
+                    f"深查「{company.company_name}」失败，已保留原评分：{error}",
                 )
-        return results
+                continue
+            if outcome is None:
+                _append_warning(
+                    warnings,
+                    f"深查「{company.company_name}」没有获得可用结论，已保留原评分。",
+                )
+                continue
+            results[company.company_name] = DeepCheck(
+                verdict=outcome.verdict,
+                reasoning=outcome.reasoning,
+                lookups=[lookup.tool for lookup in outcome.lookups],
+            )
+        return results, warnings
 
 
 class ContactAgent:
+    def __init__(self, dependencies: ProspectWorkflowDependencies) -> None:
+        self._dependencies = dependencies
+
     async def run(self, state: ProspectState) -> dict[str, Any]:
-        reachable = sum(company.reachable for company in state.get("assessed", []))
+        assessed = state.get("assessed", [])
+        reachable = sum(company.reachable for company in assessed)
+        await _emit(
+            self._dependencies,
+            "contact",
+            {
+                "companies": [
+                    {
+                        "name": company.hit.name,
+                        "phones": company.phones,
+                        "reachable": company.reachable,
+                    }
+                    for company in assessed
+                ]
+            },
+        )
         return {"reachable": reachable, "trail": [f"contact: {reachable} 家可联系"]}
 
 
@@ -306,7 +430,7 @@ def build_prospect_graph(dependencies: ProspectWorkflowDependencies):
     graph.add_node("product_intent", ProductIntentAgent(dependencies).run)
     graph.add_node("sourcing", SourcingAgent(dependencies).run)
     graph.add_node("scoring", ScoringAgent(dependencies).run)
-    graph.add_node("contact", ContactAgent().run)
+    graph.add_node("contact", ContactAgent(dependencies).run)
     graph.add_node("finish", finish_prospect)
     graph.add_edge(START, "product_intent")
     graph.add_edge("product_intent", "sourcing")
@@ -344,6 +468,7 @@ async def run_prospect_workflow(
             "reachable": 0,
             "priority": 0,
             "error": None,
+            "warnings": [],
             "trail": [],
         },
         config={
@@ -369,4 +494,5 @@ async def run_prospect_workflow(
             priority=state.get("priority", 0),
         ),
         replan=state.get("replan"),
+        warnings=state.get("warnings", []),
     )
